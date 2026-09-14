@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { closeTab, useWorkspace } from '@/lib/workspaceStore'
+import { Icon } from '@/components/icons'
 
 /** Onglets des espaces de travail ouverts (une page = un onglet, refermable). */
 export default function WorkspaceTabs() {
@@ -8,14 +9,16 @@ export default function WorkspaceTabs() {
   const { pathname } = useLocation()
 
   return (
-    <div className="flex h-7 items-end gap-px overflow-x-auto bg-bb-tabs px-1">
+    <div className="flex h-10 items-end gap-1 overflow-x-auto border-b border-gray-200 bg-bb-tabs px-3 pt-1.5">
       {tabs.map((tab) => {
         const active = tab.path === pathname
         return (
           <div
             key={tab.path}
-            className={`flex h-6 items-center gap-2 border border-b-0 border-bb-line pl-2 pr-1 text-[12px] ${
-              active ? 'bg-white' : 'bg-[#efefef] text-gray-700 hover:bg-white'
+            className={`flex h-8 items-center gap-1.5 rounded-t-lg border border-b-0 pl-3 pr-1.5 text-[13px] transition ${
+              active
+                ? 'border-gray-200 bg-white font-medium text-gray-900'
+                : 'border-transparent text-gray-500 hover:bg-white/70 hover:text-gray-800'
             }`}
           >
             <button
@@ -34,10 +37,10 @@ export default function WorkspaceTabs() {
                   navigate(next)
                 }
               }}
-              className="px-0.5 text-gray-500 hover:text-black"
+              className="rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-700"
               aria-label={`Fermer ${tab.label}`}
             >
-              ×
+              <Icon name="close" className="h-3.5 w-3.5" />
             </button>
           </div>
         )

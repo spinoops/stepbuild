@@ -122,8 +122,8 @@ export const DEMO_REPORTS: DemoReport[] = [
     remark: 'RAPPORT :\n\nSuivi de chantier : séance sur place pour voir travaux à faire',
     weather: 'Partiellement nuageux', tempMin: 21, tempMax: 28,
     lines: [
-      { collaboratorId: 'c1', hours: { '01': 1 } },
-      { collaboratorId: 'c3', hours: { '01': 1 } },
+      { collaboratorId: 'c1', hours: { '02': 1 } },
+      { collaboratorId: 'c3', hours: { '02': 1 } },
     ],
   },
   {
@@ -427,3 +427,36 @@ export const DEMO_DOCUMENTS: DemoDocument[] = [
     ],
   },
 ]
+
+/** Étape d'un devis (position de niveau 1 sans sous-numéro). */
+export interface DevisStep {
+  code: string
+  label: string
+  /** Nombre de positions rattachées à l'étape. */
+  positions: number
+}
+
+/** Étapes d'un document (chapitres de niveau 1). */
+export function documentSteps(doc: DemoDocument): DevisStep[] {
+  return doc.positions
+    .filter((position) => position.level === 1 && !position.code.includes('.'))
+    .map((position) => ({
+      code: position.code,
+      label: position.description,
+      positions: doc.positions.filter((item) => item.code.startsWith(position.code) && item !== position).length,
+    }))
+}
+
+/** Devis d'un projet (le premier devis fait référence pour les rapports). */
+export function projectDevis(projectId: string): DemoDocument | null {
+  return DEMO_DOCUMENTS.find((doc) => doc.projectId === projectId && doc.type === 'DEV') ?? null
+}
+
+/**
+ * Étapes de chantier d'un projet : celles de son devis. Tout le suivi (rapports
+ * journaliers, régie, facture) se rattache à ces étapes.
+ */
+export function projectSteps(projectId: string): DevisStep[] {
+  const devis = projectDevis(projectId)
+  return devis ? documentSteps(devis) : []
+}

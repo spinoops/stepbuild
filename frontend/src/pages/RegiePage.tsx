@@ -1,5 +1,5 @@
 import Workspace from '@/components/baubit/Workspace'
-import { StandardTools, ToolMenu } from '@/components/baubit/Toolbar'
+import { ToolButton, ToolMenu } from '@/components/baubit/Toolbar'
 import ModulePlaceholder from '@/components/ModulePlaceholder'
 import PagePane from '@/components/PagePane'
 
@@ -9,7 +9,7 @@ export default function RegiePage() {
       tabLabel="Tarifs régie"
       toolbar={
         <>
-          <StandardTools />
+          <ToolButton icon="print" title="Imprimer" />
           <ToolMenu icon="export" label="Export" />
         </>
       }

@@ -1,43 +1,48 @@
 @import "tailwindcss";
 
 /*
- * Couleur principale de l'application (accent « chantier »).
- * Utilisée par le kit UI via les classes primary-* (bg-primary-600, text-primary-700…).
+ * Charte Lachat Construction : bleu du logo (primary) pour la navigation et les
+ * sélections, rouge (accent) pour les actions principales, comme sur le site.
  */
 @theme {
-  --color-primary-50: #fff7ed;
-  --color-primary-100: #ffedd5;
-  --color-primary-200: #fed7aa;
-  --color-primary-300: #fdba74;
-  --color-primary-500: #f97316;
-  --color-primary-600: #ea580c;
-  --color-primary-700: #c2410c;
-  --color-primary-800: #9a3412;
+  --color-primary-50: #eef3fc;
+  --color-primary-100: #dbe5f8;
+  --color-primary-200: #b9caf0;
+  --color-primary-300: #86a4e3;
+  --color-primary-500: #2f5bc4;
+  --color-primary-600: #1d3f9c;
+  --color-primary-700: #17337f;
+  --color-primary-800: #122862;
 
-  /* Palette « BauBit » (ruban, barre de contexte, grilles). */
-  --color-bb-title: #2f3a48;
-  --color-bb-ribbon: #f5f5f5;
-  --color-bb-ribbon-line: #d5d5d5;
-  --color-bb-blue: #1e6fd1;
-  --color-bb-blue-light: #b9dcf7;
-  --color-bb-tabs: #d4d4d4;
-  --color-bb-head: #1c4f91;
-  --color-bb-yellow: #fdf5cc;
-  --color-bb-row: #fefbe8;
-  --color-bb-line: #d9d9d9;
-  --color-bb-green: #b3eca3;
-  --color-bb-red: #f4a3a3;
-  --color-bb-grey: #e4e4e4;
-  --color-bb-dark: #8c8c8c;
-  --color-bb-select: #cce3ff;
+  --color-accent-50: #fef2f2;
+  --color-accent-100: #fee2e2;
+  --color-accent-500: #e53935;
+  --color-accent-600: #d32f2f;
+  --color-accent-700: #b71c1c;
+
+  /* Tokens de l'espace de travail (structure BauBit, habillage moderne). */
+  --color-bb-ribbon: #f8fafc;
+  --color-bb-ribbon-line: #e2e8f0;
+  --color-bb-line: #e5e7eb;
+  --color-bb-head: #64748b;
+  --color-bb-blue: #1d3f9c;
+  --color-bb-blue-light: #dbe5f8;
+  --color-bb-tabs: #f1f5f9;
+  --color-bb-yellow: #ffffff;
+  --color-bb-row: #f9fafb;
+  --color-bb-select: #eef3fc;
+  --color-bb-green: #dcfce7;
+  --color-bb-red: #fee2e2;
+  --color-bb-grey: #f1f5f9;
+  --color-bb-dark: #e2e8f0;
 }
 
-/* Espace de travail dense, façon logiciel de bureau. */
+/* Espace de travail : police système, taille confortable. */
 .bb {
-  font-family: 'Segoe UI', Tahoma, system-ui, sans-serif;
-  font-size: 12px;
-  line-height: 1.25;
-  color: #222;
+  font-family: ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #1f2937;
 }
 .bb input,
 .bb select,

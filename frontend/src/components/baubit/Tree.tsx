@@ -39,8 +39,8 @@ export default function Tree({ nodes, selectedId, onSelect, defaultExpanded = []
       return (
         <div key={node.id}>
           <div
-            className={`flex h-5 cursor-default items-center gap-0.5 whitespace-nowrap pr-2 ${
-              selected ? 'bg-bb-select' : 'hover:bg-gray-100'
+            className={`flex h-7 cursor-default items-center gap-1 whitespace-nowrap rounded-md pr-2 text-[13px] transition ${
+              selected ? 'bg-primary-50 font-medium text-primary-700' : 'text-gray-700 hover:bg-gray-100'
             }`}
             style={{ paddingLeft: 4 + depth * 16 }}
             onClick={() => onSelect?.(node)}
@@ -52,13 +52,13 @@ export default function Tree({ nodes, selectedId, onSelect, defaultExpanded = []
                 event.stopPropagation()
                 toggle(node.id)
               }}
-              className={`flex h-4 w-4 items-center justify-center text-gray-600 ${hasChildren ? '' : 'invisible'}`}
+              className={`flex h-4 w-4 items-center justify-center text-gray-400 ${hasChildren ? '' : 'invisible'}`}
               aria-label={open ? 'Replier' : 'Déplier'}
             >
               <Icon name="chevron" className={`h-3 w-3 transition ${open ? 'rotate-90' : ''}`} />
             </button>
-            <Icon name="folder" className="h-3.5 w-3.5 text-amber-500" />
-            <span className="ml-1 truncate text-[12px]">{node.label}</span>
+            <Icon name="folder" className={`h-4 w-4 ${selected ? 'text-primary-500' : 'text-amber-400'}`} />
+            <span className="ml-1 truncate">{node.label}</span>
           </div>
           {hasChildren && open && renderNodes(node.children!, depth + 1)}
         </div>

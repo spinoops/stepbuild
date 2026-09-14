@@ -6,22 +6,22 @@ import { routeLabel } from '@/lib/navigation'
 import { ROLE_LABELS, primaryRole } from '@/lib/roles'
 import { openTab } from '@/lib/workspaceStore'
 import { Icon } from '@/components/icons'
+import Brand from '@/components/Brand'
 import Ribbon from '@/components/shell/Ribbon'
 import ContextBar from '@/components/shell/ContextBar'
 import WorkspaceTabs from '@/components/shell/WorkspaceTabs'
 import StatusBar from '@/components/shell/StatusBar'
 
 /**
- * Cadre commun « façon BauBit » : barre de titre, ruban, barre Projet/Document,
- * onglets d'espaces de travail, contenu, barre d'état.
+ * Cadre commun : en-tête + ruban d'actions, barre Projet/Document, onglets d'espaces
+ * de travail, contenu, barre d'état. Même logique que BauBit, habillage actuel.
  */
 export default function AppLayout() {
   const { user, logout } = useAuth()
   const { data: settings } = useSettings()
   const { pathname } = useLocation()
 
-  const appName = settings?.app_name ?? 'Chantier'
-  const appLogo = settings?.app_logo_url ?? ''
+  const appName = settings?.app_name ?? 'Lachat Construction'
   const role = primaryRole(user)
 
   // Chaque page visitée ouvre (ou réactive) son onglet d'espace de travail.
@@ -29,34 +29,31 @@ export default function AppLayout() {
     openTab(pathname, routeLabel(pathname))
   }, [pathname])
 
-  return (
-    <div className="bb flex h-screen min-w-[1100px] flex-col overflow-hidden bg-gray-100">
-      <header className="flex h-8 shrink-0 items-center bg-bb-title px-2 text-[12px] text-gray-100">
-        {appLogo ? (
-          <img src={appLogo} alt="" className="h-5 w-5 rounded object-contain" />
-        ) : (
-          <Icon name="hardhat" className="h-4 w-4 text-primary-500" />
-        )}
-        <span className="ml-2 font-semibold">{appName}</span>
-        <span className="mx-auto text-gray-300">
-          {appName} - Gestion de chantier
-        </span>
-        <span className="mr-3">
-          {user?.name}
-          <span className="ml-1 text-gray-400">({role ? ROLE_LABELS[role] : '—'})</span>
-        </span>
-        <button
-          type="button"
-          onClick={() => logout()}
-          title="Déconnexion"
-          className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-white/10"
-        >
-          <Icon name="logout" className="h-3.5 w-3.5" />
-          Déconnexion
-        </button>
-      </header>
+  const brand = <Brand size={20} className="mr-1" title={appName} />
 
-      <Ribbon />
+  const userSlot = (
+    <div className="ml-3 flex items-center gap-2 border-l border-gray-200 pl-3">
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-[12px] font-semibold text-primary-700">
+        {initials(user?.name)}
+      </span>
+      <span className="leading-tight">
+        <span className="block text-[13px] font-medium text-gray-800">{user?.name}</span>
+        <span className="block text-[11px] text-gray-500">{role ? ROLE_LABELS[role] : '—'}</span>
+      </span>
+      <button
+        type="button"
+        onClick={() => logout()}
+        title="Déconnexion"
+        className="ml-1 rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+      >
+        <Icon name="logout" className="h-4 w-4" />
+      </button>
+    </div>
+  )
+
+  return (
+    <div className="bb flex h-screen min-w-[1100px] flex-col overflow-hidden bg-gray-50">
+      <Ribbon brand={brand} user={userSlot} />
       <ContextBar />
       <WorkspaceTabs />
 
@@ -67,4 +64,15 @@ export default function AppLayout() {
       <StatusBar />
     </div>
   )
+}
+
+function initials(name?: string): string {
+  if (!name) {
+    return '?'
+  }
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
 }

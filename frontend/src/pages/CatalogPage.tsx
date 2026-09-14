@@ -48,7 +48,7 @@ export default function CatalogPage() {
       tabLabel="Catalogue libre"
       toolbar={
         <>
-          <StandardTools />
+          <StandardTools newLabel="Nouvel article" />
           <ToolMenu icon="import" label="Import" />
           <ToolMenu icon="export" label="Export" />
           <ToolSep />
@@ -64,7 +64,6 @@ export default function CatalogPage() {
             <option value="2">2 - Régie</option>
           </BbSelect>
           <ToolSep />
-          <ToolButton icon="fileplus" title="Nouvel article (création à la volée)" tone="success" />
           <ToolButton icon="table" title="Positions" tone="primary" />
         </>
       }
@@ -75,15 +74,15 @@ export default function CatalogPage() {
             { icon: 'image', label: 'Graphique' },
           ]}
         >
-          <div className="mt-1 text-[15px] text-gray-800">Structure arborescente</div>
-          <div className="mt-2 border border-bb-line bg-white py-1">
+          <div className="mt-1 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Corps de métier</div>
+          <div className="mt-2 py-1">
             <Tree nodes={TREE} selectedId={chapter} onSelect={(node) => setChapter(node.id)} defaultExpanded={['18']} />
           </div>
           <BbCheckbox
             label="Synchroniser"
             checked={sync}
             onChange={(event) => setSync(event.target.checked)}
-            className="mt-2"
+            className="mt-3"
           />
         </AsidePanel>
       }
@@ -93,7 +92,7 @@ export default function CatalogPage() {
         columns={COLUMNS}
         rows={rows}
         rowKey={rowId}
-        rowClass={(row) => (row.isTitle ? 'bg-white font-medium' : 'bg-bb-row')}
+        rowClass={(row, index) => (row.isTitle ? 'bg-gray-100 font-semibold' : index % 2 ? 'bg-bb-row' : 'bg-white')}
         selectedKey={selectedId}
         onSelect={(row) => setSelectedId(rowId(row))}
       />

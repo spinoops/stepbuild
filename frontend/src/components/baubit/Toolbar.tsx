@@ -5,9 +5,9 @@ import type { IconName } from '@/components/icons'
 type Tone = 'default' | 'danger' | 'primary' | 'success'
 
 const TONES: Record<Tone, string> = {
-  default: 'text-gray-700',
-  danger: 'text-red-600',
-  primary: 'text-bb-blue',
+  default: 'text-gray-600',
+  danger: 'text-red-500',
+  primary: 'text-primary-600',
   success: 'text-green-600',
 }
 
@@ -23,7 +23,7 @@ function later() {
   toast('Fonction disponible dans une phase ultérieure.', 'info')
 }
 
-/** Petit bouton-icône de barre d'outils. Sans onClick, signale une fonction à venir. */
+/** Bouton-icône de barre d'outils. Sans onClick, signale une fonction à venir. */
 export function ToolButton({ icon, title, tone = 'default', disabled = false, onClick }: ToolButtonProps) {
   return (
     <button
@@ -31,7 +31,7 @@ export function ToolButton({ icon, title, tone = 'default', disabled = false, on
       title={title}
       disabled={disabled}
       onClick={onClick ?? later}
-      className="flex h-6 w-6 items-center justify-center rounded hover:bg-blue-50 disabled:opacity-40 disabled:hover:bg-transparent"
+      className="flex h-8 w-8 items-center justify-center rounded-md transition hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-transparent"
     >
       <Icon name={icon} className={`h-4 w-4 ${TONES[tone]}`} />
     </button>
@@ -50,34 +50,46 @@ export function ToolMenu({ icon, label, onClick }: ToolMenuProps) {
     <button
       type="button"
       onClick={onClick ?? later}
-      className="flex h-6 items-center gap-1 rounded px-1.5 text-[12px] hover:bg-blue-50"
+      className="flex h-8 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 text-[13px] text-gray-700 transition hover:bg-gray-50"
     >
-      {icon && <Icon name={icon} className="h-4 w-4 text-primary-700" />}
+      {icon && <Icon name={icon} className="h-4 w-4 text-gray-500" />}
       {label}
-      <Icon name="chevrondown" className="h-3 w-3 text-gray-500" />
+      <Icon name="chevrondown" className="h-3 w-3 text-gray-400" />
+    </button>
+  )
+}
+
+/** Bouton d'action principal (« Nouveau projet »). */
+export function ToolPrimary({ icon = 'plus', label, onClick }: { icon?: IconName; label: string; onClick?: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick ?? later}
+      className="flex h-8 items-center gap-1.5 rounded-md bg-accent-600 px-3 text-[13px] font-medium text-white shadow-sm transition hover:bg-accent-700"
+    >
+      <Icon name={icon} className="h-4 w-4" />
+      {label}
     </button>
   )
 }
 
 export function ToolSep() {
-  return <span className="mx-1 h-5 w-px bg-bb-line" />
+  return <span className="mx-1.5 h-5 w-px bg-gray-200" />
 }
 
-/** Jeu de boutons standard (supprimer, nouveau, enregistrer, annuler, colonnes, filtre, imprimer). */
-export function StandardTools() {
+/** Jeu de boutons standard : nouveau, enregistrer, annuler, supprimer, colonnes, filtre, imprimer. */
+export function StandardTools({ newLabel = 'Nouveau' }: { newLabel?: string }) {
   return (
     <>
-      <ToolButton icon="close" title="Supprimer" tone="danger" />
-      <ToolButton icon="fileplus" title="Nouveau" />
+      <ToolPrimary label={newLabel} />
+      <ToolSep />
       <ToolButton icon="save" title="Enregistrer" tone="primary" />
-      <ToolButton icon="undo" title="Annuler les modifications" tone="danger" />
+      <ToolButton icon="undo" title="Annuler les modifications" />
+      <ToolButton icon="trash" title="Supprimer" tone="danger" />
       <ToolSep />
-      <ToolButton icon="table" title="Colonnes" tone="primary" />
-      <ToolButton icon="sliders" title="Disposition" tone="primary" />
-      <ToolButton icon="filter" title="Filtre" tone="primary" />
-      <ToolSep />
+      <ToolButton icon="table" title="Colonnes" />
+      <ToolButton icon="filter" title="Filtre" />
       <ToolButton icon="print" title="Imprimer" />
-      <ToolButton icon="search" title="Aperçu avant impression" />
       <ToolSep />
     </>
   )

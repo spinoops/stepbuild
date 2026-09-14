@@ -13,9 +13,11 @@ import {
   DEMO_DOCUMENTS,
   DEMO_PROJECTS,
   DOCUMENT_TYPES,
+  documentSteps,
 } from '@/lib/demo'
 import type { DemoPosition } from '@/lib/demo'
 import { fmtAmount, fmtDate } from '@/lib/format'
+import { toast } from '@/lib/toast'
 import { useWorkspace } from '@/lib/workspaceStore'
 
 const TABS = ['En-tête document', 'Textes document', 'Paramètres', 'Détail document', 'Conditions', 'Récapitulation', 'Complément']
@@ -23,18 +25,18 @@ const LEVELS = [1, 2, 3, 4]
 const TVA = 8.1
 
 const DOC_STATUS = [
-  { value: 'en_cours', label: '1-EC', rowClass: 'bg-white' },
-  { value: 'envoye', label: '2-ENV', rowClass: 'bg-bb-yellow' },
-  { value: 'accepte', label: '3-ACC', rowClass: 'bg-bb-green' },
+  { value: 'en_cours', label: '1-EC · En cours', rowClass: 'bg-white' },
+  { value: 'envoye', label: '2-ENV · Envoyé', rowClass: 'bg-amber-50' },
+  { value: 'accepte', label: '3-ACC · Accepté', rowClass: 'bg-bb-green' },
 ]
 
 type Row = DemoPosition & { id: string; amount: number | null }
 
 const COLUMNS: GridColumn<Row>[] = [
-  { key: 'level', header: 'G. li.', value: (r) => `PO${r.level}`, width: 45, cellClass: (r) => (r.level === 1 ? 'font-bold' : '') },
+  { key: 'level', header: 'Niv.', value: (r) => `PO${r.level}`, width: 50, cellClass: (r) => (r.level === 1 ? 'font-semibold text-gray-500' : 'text-gray-400') },
   { key: 'code', header: 'Code', value: (r) => r.code.split('.')[0], width: 45 },
   { key: 'pos', header: 'N° p…', value: (r) => r.code, width: 80 },
-  { key: 'description', header: 'Description', value: (r) => r.description, width: 620, wrap: true, cellClass: (r) => (r.level === 1 ? 'font-bold' : '') },
+  { key: 'description', header: 'Description', value: (r) => r.description, width: 620, wrap: true, cellClass: (r) => (r.level === 1 ? 'font-semibold' : '') },
   { key: 'unit', header: 'Un.', value: (r) => r.unit, width: 60 },
   { key: 'qty', header: 'Quantité', value: (r) => r.qty, type: 'number', width: 70 },
   { key: 'price', header: 'Prix CHF', value: (r) => r.price, type: 'number', width: 80 },
@@ -80,6 +82,8 @@ export default function DocumentsPage() {
       .reduce((sum, p) => sum + (p.qty ?? 0) * (p.price ?? 0), 0),
   })).filter((item) => item.amount > 0)
 
+  const steps = documentSteps(doc)
+
   const treeNodes = DEMO_CHAPTERS.map((item) => ({
     id: item.code,
     label: `${item.code} - ${item.label}`,
@@ -94,7 +98,7 @@ export default function DocumentsPage() {
       totals={`Brut: ${fmtAmount(total)} CHF   Net: ${fmtAmount(total + tva)} CHF`}
       toolbar={
         <>
-          <StandardTools />
+          <StandardTools newLabel="Nouvelle position" />
           <ToolMenu icon="import" label="Import" />
           <ToolMenu icon="export" label="Export" />
           <ToolSep />
@@ -105,14 +109,14 @@ export default function DocumentsPage() {
             <option value="libre">Texte libre</option>
           </BbSelect>
           <ToolSep />
-          <span className="mr-1 text-gray-600">Niveau</span>
+          <span className="mr-1 text-[12px] text-gray-500">Niveau</span>
           {LEVELS.map((level) => (
             <button
               key={level}
               type="button"
               onClick={() => setMaxLevel(level)}
-              className={`h-6 w-6 rounded border text-[12px] ${
-                maxLevel === level ? 'border-bb-blue bg-bb-select' : 'border-transparent hover:bg-blue-50'
+              className={`h-7 w-7 rounded-md text-[13px] transition ${
+                maxLevel === level ? 'bg-primary-600 font-medium text-white' : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
               {level}
@@ -126,26 +130,50 @@ export default function DocumentsPage() {
       }
       aside={
         <AsidePanel
+          title="Étapes"
           nav={[
-            { icon: 'tree', label: 'Structure arborescente', active: true },
+            { icon: 'tree', label: 'Étapes et modèles', active: true },
             { icon: 'image', label: 'Images' },
           ]}
         >
-          <div className="mt-1 text-[15px] text-gray-800">Structure arborescente</div>
-          <div className="mt-2 border border-bb-line bg-white py-1">
+          <div className="mt-1 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Étapes du devis</div>
+          <p className="mt-1 text-[12px] text-gray-400">
+            Les rapports journaliers, la régie et la facture se rattachent à ces étapes.
+          </p>
+          <ul className="mt-2 space-y-0.5">
+            {steps.map((step) => (
+              <li key={step.code}>
+                <button
+                  type="button"
+                  onClick={() => setChapter(chapter === step.code ? null : step.code)}
+                  className={`flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-[13px] transition ${
+                    chapter === step.code ? 'bg-primary-50 font-medium text-primary-700' : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <span className="w-6 shrink-0 text-[12px] text-gray-400">{step.code}</span>
+                  <span className="truncate">{step.label}</span>
+                  <span className="ml-auto rounded-full bg-gray-100 px-1.5 text-[11px] text-gray-500">{step.positions}</span>
+                </button>
+              </li>
+            ))}
+            {steps.length === 0 && <li className="px-2 text-[13px] text-gray-400">Aucune étape : ajoutez-en depuis les modèles.</li>}
+          </ul>
+
+          <div className="mt-5 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Modèles d'étapes</div>
+          <p className="mt-1 text-[12px] text-gray-400">Cliquez sur un modèle pour l'ajouter au devis avec ses articles.</p>
+          <div className="mt-2 py-1">
             <Tree
               nodes={treeNodes}
-              selectedId={chapter}
-              onSelect={(node) => setChapter(chapter === node.id ? null : node.id)}
-              defaultExpanded={['18']}
+              selectedId={null}
+              onSelect={(node) => toast(`Ajout de l'étape « ${node.label} » au devis : phase 5.`, 'info')}
             />
           </div>
-          <BbCheckbox label="Synchroniser" defaultChecked className="mt-2" />
+          <BbCheckbox label="Synchroniser avec le catalogue" defaultChecked className="mt-3" />
         </AsidePanel>
       }
     >
       <div className="flex h-full flex-col">
-        <TabStrip tabs={TABS} active={tab} onChange={setTab} className="shrink-0 px-1 pt-1" />
+        <TabStrip tabs={TABS} active={tab} onChange={setTab} className="shrink-0 px-4" />
 
         {tab === 'Détail document' && (
           <DataGrid
@@ -153,15 +181,15 @@ export default function DocumentsPage() {
             columns={COLUMNS}
             rows={rows}
             rowKey={(row) => row.id}
-            rowClass={(row, index) => (row.level === 1 ? 'bg-bb-yellow' : index % 2 ? 'bg-bb-row' : 'bg-white')}
+            rowClass={(row, index) => (row.level === 1 ? 'bg-gray-100' : index % 2 ? 'bg-bb-row' : 'bg-white')}
             selectedKey={selectedId}
             onSelect={(row) => setSelectedId(row.id)}
           />
         )}
 
         {tab === 'En-tête document' && (
-          <div className="flex min-h-0 flex-1 gap-8 overflow-auto p-3">
-            <form key={doc.id} className="w-[430px] shrink-0 space-y-1.5">
+          <div className="flex min-h-0 flex-1 gap-12 overflow-auto p-5">
+            <form key={doc.id} className="w-[440px] shrink-0 space-y-2">
               <SectionTitle>Informations documents</SectionTitle>
               <Field label="Type">
                 <BbSelect className="w-72" defaultValue="Libre">
@@ -233,7 +261,7 @@ export default function DocumentsPage() {
             <div className="w-[480px] shrink-0">
               <SectionTitle>Adresses</SectionTitle>
               <TabStrip tabs={['Adresse destinataire', '2ème adresse']} active={addressTab} onChange={setAddressTab} />
-              <form key={`${doc.id}-${addressTab}`} className="space-y-1.5 border border-t-0 border-bb-line p-3">
+              <form key={`${doc.id}-${addressTab}`} className="space-y-2 pt-4">
                 <Field label="Adresse">
                   <BbSelect className="w-72" defaultValue={address?.id ?? ''}>
                     <option value="" />
@@ -301,7 +329,7 @@ export default function DocumentsPage() {
                   <BbInput className="w-72" />
                 </Field>
                 <div className="flex items-start gap-2">
-                  <span className="w-[110px] shrink-0 pt-1 text-gray-700">Remarque</span>
+                  <span className="w-[120px] shrink-0 pt-1.5 text-[13px] text-gray-500">Remarque</span>
                   <BbTextarea rows={3} className="w-72" />
                 </div>
               </form>
@@ -310,34 +338,35 @@ export default function DocumentsPage() {
         )}
 
         {tab === 'Récapitulation' && (
-          <div className="p-4">
-            <table className="w-[520px] border-collapse text-[12px]">
+          <div className="p-5">
+            <table className="w-[560px] border-collapse overflow-hidden rounded-lg text-[13px]">
               <thead>
-                <tr className="bg-[#f4f4f4] text-bb-head">
-                  <th className="border border-bb-line px-2 py-1 text-left font-normal">Chapitre</th>
-                  <th className="border border-bb-line px-2 py-1 text-right font-normal">Montant CHF</th>
+                <tr className="bg-bb-ribbon text-[12px] font-semibold text-gray-500">
+                  <th className="border-b border-gray-200 px-3 py-2 text-left">Chapitre</th>
+                  <th className="border-b border-gray-200 px-3 py-2 text-right">Montant CHF</th>
                 </tr>
               </thead>
               <tbody>
                 {chapterTotals.map((item, index) => (
                   <tr key={item.code} className={index % 2 ? 'bg-bb-row' : 'bg-white'}>
-                    <td className="border border-bb-line px-2 py-0.5">
-                      {item.code} {item.label}
+                    <td className="border-b border-gray-100 px-3 py-1.5">
+                      <span className="mr-2 text-gray-400">{item.code}</span>
+                      {item.label}
                     </td>
-                    <td className="border border-bb-line px-2 py-0.5 text-right">{fmtAmount(item.amount)}</td>
+                    <td className="border-b border-gray-100 px-3 py-1.5 text-right">{fmtAmount(item.amount)}</td>
                   </tr>
                 ))}
-                <tr className="bg-[#ececec] font-medium">
-                  <td className="border border-bb-line px-2 py-0.5">Total HT</td>
-                  <td className="border border-bb-line px-2 py-0.5 text-right">{fmtAmount(total)}</td>
+                <tr className="bg-gray-50 font-medium">
+                  <td className="border-b border-gray-200 px-3 py-1.5">Total HT</td>
+                  <td className="border-b border-gray-200 px-3 py-1.5 text-right">{fmtAmount(total)}</td>
                 </tr>
                 <tr>
-                  <td className="border border-bb-line px-2 py-0.5">TVA {TVA} %</td>
-                  <td className="border border-bb-line px-2 py-0.5 text-right">{fmtAmount(tva)}</td>
+                  <td className="border-b border-gray-100 px-3 py-1.5 text-gray-600">TVA {TVA} %</td>
+                  <td className="border-b border-gray-100 px-3 py-1.5 text-right">{fmtAmount(tva)}</td>
                 </tr>
-                <tr className="bg-[#d9d9d9] font-bold">
-                  <td className="border border-bb-line px-2 py-0.5">Total TTC</td>
-                  <td className="border border-bb-line px-2 py-0.5 text-right">{fmtAmount(total + tva)}</td>
+                <tr className="bg-primary-50 font-semibold text-primary-800">
+                  <td className="px-3 py-2">Total TTC</td>
+                  <td className="px-3 py-2 text-right">{fmtAmount(total + tva)}</td>
                 </tr>
               </tbody>
             </table>
@@ -345,7 +374,7 @@ export default function DocumentsPage() {
         )}
 
         {!['Détail document', 'En-tête document', 'Récapitulation'].includes(tab) && (
-          <div className="flex flex-1 items-center justify-center text-gray-500">
+          <div className="flex flex-1 items-center justify-center text-gray-400">
             Onglet « {tab} » : disponible en phase 5.
           </div>
         )}

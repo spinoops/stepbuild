@@ -11,7 +11,7 @@ import Spinner from '@/components/ui/Spinner'
 const schema = z.object({
   app_name: z.string().min(1, 'Le nom est requis.').max(255),
   app_logo_url: z.string().max(2048),
-  app_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Couleur hexadécimale invalide (ex : #ea580c).'),
+  app_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Couleur hexadécimale invalide (ex : #1d3f9c).'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -28,7 +28,7 @@ export default function SettingsPage() {
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { app_name: '', app_logo_url: '', app_color: '#ea580c' },
+    defaultValues: { app_name: '', app_logo_url: '', app_color: '#1d3f9c' },
   })
 
   const { field: colorField } = useController({ name: 'app_color', control })

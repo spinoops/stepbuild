@@ -7,14 +7,16 @@ import DataGrid from '@/components/baubit/DataGrid'
 import type { GridColumn } from '@/components/baubit/DataGrid'
 import { BbInput, BbSelect, BbTextarea, Field, StatusSelect } from '@/components/baubit/Form'
 import { Icon } from '@/components/icons'
+import Badge from '@/components/ui/Badge'
 import {
   DEMO_COLLABORATORS,
   DEMO_EXTRA_COLUMNS,
   DEMO_PROJECTS,
   DEMO_REPORTS,
-  DEMO_WORK_TYPES,
   WEATHER_OPTIONS,
   collaboratorName,
+  projectDevis,
+  projectSteps,
 } from '@/lib/demo'
 import type { DemoReport } from '@/lib/demo'
 import { fmtAmount, fmtDate } from '@/lib/format'
@@ -27,7 +29,7 @@ const TABS = ['Salaire', 'Matériaux', 'Machines', 'Mat. exploitation', 'Outilla
 
 const STATUS_OPTIONS = (Object.keys(REPORT_STATUSES) as ReportStatus[]).map((key) => ({
   value: key,
-  label: REPORT_STATUSES[key].code,
+  label: `${REPORT_STATUSES[key].code} · ${REPORT_STATUSES[key].label}`,
   rowClass: REPORT_STATUSES[key].rowClass,
 }))
 
@@ -35,9 +37,14 @@ const LIST_COLUMNS: GridColumn<DemoReport>[] = [
   { key: 'date', header: 'Date', value: (r) => fmtDate(r.date, true), width: 92 },
   { key: 'number', header: 'Numéro', value: (r) => r.number, width: 60 },
   { key: 'resp', header: 'Responsable', value: (r) => collaboratorName(r.responsableId), width: 120 },
-  { key: 'status', header: 'Statut', value: (r) => REPORT_STATUSES[r.status].code, width: 60 },
+  {
+    key: 'status',
+    header: 'Statut',
+    value: (r) => REPORT_STATUSES[r.status].label,
+    width: 110,
+    render: (r) => <Badge className={REPORT_STATUSES[r.status].className}>{REPORT_STATUSES[r.status].label}</Badge>,
+  },
   { key: 'regie', header: 'Régie', value: (r) => r.regie, type: 'bool', width: 40 },
-  { key: 'exp', header: 'Exp…', value: () => false, type: 'bool', width: 40 },
 ]
 
 interface HourLine {
@@ -47,8 +54,6 @@ interface HourLine {
   hours: Record<string, number>
   total: number
 }
-
-const HOUR_CODES = DEMO_WORK_TYPES.map((type) => type.code)
 
 /** Rapports journaliers : liste à gauche, en-tête du rapport, grille des heures par type de travail. */
 export default function DailyReportsPage() {
@@ -66,6 +71,11 @@ export default function DailyReportsPage() {
 
   const report = reports.find((item) => item.id === selectedId) ?? reports[0] ?? null
   const project = DEMO_PROJECTS.find((item) => item.id === (projectId ?? report?.projectId))
+
+  // Les étapes du rapport sont celles du devis du projet : tout le suivi s'y rattache.
+  const devis = project ? projectDevis(project.id) : null
+  const steps = project ? projectSteps(project.id) : []
+  const HOUR_CODES = steps.map((step) => step.code)
 
   const lines: HourLine[] = (report?.lines ?? []).map((line) => {
     const collaborator = DEMO_COLLABORATORS.find((item) => item.id === line.collaboratorId)
@@ -99,7 +109,7 @@ export default function DailyReportsPage() {
     ...(showPrices
       ? [{ key: 'base', header: 'Base', value: (l: HourLine) => l.base, type: 'number' as const, width: 50 }]
       : []),
-    ...DEMO_WORK_TYPES.map<GridColumn<HourLine>>((type) => ({
+    ...steps.map<GridColumn<HourLine>>((type) => ({
       key: type.code,
       header: `${type.code} ${type.label}`,
       value: (l) => l.hours[type.code] ?? null,
@@ -113,7 +123,7 @@ export default function DailyReportsPage() {
       value: (l) => l.total || null,
       type: 'number',
       width: 60,
-      cellClass: () => 'bg-[#d9d9d9]',
+      cellClass: () => 'bg-gray-100 font-medium',
       headerClass: 'whitespace-normal',
     },
     ...DEMO_EXTRA_COLUMNS.map<GridColumn<HourLine>>((type) => ({
@@ -141,10 +151,9 @@ export default function DailyReportsPage() {
       tabLabel={project ? `Rapports journaliers : ${project.number} - ${project.designation1}` : 'Rapports journaliers'}
       statusLeft={statusLeft}
       statusRight={statusRight}
-      totals={showPrices ? 'Brut: 11’490.00 CHF   Net: 12’420.69 CHF' : undefined}
       toolbar={
         <>
-          <StandardTools />
+          <StandardTools newLabel="Nouveau rapport" />
           <ToolMenu icon="import" label="Import" />
           <ToolMenu icon="export" label="Export" />
           <ToolSep />
@@ -174,14 +183,14 @@ export default function DailyReportsPage() {
           </Field>
           <button
             type="button"
-            className="mt-1.5 flex h-6 w-full items-center gap-2 border border-bb-line bg-white px-1 text-[12px]"
+            className="mt-2 flex h-8 w-full items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-2 text-[13px] text-gray-600 hover:bg-gray-50"
           >
-            <Icon name="filter" className="h-3.5 w-3.5 text-bb-blue" />
-            <span className="flex-1 text-center">Filtre types de travail</span>
+            <Icon name="filter" className="h-4 w-4 text-gray-400" />
+            Filtre types de travail
           </button>
-          <div className="mt-3 text-[16px] text-gray-800">Tous les rapports journaliers</div>
+          <div className="mb-2 mt-4 text-[13px] font-semibold text-gray-800">Tous les rapports journaliers</div>
           <DataGrid
-            className="mt-1 max-h-[420px] border border-bb-line"
+            className="max-h-[420px] overflow-hidden rounded-lg border border-gray-200"
             columns={LIST_COLUMNS}
             rows={reports}
             rowKey={(row) => row.id}
@@ -198,20 +207,20 @@ export default function DailyReportsPage() {
     >
       {report ? (
         <div className="flex h-full flex-col">
-          <form key={report.id} className="shrink-0 space-y-1.5 px-3 pb-4 pt-3">
+          <form key={report.id} className="shrink-0 space-y-2 px-4 pb-5 pt-4">
             <div className="flex items-center gap-10">
               <Field label="Numéro" labelWidth={80}>
                 <BbInput defaultValue={report.number} readOnly className="w-48" />
               </Field>
               <Field label="Date" labelWidth={70}>
                 <BbInput defaultValue={fmtDate(report.date, true)} className="w-52" />
-                <button type="button" className="px-0.5 text-gray-500" title="Jour précédent">‹</button>
-                <button type="button" className="px-0.5 text-gray-500" title="Jour suivant">›</button>
+                <button type="button" className="rounded-md px-1.5 text-gray-400 hover:bg-gray-100" title="Jour précédent">‹</button>
+                <button type="button" className="rounded-md px-1.5 text-gray-400 hover:bg-gray-100" title="Jour suivant">›</button>
               </Field>
             </div>
             <div className="flex items-start gap-2">
-              <span className="w-[80px] shrink-0 pt-1 text-gray-700">Remarque</span>
-              <BbTextarea defaultValue={report.remark} rows={8} className="w-[570px] text-[13px]" />
+              <span className="w-[80px] shrink-0 pt-1.5 text-[13px] text-gray-500">Remarque</span>
+              <BbTextarea defaultValue={report.remark} rows={6} className="w-[570px]" />
             </div>
             <div className="flex items-center gap-10">
               <Field label="Météo" labelWidth={80}>
@@ -248,43 +257,59 @@ export default function DailyReportsPage() {
             </div>
           </form>
 
-          <TabStrip tabs={TABS} active={tab} onChange={setTab} className="shrink-0 px-3" />
+          <TabStrip tabs={TABS} active={tab} onChange={setTab} className="shrink-0 px-4" />
 
-          {tab === 'Salaire' ? (
+          {tab === 'Salaire' && !devis ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 text-gray-500">
+              <Icon name="file" className="h-8 w-8 text-gray-300" />
+              <p className="font-medium text-gray-700">Ce projet n'a pas encore de devis.</p>
+              <p className="max-w-md text-center text-[13px]">
+                Les heures se saisissent sur les étapes du devis. Créez d'abord le devis du projet, ses étapes
+                apparaîtront ici en colonnes.
+              </p>
+            </div>
+          ) : tab === 'Salaire' ? (
+            <>
+            <div className="flex h-9 shrink-0 items-center gap-2 bg-primary-50/60 px-4 text-[12px] text-primary-800">
+              <Icon name="file" className="h-3.5 w-3.5" />
+              Étapes issues du devis <span className="font-semibold">{devis?.number}</span>
+              <span className="text-primary-600">· {steps.length} étape{steps.length > 1 ? 's' : ''}</span>
+            </div>
             <DataGrid
               className="min-h-0 flex-1"
               columns={hourColumns}
               rows={lines}
               rowKey={(row) => row.id}
               footer={
-                <tr className="text-[12px]">
-                  <td className="border-r border-t border-bb-line" />
-                  <td className="border-r border-t border-bb-line" />
-                  {showPrices && <td className="border-r border-t border-bb-line" />}
-                  {DEMO_WORK_TYPES.map((type) => (
-                    <td key={type.code} className="border-r border-t border-bb-line px-1.5 py-1 text-right">
-                      {fmtAmount(columnTotal(type.code))}
+                <tr className="text-[12px] text-gray-700">
+                  <td className="border-t border-gray-200" />
+                  <td className="border-t border-gray-200 px-3 py-2">Total</td>
+                  {showPrices && <td className="border-t border-gray-200" />}
+                  {steps.map((type) => (
+                    <td key={type.code} className="border-t border-gray-200 px-3 py-2 text-right">
+                      {columnTotal(type.code) ? fmtAmount(columnTotal(type.code)) : ''}
                     </td>
                   ))}
-                  <td className="border-r border-t border-bb-line bg-[#d9d9d9] px-1.5 py-1 text-right">
+                  <td className="border-t border-gray-200 bg-gray-100 px-3 py-2 text-right font-semibold">
                     {fmtAmount(reportHours)}
                   </td>
                   {DEMO_EXTRA_COLUMNS.map((type) => (
-                    <td key={type.code} className="border-r border-t border-bb-line px-1.5 py-1 text-right">
-                      {fmtAmount(columnTotal(type.code), 0)}
+                    <td key={type.code} className="border-t border-gray-200 px-3 py-2 text-right">
+                      {columnTotal(type.code) ? fmtAmount(columnTotal(type.code), 0) : ''}
                     </td>
                   ))}
                 </tr>
               }
             />
+            </>
           ) : (
-            <div className="flex flex-1 items-center justify-center text-gray-500">
+            <div className="flex flex-1 items-center justify-center text-gray-400">
               Onglet « {tab} » : saisie disponible en phase 3.
             </div>
           )}
         </div>
       ) : (
-        <div className="flex h-full items-center justify-center text-gray-500">
+        <div className="flex h-full items-center justify-center text-gray-400">
           Aucun rapport journalier pour le projet sélectionné.
         </div>
       )}

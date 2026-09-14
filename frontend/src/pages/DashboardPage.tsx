@@ -8,6 +8,14 @@ import PageHeader from '@/components/ui/PageHeader'
 import Card from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 
+const FLOW = [
+  { icon: 'folder', title: 'Projet', text: 'Créer le chantier : client, adresses, statut.', to: '/projets' },
+  { icon: 'file', title: 'Devis', text: 'Choisir les étapes depuis les modèles et chiffrer.', to: '/documents' },
+  { icon: 'clipboard', title: 'Rapports journaliers', text: 'Saisir heures et matériel sur les étapes du devis.', to: '/rapports' },
+  { icon: 'calculator', title: 'Régie et contrôle', text: 'Prix brut → majoré → client, contrôle des heures.', to: '/regie' },
+  { icon: 'file', title: 'Facture', text: 'Facture finale depuis les rapports validés.', to: '/documents' },
+] as const
+
 const PHASE_TONE = { done: 'green', current: 'primary', planned: 'gray' } as const
 const PHASE_LABEL = { done: 'Livrée', current: 'En cours', planned: 'À venir' } as const
 
@@ -26,6 +34,38 @@ export default function DashboardPage() {
         title={`Bonjour ${user?.name ?? ''}`}
         description={`Connecté en tant que ${role ? ROLE_LABELS[role].toLowerCase() : 'utilisateur'}.`}
       />
+
+      <section className="mb-8">
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Parcours d'un chantier</h3>
+        <ol className="grid gap-3 md:grid-cols-5">
+          {FLOW.map((step, index) => {
+            const allowed = modules.some((module) => module.to === step.to) || step.to === '/projets'
+            return (
+              <li key={step.title} className="relative">
+                <Link
+                  to={allowed ? step.to : '/dashboard'}
+                  className="flex h-full flex-col gap-2 rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition hover:border-primary-200 hover:shadow"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-600 text-xs font-semibold text-white">
+                      {index + 1}
+                    </span>
+                    <Icon name={step.icon} className="h-4 w-4 text-primary-600" />
+                    <span className="font-medium text-gray-900">{step.title}</span>
+                  </span>
+                  <span className="text-xs text-gray-500">{step.text}</span>
+                </Link>
+                {index < FLOW.length - 1 && (
+                  <Icon name="chevron" className="absolute -right-2.5 top-1/2 hidden h-4 w-4 -translate-y-1/2 text-gray-300 md:block" />
+                )}
+              </li>
+            )
+          })}
+        </ol>
+        <p className="mt-2 text-xs text-gray-400">
+          Différence avec BauBit : le devis est créé juste après le projet et fixe ses étapes ; tout le suivi du chantier s'y rattache.
+        </p>
+      </section>
 
       <section>
         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Modules</h3>

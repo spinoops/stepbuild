@@ -45,10 +45,9 @@ export default function PriceListsPage() {
       tabLabel="Eléments de coûts"
       toolbar={
         <>
-          <StandardTools />
+          <StandardTools newLabel="Nouvel élément" />
           <ToolMenu icon="export" label="Export" />
           <ToolSep />
-          <ToolButton icon="fileplus" title="Nouvel élément" tone="success" />
           <ToolButton icon="refresh" title="Mettre à jour les prix" tone="primary" />
           <ToolButton icon="paperclip" title="Documents fournisseur" />
           <ToolButton icon="import" title="Importer une liste de prix" tone="primary" />
@@ -63,8 +62,8 @@ export default function PriceListsPage() {
       }
       aside={
         <AsidePanel nav={[{ icon: 'tree', label: 'Structure arborescente', active: true }]}>
-          <div className="mt-1 text-[15px] text-gray-800">Structure arborescente</div>
-          <div className="mt-2 border border-bb-line bg-white py-1">
+          <div className="mt-1 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Groupes</div>
+          <div className="mt-2 py-1">
             <Tree
               nodes={groups.map((code) => ({ id: code, label: `${code} - Groupe ${code}` }))}
               selectedId={group}
@@ -82,7 +81,7 @@ export default function PriceListsPage() {
             setTab(value)
             setGroup(null)
           }}
-          className="shrink-0 px-1 pt-1"
+          className="shrink-0 px-4"
         />
         <DataGrid
           className="min-h-0 flex-1"

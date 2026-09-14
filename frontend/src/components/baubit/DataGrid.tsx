@@ -29,7 +29,7 @@ interface DataGridProps<T> {
   columns: GridColumn<T>[]
   rows: T[]
   rowKey: (row: T) => string
-  /** Classe de la ligne (couleur de statut). Sinon : alternance blanc / jaune pâle. */
+  /** Classe de la ligne (couleur de statut). Sinon : alternance blanc / gris pâle. */
   rowClass?: (row: T, index: number) => string | undefined
   selectedKey?: string | null
   onSelect?: (row: T) => void
@@ -50,8 +50,8 @@ function normalize(value: CellValue): string {
 }
 
 /**
- * Grille « façon BauBit » : en-tête bleu, ligne de filtre jaune (filtrage réel),
- * tri au clic sur l'en-tête, lignes alternées ou colorées par statut, ligne sélectionnée.
+ * Grille de données : en-tête discret, ligne de filtre par colonne (filtrage réel),
+ * tri au clic sur l'en-tête, lignes colorées par statut, ligne sélectionnée.
  */
 export default function DataGrid<T>({
   columns,
@@ -64,7 +64,7 @@ export default function DataGrid<T>({
   footer,
   className = '',
   emptyText = 'Aucune entrée.',
-  rotateHeight = 90,
+  rotateHeight = 96,
 }: DataGridProps<T>) {
   const [filters, setFilters] = useState<Record<string, string>>({})
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null)
@@ -95,6 +95,8 @@ export default function DataGrid<T>({
     return result
   }, [rows, columns, filters, sort])
 
+  const hasFilters = Object.values(filters).some(Boolean)
+
   function toggleSort(key: string) {
     setSort((current) => {
       if (!current || current.key !== key) {
@@ -110,10 +112,10 @@ export default function DataGrid<T>({
     }
     const value = column.value(row)
     if (column.type === 'bool') {
-      return (
-        <span className="inline-flex h-3.5 w-3.5 items-center justify-center border border-gray-500 bg-white text-[10px] leading-none">
-          {value ? '✓' : ''}
-        </span>
+      return value ? (
+        <Icon name="check" className="mx-auto h-4 w-4 text-green-600" />
+      ) : (
+        <span className="mx-auto block h-4 w-4 rounded border border-gray-300" />
       )
     }
     if (column.type === 'number') {
@@ -133,22 +135,22 @@ export default function DataGrid<T>({
 
   return (
     <div className={`overflow-auto ${className}`}>
-      <table className="w-max min-w-full border-collapse text-[12px]">
+      <table className="w-max min-w-full border-collapse text-[13px]">
         <thead className="sticky top-0 z-10">
-          <tr className="bg-[#f4f4f4]">
-            <th className="w-5 border-b border-r border-bb-line bg-[#f4f4f4]" />
+          <tr>
+            <th className="w-1 border-b border-gray-200 bg-bb-ribbon" />
             {columns.map((column) => (
               <th
                 key={column.key}
                 onClick={() => toggleSort(column.key)}
                 style={{ width: column.width, minWidth: column.width }}
-                className={`cursor-pointer select-none border-b border-r border-bb-line bg-[#f4f4f4] px-1.5 font-normal text-bb-head hover:bg-[#e9eef5] ${
-                  column.rotate ? 'align-bottom' : 'h-6 whitespace-nowrap'
+                className={`cursor-pointer select-none border-b border-gray-200 bg-bb-ribbon px-3 text-[12px] font-semibold text-gray-500 transition hover:text-gray-800 ${
+                  column.rotate ? 'align-bottom' : 'h-9 whitespace-nowrap'
                 } ${column.headerClass ?? ''} ${column.rotate ? 'text-center' : align(column)}`}
               >
                 {column.rotate ? (
-                  <div className="mx-auto flex items-end" style={{ height: rotateHeight }}>
-                    <span className="bb-vertical whitespace-nowrap text-left">{column.header}</span>
+                  <div className="mx-auto flex items-end pb-1" style={{ height: rotateHeight }}>
+                    <span className="bb-vertical whitespace-nowrap text-left font-medium">{column.header}</span>
                   </div>
                 ) : (
                   <span className="inline-flex items-center gap-1">
@@ -162,28 +164,22 @@ export default function DataGrid<T>({
             ))}
           </tr>
           {showFilter && (
-            <tr className="bg-bb-yellow">
-              <th className="border-b border-r border-bb-line bg-bb-yellow">
-                <Icon name="filter" className="mx-auto h-3 w-3 text-bb-blue" />
-              </th>
+            <tr>
+              <th className={`border-b border-gray-200 ${hasFilters ? 'bg-primary-50' : 'bg-white'}`} />
               {columns.map((column) => (
-                <th key={column.key} className="h-6 border-b border-r border-bb-line bg-bb-yellow px-1 font-normal">
-                  {column.noFilter ? null : column.type === 'bool' ? (
-                    <span className="mx-auto block h-3 w-3 border border-gray-500 bg-white" />
-                  ) : (
-                    <div className="flex items-center gap-1">
-                      <span className="shrink-0 border border-gray-400 bg-white px-0.5 text-[9px] leading-[11px] text-gray-600">
-                        {column.type === 'number' ? '=' : 'abc'}
-                      </span>
-                      <input
-                        value={filters[column.key] ?? ''}
-                        onChange={(event) =>
-                          setFilters((current) => ({ ...current, [column.key]: event.target.value }))
-                        }
-                        aria-label={`Filtrer ${column.header}`}
-                        className="w-full min-w-5 bg-transparent text-[12px] outline-none"
-                      />
-                    </div>
+                <th key={column.key} className="border-b border-gray-200 bg-white px-1.5 py-1 font-normal">
+                  {column.noFilter || column.type === 'bool' ? null : (
+                    <input
+                      value={filters[column.key] ?? ''}
+                      onChange={(event) =>
+                        setFilters((current) => ({ ...current, [column.key]: event.target.value }))
+                      }
+                      aria-label={`Filtrer ${column.header}`}
+                      placeholder={column.rotate ? '' : 'Filtrer…'}
+                      className={`h-7 w-full min-w-6 rounded-md border px-2 text-[12px] outline-none transition placeholder:text-gray-300 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 ${
+                        filters[column.key] ? 'border-primary-300 bg-primary-50' : 'border-gray-200 bg-gray-50'
+                      }`}
+                    />
                   )}
                 </th>
               ))}
@@ -199,15 +195,13 @@ export default function DataGrid<T>({
               <tr
                 key={key}
                 onClick={() => onSelect?.(row)}
-                className={`cursor-default ${cls} ${selected ? 'outline -outline-offset-1 outline-bb-blue' : ''}`}
+                className={`cursor-default transition ${selected ? 'bg-primary-50' : `${cls} hover:brightness-[0.97]`}`}
               >
-                <td className="border-b border-r border-bb-line text-center text-[10px] text-gray-600">
-                  {selected ? '▶' : ''}
-                </td>
+                <td className={`w-1 border-b border-gray-100 ${selected ? 'bg-primary-600' : ''}`} />
                 {columns.map((column) => (
                   <td
                     key={column.key}
-                    className={`border-b border-r border-bb-line px-1.5 py-0.5 align-top ${align(column)} ${
+                    className={`border-b border-gray-100 px-3 py-1.5 align-top ${align(column)} ${
                       column.wrap ? 'whitespace-normal' : 'whitespace-nowrap'
                     } ${column.cellClass?.(row) ?? ''}`}
                     style={column.wrap ? { maxWidth: column.width } : undefined}
@@ -220,13 +214,13 @@ export default function DataGrid<T>({
           })}
           {visible.length === 0 && (
             <tr>
-              <td colSpan={columns.length + 1} className="p-4 text-center text-gray-500">
+              <td colSpan={columns.length + 1} className="p-8 text-center text-gray-400">
                 {emptyText}
               </td>
             </tr>
           )}
         </tbody>
-        {footer && <tfoot className="sticky bottom-0 z-10 bg-[#f4f4f4]">{footer}</tfoot>}
+        {footer && <tfoot className="sticky bottom-0 z-10 bg-bb-ribbon font-medium">{footer}</tfoot>}
       </table>
     </div>
   )

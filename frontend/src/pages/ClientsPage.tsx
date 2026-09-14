@@ -39,7 +39,7 @@ export default function ClientsPage() {
       tabLabel={onlyActive ? 'Adresses - Seulement actifs' : 'Adresses'}
       toolbar={
         <>
-          <StandardTools />
+          <StandardTools newLabel="Nouvelle adresse" />
           <ToolMenu icon="import" label="Import" />
           <ToolMenu icon="export" label="Export" />
           <ToolSep />
@@ -63,8 +63,8 @@ export default function ClientsPage() {
       }
       aside={
         <AsidePanel nav={[{ icon: 'contacts', label: 'Adresses', active: true }, { icon: 'users', label: 'Personnes de contact' }]}>
-          <div className="mt-1 text-[15px] text-gray-800">Fiche</div>
-          <div className="mt-2 space-y-0.5 border border-bb-line bg-white p-2 text-[12px]">
+          <div className="mt-1 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Fiche</div>
+          <div className="mt-2 space-y-0.5 rounded-lg border border-gray-200 bg-gray-50 p-3 text-[13px]">
             <div className="font-semibold">
               {address.title} {address.lastName} {address.firstName}
             </div>
@@ -75,15 +75,15 @@ export default function ClientsPage() {
               {address.zip} {address.city}
             </div>
             {address.phone && <div className="mt-1">{address.phone}</div>}
-            {address.email && <div className="text-bb-blue">{address.email}</div>}
+            {address.email && <div className="text-primary-700">{address.email}</div>}
           </div>
         </AsidePanel>
       }
     >
       <div className="flex h-full flex-col">
-        <form key={address.id} className="shrink-0 border-b border-bb-line px-3 pb-4 pt-3">
+        <form key={address.id} className="shrink-0 border-b border-gray-200 px-4 pb-5 pt-4">
           <SectionTitle>Adresse</SectionTitle>
-          <div className="grid grid-cols-[max-content_max-content] gap-x-10 gap-y-1.5">
+          <div className="grid grid-cols-[max-content_max-content] gap-x-12 gap-y-2">
             <Field label="Type">
               <BbSelect defaultValue={address.type} className="w-64">
                 {TYPES.map((type) => (
@@ -135,7 +135,7 @@ export default function ClientsPage() {
           columns={COLUMNS}
           rows={rows}
           rowKey={(row) => row.id}
-          rowClass={(row, index) => (row.active ? (index % 2 ? 'bg-bb-row' : 'bg-white') : 'bg-bb-grey text-gray-500')}
+          rowClass={(row, index) => (row.active ? (index % 2 ? 'bg-bb-row' : 'bg-white') : 'bg-bb-grey text-gray-400')}
           selectedKey={selectedId}
           onSelect={(row) => setSelectedId(row.id)}
         />

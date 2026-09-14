@@ -5,7 +5,7 @@ import { Icon } from '@/components/icons'
 export function Field({
   label,
   children,
-  labelWidth = 110,
+  labelWidth = 120,
   className = '',
 }: {
   label: string
@@ -15,7 +15,7 @@ export function Field({
 }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <span className="shrink-0 text-gray-700" style={{ width: labelWidth }}>
+      <span className="shrink-0 text-[13px] text-gray-500" style={{ width: labelWidth }}>
         {label}
       </span>
       {children}
@@ -23,13 +23,15 @@ export function Field({
   )
 }
 
-/** Titre de section bleu souligné (« Informations documents », « Adresses »). */
+/** Titre de section (« Informations documents », « Adresses »). */
 export function SectionTitle({ children }: { children: ReactNode }) {
-  return <div className="mb-2 border-b border-gray-400 pb-0.5 text-[12px] font-bold text-bb-head">{children}</div>
+  return (
+    <div className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400">{children}</div>
+  )
 }
 
 const BASE =
-  'h-[22px] border border-[#b9b9b9] bg-white px-1.5 text-[12px] outline-none focus:border-bb-blue read-only:bg-[#f7f7f7] disabled:bg-[#f3f3f3] disabled:text-gray-500'
+  'h-8 rounded-md border border-gray-300 bg-white px-2.5 text-[13px] text-gray-800 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 read-only:bg-gray-50 read-only:text-gray-600 disabled:bg-gray-50 disabled:text-gray-400'
 
 export function BbInput({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={`${BASE} ${className}`} {...props} />
@@ -46,7 +48,7 @@ export function BbSelect({ className = '', children, ...props }: SelectHTMLAttri
 export function BbTextarea({ className = '', ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea
-      className={`border border-[#b9b9b9] bg-white px-1.5 py-1 text-[12px] outline-none focus:border-bb-blue ${className}`}
+      className={`rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[13px] text-gray-800 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 ${className}`}
       {...props}
     />
   )
@@ -58,8 +60,8 @@ export function BbCheckbox({
   ...props
 }: InputHTMLAttributes<HTMLInputElement> & { label?: string }) {
   return (
-    <label className={`inline-flex items-center gap-1.5 ${className}`}>
-      <input type="checkbox" className="h-3.5 w-3.5 accent-bb-blue" {...props} />
+    <label className={`inline-flex items-center gap-2 text-[13px] text-gray-700 ${className}`}>
+      <input type="checkbox" className="h-4 w-4 rounded accent-primary-600" {...props} />
       {label}
     </label>
   )
@@ -68,11 +70,11 @@ export function BbCheckbox({
 export interface StatusOption {
   value: string
   label: string
-  /** Classe de fond (couleur BauBit du statut). */
+  /** Classe de fond (couleur du statut). */
   rowClass: string
 }
 
-/** Champ Statut coloré selon la valeur (vert « 2-ADJ », rouge « 1-EC »…). */
+/** Champ Statut coloré selon la valeur (vert « Adjugé », rouge « En cours »…). */
 export function StatusSelect({
   options,
   value,
@@ -86,11 +88,11 @@ export function StatusSelect({
 }) {
   const current = options.find((option) => option.value === value)
   return (
-    <div className={`relative flex items-center ${current?.rowClass ?? 'bg-white'} ${className}`}>
+    <div className={`relative flex items-center rounded-md ${current?.rowClass ?? 'bg-white'} ${className}`}>
       <select
         value={value}
         onChange={(event) => onChange?.(event.target.value)}
-        className="h-[22px] flex-1 appearance-none border border-[#b9b9b9] bg-transparent pl-1.5 pr-10 text-[12px] outline-none focus:border-bb-blue"
+        className="h-8 flex-1 appearance-none rounded-md border border-gray-300 bg-transparent pl-2.5 pr-8 text-[13px] font-medium text-gray-800 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -98,8 +100,7 @@ export function StatusSelect({
           </option>
         ))}
       </select>
-      <Icon name="chevrondown" className="pointer-events-none absolute right-6 h-3 w-3 text-gray-600" />
-      <Icon name="clock" className="pointer-events-none absolute right-1.5 h-3.5 w-3.5 text-bb-blue" />
+      <Icon name="chevrondown" className="pointer-events-none absolute right-2.5 h-3.5 w-3.5 text-gray-500" />
     </div>
   )
 }

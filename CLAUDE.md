@@ -28,6 +28,17 @@ Les documents de référence sont dans `_construction/` (non versionné) :
 **Exigence prioritaire : rapidité de saisie** (recherche < 100 ms dès la 2ème lettre, ligne de
 rapport < 10 s au clavier, sauvegarde automatique, création d'article à la volée).
 
+## Flux métier (différence voulue avec BauBit)
+1. **Projet** (chantier : client, adresses, statut).
+2. **Devis** créé aussitôt après : on y **choisit les étapes** du chantier depuis des **modèles
+   d'étapes** (arborescence par corps de métier, avec leurs articles) et on chiffre.
+3. **Rapports journaliers** : les heures, matériaux, machines et sous-traitants se saisissent
+   **sur les étapes du devis** (pas sur une liste globale de types de travail).
+4. **Régie / contrôle des heures** puis **facture** : tout se rattache au devis du projet.
+Conséquence pour le modèle de données : `étape` appartient au devis (document), les lignes de
+rapport référencent une étape du devis ; les « modèles d'étapes » sont des gabarits réutilisables.
+Côté front, `projectSteps()` / `documentSteps()` dans `lib/demo.ts` illustrent ce lien.
+
 ## Rôles
 - `admin` : tout (utilisateurs, configuration).
 - `responsable` : chantiers, prix, régie, documents, contrôle, statistiques.

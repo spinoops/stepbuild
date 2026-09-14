@@ -5,17 +5,19 @@ interface TabStripProps {
   className?: string
 }
 
-/** Onglets « boîtes » façon BauBit (Général | Compléments | Adresses…). */
+/** Onglets soulignés (Général | Compléments | Adresses…). */
 export default function TabStrip({ tabs, active, onChange, className = '' }: TabStripProps) {
   return (
-    <div className={`flex items-end border-b border-bb-line px-1 ${className}`}>
+    <div className={`flex items-end gap-1 overflow-x-auto border-b border-gray-200 ${className}`}>
       {tabs.map((tab) => (
         <button
           key={tab}
           type="button"
           onClick={() => onChange(tab)}
-          className={`-mb-px h-6 whitespace-nowrap border border-bb-line px-2 text-[12px] ${
-            tab === active ? 'border-b-white bg-white' : 'bg-[#ececec] text-gray-700 hover:bg-[#f5f5f5]'
+          className={`-mb-px h-9 whitespace-nowrap border-b-2 px-3 text-[13px] transition ${
+            tab === active
+              ? 'border-primary-600 font-medium text-primary-700'
+              : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-800'
           }`}
         >
           {tab}

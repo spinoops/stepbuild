@@ -15,9 +15,9 @@ class Setting extends Model
      * @var array<string, string>
      */
     public const DEFAULTS = [
-        'app_name' => 'Chantier',
+        'app_name' => 'Lachat Construction',
         'app_logo_url' => '',
-        'app_color' => '#ea580c',
+        'app_color' => '#1d3f9c',
     ];
 
     /**
