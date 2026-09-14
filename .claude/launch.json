@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "api",
-      "runtimeExecutable": "D:\wamp64\bin\php\php8.4.24\php.exe",
+      "runtimeExecutable": "D:/wamp64/bin/php/php8.4.24/php.exe",
       "runtimeArgs": ["backend/artisan", "serve", "--port=8000"],
       "port": 8000
     },
