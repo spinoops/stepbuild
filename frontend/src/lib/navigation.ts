@@ -62,3 +62,14 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
 ]
+
+/** Libellé d'onglet pour une route (utilisé par les onglets d'espaces de travail). */
+export function routeLabel(path: string): string {
+  for (const group of NAV_GROUPS) {
+    const item = group.items.find((entry) => entry.to === path)
+    if (item) {
+      return item.label
+    }
+  }
+  return 'Page'
+}

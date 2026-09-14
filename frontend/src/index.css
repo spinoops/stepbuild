@@ -13,6 +13,41 @@
   --color-primary-600: #ea580c;
   --color-primary-700: #c2410c;
   --color-primary-800: #9a3412;
+
+  /* Palette « BauBit » (ruban, barre de contexte, grilles). */
+  --color-bb-title: #2f3a48;
+  --color-bb-ribbon: #f5f5f5;
+  --color-bb-ribbon-line: #d5d5d5;
+  --color-bb-blue: #1e6fd1;
+  --color-bb-blue-light: #b9dcf7;
+  --color-bb-tabs: #d4d4d4;
+  --color-bb-head: #1c4f91;
+  --color-bb-yellow: #fdf5cc;
+  --color-bb-row: #fefbe8;
+  --color-bb-line: #d9d9d9;
+  --color-bb-green: #b3eca3;
+  --color-bb-red: #f4a3a3;
+  --color-bb-grey: #e4e4e4;
+  --color-bb-dark: #8c8c8c;
+  --color-bb-select: #cce3ff;
+}
+
+/* Espace de travail dense, façon logiciel de bureau. */
+.bb {
+  font-family: 'Segoe UI', Tahoma, system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.25;
+  color: #222;
+}
+.bb input,
+.bb select,
+.bb textarea,
+.bb button {
+  font: inherit;
+}
+.bb-vertical {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
 }
 
 html,

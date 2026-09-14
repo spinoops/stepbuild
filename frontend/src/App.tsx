@@ -17,6 +17,7 @@ import SettingsPage from '@/pages/SettingsPage'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import RoleRoute from '@/components/RoleRoute'
 import AppLayout from '@/components/AppLayout'
+import PagePane from '@/components/PagePane'
 
 export default function App() {
   return (
@@ -28,7 +29,7 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           {/* Accessible à tous les rôles (l'ouvrier ne voit ni prix ni marges) */}
-          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/dashboard" element={<PagePane><DashboardPage /></PagePane>} />
           <Route path="/projets" element={<ProjectsPage />} />
           <Route path="/rapports" element={<DailyReportsPage />} />
 
@@ -45,8 +46,8 @@ export default function App() {
 
           {/* Administration : admin uniquement */}
           <Route element={<RoleRoute roles={['admin']} />}>
-            <Route path="/users" element={<UsersPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/users" element={<PagePane><UsersPage /></PagePane>} />
+            <Route path="/settings" element={<PagePane><SettingsPage /></PagePane>} />
           </Route>
         </Route>
       </Route>

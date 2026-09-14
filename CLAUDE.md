@@ -37,6 +37,21 @@ rapport < 10 s au clavier, sauvegarde automatique, création d'article à la vol
 Comptes de démo (seeder) : `admin@chantier.test`, `responsable@chantier.test`,
 `ouvrier@chantier.test` — mot de passe `password`.
 
+## Interface « façon BauBit »
+La coque reproduit BauBit PRO (cf. captures) : barre de titre, **ruban** à onglets
+(`lib/ribbon.ts`), **barre bleue Projet / Document** (contexte courant dans
+`lib/workspaceStore.ts`), **onglets d'espaces de travail**, contenu, **barre d'état** double.
+Composants dans `frontend/src/components/shell/` (coque) et `components/baubit/` (kit) :
+- `Workspace` (barre d'outils + panneau `AsidePanel` + contenu, alimente barre d'état et onglet),
+- `DataGrid` (en-tête bleu, ligne de filtre jaune fonctionnelle, tri, lignes colorées par statut),
+- `Form` (`Field`, `BbInput`, `BbSelect`, `BbTextarea`, `BbCheckbox`, `StatusSelect`, `SectionTitle`),
+- `TabStrip`, `Toolbar` (`StandardTools`, `ToolButton`, `ToolMenu`, `ToolSep`), `Tree`.
+Les pages Projets, Rapports journaliers, Contrôle des heures, Documents, Catalogue,
+Éléments de coûts et Adresses sont construites sur ce kit avec les **données d'exemple
+fictives** de `lib/demo.ts` (à remplacer par les hooks API au fil des phases ; le badge
+« Données d'exemple » de la barre d'état vient de la prop `demo` de `Workspace`).
+Couleurs BauBit : tokens `bb-*` dans `index.css` ; classes de lignes par statut dans `lib/status.ts`.
+
 ## Modules et routes front
 Navigation dans `frontend/src/lib/navigation.ts` (groupes calqués sur les rubans BauBit),
 filtrée par rôle. Pages dans `frontend/src/pages/` :
