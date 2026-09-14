@@ -20,6 +20,11 @@
   --color-accent-600: #d32f2f;
   --color-accent-700: #b71c1c;
 
+  --color-anthracite-950: #161616;
+  --color-anthracite-900: #1f1f1f;
+  --color-anthracite-800: #2a2a2a;
+  --color-anthracite-700: #3a3a3a;
+
   /* Tokens de l'espace de travail (structure BauBit, habillage moderne). */
   --color-bb-ribbon: #f8fafc;
   --color-bb-ribbon-line: #e2e8f0;

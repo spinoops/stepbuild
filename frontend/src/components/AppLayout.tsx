@@ -32,19 +32,19 @@ export default function AppLayout() {
   const brand = <Brand size={28} className="mr-2" title={appName} />
 
   const userSlot = (
-    <div className="ml-3 flex items-center gap-2 border-l border-gray-200 pl-3">
-      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-[12px] font-semibold text-primary-700">
+    <div className="ml-3 flex items-center gap-2 border-l border-white/15 pl-3">
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-[12px] font-semibold text-white">
         {initials(user?.name)}
       </span>
       <span className="leading-tight">
-        <span className="block text-[13px] font-medium text-gray-800">{user?.name}</span>
-        <span className="block text-[11px] text-gray-500">{role ? ROLE_LABELS[role] : '—'}</span>
+        <span className="block text-[13px] font-medium text-white">{user?.name}</span>
+        <span className="block text-[11px] text-gray-400">{role ? ROLE_LABELS[role] : '—'}</span>
       </span>
       <button
         type="button"
         onClick={() => logout()}
         title="Déconnexion"
-        className="ml-1 rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+        className="ml-1 rounded-md p-1.5 text-gray-400 hover:bg-white/10 hover:text-white"
       >
         <Icon name="logout" className="h-4 w-4" />
       </button>

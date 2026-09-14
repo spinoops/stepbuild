@@ -66,7 +66,7 @@ export default function Ribbon({ brand, user: userSlot }: RibbonProps) {
 
   return (
     <div className="select-none bg-white">
-      <div className="flex h-12 items-center gap-2 border-b border-gray-200 px-3">
+      <div className="flex h-12 items-center gap-2 bg-anthracite-900 px-3 text-gray-200">
         {brand}
 
         <nav className="ml-4 flex items-center gap-0.5">
@@ -77,8 +77,8 @@ export default function Ribbon({ brand, user: userSlot }: RibbonProps) {
               onClick={() => setChoice({ path: pathname, tab: tab.id })}
               className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition ${
                 tab.id === current?.id
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  ? 'bg-white text-anthracite-900'
+                  : 'text-gray-300 hover:bg-white/10 hover:text-white'
               }`}
             >
               {tab.label}
@@ -92,9 +92,9 @@ export default function Ribbon({ brand, user: userSlot }: RibbonProps) {
             ref={searchRef}
             type="search"
             placeholder="Rechercher un projet, un client, un article…"
-            className="h-8 w-72 rounded-md border border-gray-200 bg-gray-50 pl-8 pr-12 text-[13px] outline-none transition focus:border-primary-400 focus:bg-white focus:ring-2 focus:ring-primary-100"
+            className="h-8 w-72 rounded-md border border-white/10 bg-white/10 pl-8 pr-12 text-[13px] text-white outline-none transition placeholder:text-gray-400 focus:border-white/30 focus:bg-white/15"
           />
-          <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-gray-200 bg-white px-1 text-[10px] text-gray-400">
+          <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-white/20 px-1 text-[10px] text-gray-400">
             Ctrl K
           </kbd>
         </form>
@@ -103,7 +103,7 @@ export default function Ribbon({ brand, user: userSlot }: RibbonProps) {
       </div>
 
       {!collapsed && current && (
-        <div className="flex h-12 items-center gap-1 border-b border-gray-200 bg-bb-ribbon px-3">
+        <div className="flex h-12 items-center gap-1 border-b border-gray-200 bg-white px-3">
           {current.groups.map((group) => (
             <div
               key={group.title}
@@ -132,7 +132,7 @@ export default function Ribbon({ brand, user: userSlot }: RibbonProps) {
           type="button"
           onClick={() => setCollapsed(false)}
           title="Afficher la barre d'actions"
-          className="flex h-5 w-full items-center justify-center border-b border-gray-200 bg-bb-ribbon text-gray-400 hover:text-gray-700"
+          className="flex h-5 w-full items-center justify-center border-b border-gray-200 bg-white text-gray-400 hover:text-gray-700"
         >
           <Icon name="chevrondown" className="h-3.5 w-3.5" />
         </button>
@@ -166,7 +166,7 @@ function RibbonButton({ item, onClick }: { item: RibbonItem; onClick: () => void
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className="flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 text-[13px] text-gray-700 transition hover:bg-white hover:shadow-sm disabled:cursor-default disabled:text-gray-300 disabled:hover:bg-transparent disabled:hover:shadow-none"
+      className="flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 text-[13px] text-gray-700 transition hover:bg-gray-100 disabled:cursor-default disabled:text-gray-300 disabled:hover:bg-transparent"
     >
       <Icon name={item.icon} className={`h-4 w-4 ${disabled ? 'text-gray-300' : 'text-primary-600'}`} />
       {item.label}
