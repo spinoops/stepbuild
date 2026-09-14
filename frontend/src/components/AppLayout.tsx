@@ -29,7 +29,7 @@ export default function AppLayout() {
     openTab(pathname, routeLabel(pathname))
   }, [pathname])
 
-  const brand = <Brand size={20} className="mr-1" title={appName} />
+  const brand = <Brand size={28} className="mr-2" title={appName} />
 
   const userSlot = (
     <div className="ml-3 flex items-center gap-2 border-l border-gray-200 pl-3">
