@@ -1,0 +1,64 @@
+import type { Role } from '@/types'
+import type { IconName } from '@/components/icons'
+
+export interface NavItem {
+  to: string
+  label: string
+  icon: IconName
+  /** Rôles autorisés (absent = tout utilisateur connecté). */
+  roles?: Role[]
+}
+
+export interface NavGroup {
+  title: string
+  items: NavItem[]
+}
+
+const GESTION: Role[] = ['admin', 'responsable']
+
+/**
+ * Navigation principale, calquée sur les rubans BauBit :
+ * Projets / Exécution / Offre-facturation / Données de base / Administration.
+ */
+export const NAV_GROUPS: NavGroup[] = [
+  {
+    title: 'Général',
+    items: [{ to: '/dashboard', label: 'Tableau de bord', icon: 'dashboard' }],
+  },
+  {
+    title: 'Chantiers',
+    items: [
+      { to: '/projets', label: 'Projets', icon: 'folder' },
+      { to: '/clients', label: 'Clients', icon: 'contacts', roles: GESTION },
+    ],
+  },
+  {
+    title: 'Exécution',
+    items: [
+      { to: '/rapports', label: 'Rapports journaliers', icon: 'clipboard' },
+      { to: '/regie', label: 'Régie', icon: 'calculator', roles: GESTION },
+      { to: '/controle-heures', label: 'Contrôle des heures', icon: 'clock', roles: GESTION },
+    ],
+  },
+  {
+    title: 'Offre & facturation',
+    items: [
+      { to: '/documents', label: 'Documents', icon: 'file', roles: GESTION },
+      { to: '/statistiques', label: 'Statistiques', icon: 'chart', roles: GESTION },
+    ],
+  },
+  {
+    title: 'Données de base',
+    items: [
+      { to: '/catalogue', label: "Catalogue d'articles", icon: 'book', roles: GESTION },
+      { to: '/listes-prix', label: 'Listes de prix', icon: 'tag', roles: GESTION },
+    ],
+  },
+  {
+    title: 'Administration',
+    items: [
+      { to: '/users', label: 'Utilisateurs', icon: 'users', roles: ['admin'] },
+      { to: '/settings', label: 'Configuration', icon: 'settings', roles: ['admin'] },
+    ],
+  },
+]
