@@ -1,5 +1,7 @@
-import { DEMO_DOCUMENTS, DEMO_PROJECTS } from '@/lib/demo'
-import { setDocument, setProject, useWorkspace } from '@/lib/workspaceStore'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useProjectOptions } from '@/hooks/useProjects'
+import { PROJECT_STATUSES } from '@/lib/status'
+import { setProject, useWorkspace } from '@/lib/workspaceStore'
 import { Icon } from '@/components/icons'
 
 const SELECT =
@@ -7,8 +9,20 @@ const SELECT =
 
 /** Barre de contexte « Projet / Document » : le projet courant est repris par les pages. */
 export default function ContextBar() {
-  const { projectId, documentId } = useWorkspace()
-  const documents = DEMO_DOCUMENTS.filter((doc) => doc.projectId === projectId)
+  const { projectId } = useWorkspace()
+  const projects = useProjectOptions()
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const current = projects.data?.find((project) => project.id === projectId)
+
+  function onChange(value: string) {
+    const id = value ? Number(value) : null
+    setProject(id)
+    // Sur la page Projets, changer de projet courant ouvre aussi sa fiche.
+    if (pathname === '/projets') {
+      navigate(id ? `/projets?id=${id}` : '/projets', { replace: true })
+    }
+  }
 
   return (
     <div className="flex h-11 items-center gap-2 border-b border-gray-200 bg-anthracite-800 px-3">
@@ -16,42 +30,38 @@ export default function ContextBar() {
         <Icon name="folder" className="h-4 w-4 text-gray-300" />
         Projet
       </span>
-      <select
-        value={projectId ?? ''}
-        onChange={(event) => setProject(event.target.value || null)}
-        className={`${SELECT} w-[380px]`}
-      >
-        <option value="">Aucun projet sélectionné</option>
-        {DEMO_PROJECTS.map((project) => (
+      <select value={projectId ?? ''} onChange={(event) => onChange(event.target.value)} className={`${SELECT} w-[420px]`}>
+        <option value="">{projects.isLoading ? 'Chargement…' : 'Aucun projet sélectionné'}</option>
+        {(projects.data ?? []).map((project) => (
           <option key={project.id} value={project.id}>
             {project.number} · {project.designation1}
           </option>
         ))}
       </select>
-      <button
-        type="button"
-        title="Filtrer les projets"
-        className="flex h-8 w-8 items-center justify-center rounded-md text-gray-400 hover:bg-white/10 hover:text-white"
-      >
-        <Icon name="filter" className="h-4 w-4" />
-      </button>
+      {current && (
+        <>
+          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${PROJECT_STATUSES[current.status].className}`}>
+            {PROJECT_STATUSES[current.status].label}
+          </span>
+          {pathname !== '/projets' && (
+            <button
+              type="button"
+              onClick={() => navigate(`/projets?id=${current.id}`)}
+              title="Ouvrir la fiche du projet"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-gray-400 hover:bg-white/10 hover:text-white"
+            >
+              <Icon name="arrow" className="h-4 w-4" />
+            </button>
+          )}
+        </>
+      )}
 
       <span className="ml-3 flex items-center gap-1.5 border-l border-white/15 pl-3 text-[12px] font-semibold uppercase tracking-wider text-gray-400">
         <Icon name="file" className="h-4 w-4 text-gray-300" />
         Document
       </span>
-      <select
-        value={documentId ?? ''}
-        onChange={(event) => setDocument(event.target.value || null)}
-        disabled={!projectId}
-        className={`${SELECT} w-[300px] disabled:bg-white/10 disabled:text-gray-400 disabled:border-white/10`}
-      >
-        <option value="">{projectId ? 'Aucun document' : 'Choisir d’abord un projet'}</option>
-        {documents.map((doc) => (
-          <option key={doc.id} value={doc.id}>
-            {doc.label}
-          </option>
-        ))}
+      <select disabled className={`${SELECT} w-[260px] disabled:border-white/10 disabled:bg-white/10 disabled:text-gray-400`}>
+        <option>Devis du projet : phase 3</option>
       </select>
 
       <span className="ml-auto flex items-center gap-1.5 text-[12px] text-gray-400">

@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthContext'
 import { NAV_GROUPS } from '@/lib/navigation'
+import { useProjectStats } from '@/hooks/useProjects'
 import { CURRENT_PHASE, PHASES } from '@/lib/phases'
+import { PROJECT_STATUSES } from '@/lib/status'
+import type { ProjectStatus } from '@/types'
 import { ROLE_LABELS, hasRole, primaryRole } from '@/lib/roles'
 import { Icon } from '@/components/icons'
 import PageHeader from '@/components/ui/PageHeader'
@@ -22,6 +25,7 @@ const PHASE_LABEL = { done: 'Livrée', current: 'En cours', planned: 'À venir' 
 export default function DashboardPage() {
   const { user } = useAuth()
   const role = primaryRole(user)
+  const stats = useProjectStats()
 
   // Modules accessibles à l'utilisateur (hors tableau de bord et administration).
   const modules = NAV_GROUPS.filter((group) => !['Général', 'Administration'].includes(group.title))
@@ -34,6 +38,26 @@ export default function DashboardPage() {
         title={`Bonjour ${user?.name ?? ''}`}
         description={`Connecté en tant que ${role ? ROLE_LABELS[role].toLowerCase() : 'utilisateur'}.`}
       />
+
+      <section className="mb-8">
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Projets actifs</h3>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <Link to="/projets" className="rounded-xl bg-anthracite-900 p-4 text-white shadow-sm transition hover:bg-anthracite-800">
+            <div className="text-3xl font-semibold">{stats.data?.total ?? '–'}</div>
+            <div className="text-xs text-gray-300">Tous les projets</div>
+          </Link>
+          {(Object.keys(PROJECT_STATUSES) as ProjectStatus[]).map((status) => (
+            <Link
+              key={status}
+              to="/projets"
+              className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition hover:border-primary-200 hover:shadow"
+            >
+              <div className="text-3xl font-semibold text-gray-900">{stats.data?.data[status] ?? '–'}</div>
+              <Badge className={`mt-1 ${PROJECT_STATUSES[status].className}`}>{PROJECT_STATUSES[status].label}</Badge>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       <section className="mb-8">
         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Parcours d'un chantier</h3>

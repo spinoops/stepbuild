@@ -21,8 +21,8 @@ pour l'affichage : `frontend/src/lib/phases.ts`.
 |-------|---------|------|
 | 0 | Socle, rôles, interface (logique BauBit, habillage moderne, charte Lachat) | **fait** |
 | 1 | Adresses, catalogue (chapitres = modèles d'étapes), éléments de coûts, recherche instantanée | **fait** (API + front) ; reste : import de listes de prix |
-| 2 | Projets : fiche, statuts, adresses, photos ; projet courant de la barre de contexte | à faire — **prochaine étape** |
-| 3 | Devis : création depuis le projet, étapes depuis les modèles, positions, chiffrage, récapitulation ; création d'article à la volée | à faire |
+| 2 | Projets : fiche, numérotation par NPA, statuts, adresses nommées, photos ; projet courant de la barre de contexte | **fait** (API + front) |
+| 3 | Devis : création depuis le projet, étapes depuis les modèles, positions, chiffrage, récapitulation ; création d'article à la volée | à faire — **prochaine étape** |
 | 4 | Rapports journaliers sur les étapes du devis, workflow en cours → en contrôle → facturé | à faire |
 | 5 | Régie (brut → majoré → client), contrôle des heures | à faire |
 | 6 | Acomptes, factures, facture finale, export PDF ; statistiques | à faire |
@@ -84,9 +84,26 @@ Mesuré : < 2 ms en recherche normale, < 30 ms au pire sur 10 000 éléments. Le
 `lib/crud.ts` invalident `['search-index']`. `GET /api/search?q=` existe aussi côté serveur (API, mobile).
 Tout nouveau module cherchable (projets…) doit être ajouté à `SearchController::index()`.
 
+### Projets (phase 2)
+- **Lecture pour tous les rôles**, écriture `roles:admin,responsable`. Front : `canManage` dans `ProjectsPage`
+  (fiche en lecture seule pour l'ouvrier).
+- **Numéro** = NPA du chantier + séquence sur 3 chiffres (habitude BauBit : `2853-055`).
+  `GET /api/projects/next-number?zip=` ; proposé automatiquement à la saisie du NPA, modifiable, unique
+  parmi les projets non supprimés.
+- Adresse principale du chantier sur `projects` ; adresses supplémentaires **nommées** dans
+  `project_addresses` (recopie des coordonnées du carnet, modifiables).
+- **Photos** : disque privé `local` (`storage/app/private/projects/{id}`), servies par **lien signé
+  temporaire** (`project-photos.file`, 6 h) car une balise `<img>` n'envoie pas le token. Pas besoin de
+  `storage:link`. En production : dossier `storage/` inscriptible et inclus dans les sauvegardes ;
+  `upload_max_filesize` / `post_max_size` ≥ 10 Mo par photo (12 photos max par envoi).
+- Le **projet courant** (`workspaceStore.projectId`, numérique) est choisi dans la barre de contexte ou en
+  ouvrant une fiche ; les modules suivants (devis, rapports) doivent s'y rattacher.
+- Composants : `components/projects/` (`ProjectForm`, `ProjectAddressesTab`, `ProjectPhotosTab`), hooks `hooks/useProjects.ts`.
+
 ### Données d'exemple restantes
-Projets, rapports, contrôle des heures et documents utilisent encore `lib/demo.ts` (badge « Données
-d'exemple » via la prop `demo` de `Workspace`). À remplacer au fil des phases 2 à 6.
+Rapports, contrôle des heures et documents utilisent encore `lib/demo.ts` (avec leur propre
+sélection `DEMO_CONTEXT`, découplée du projet courant réel ; badge « Données d'exemple » via la prop
+`demo` de `Workspace`). À remplacer au fil des phases 3 à 6.
 Côté base, `DemoDataSeeder` charge des données **fictives** en environnement `local` uniquement.
 
 ## Modules et routes front

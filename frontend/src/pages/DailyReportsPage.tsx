@@ -10,6 +10,7 @@ import { Icon } from '@/components/icons'
 import Badge from '@/components/ui/Badge'
 import {
   DEMO_COLLABORATORS,
+  DEMO_CONTEXT,
   DEMO_EXTRA_COLUMNS,
   DEMO_PROJECTS,
   DEMO_REPORTS,
@@ -22,7 +23,6 @@ import type { DemoReport } from '@/lib/demo'
 import { fmtAmount, fmtDate } from '@/lib/format'
 import { canSeePrices } from '@/lib/roles'
 import { REPORT_STATUSES } from '@/lib/status'
-import { useWorkspace } from '@/lib/workspaceStore'
 import type { ReportStatus } from '@/types'
 
 const TABS = ['Salaire', 'Matériaux', 'Machines', 'Mat. exploitation', 'Outillage', 'Tiers', 'Evénements', 'Fichiers', 'Photos']
@@ -58,7 +58,7 @@ interface HourLine {
 /** Rapports journaliers : liste à gauche, en-tête du rapport, grille des heures par type de travail. */
 export default function DailyReportsPage() {
   const { user } = useAuth()
-  const { projectId } = useWorkspace()
+  const { projectId } = DEMO_CONTEXT
   const showPrices = canSeePrices(user)
 
   const reports = useMemo(

@@ -25,7 +25,7 @@ export interface WorkspaceStatus {
 
 interface WorkspaceState {
   tabs: WorkspaceTab[]
-  projectId: string | null
+  projectId: number | null
   documentId: string | null
   status: WorkspaceStatus
   asideOpen: boolean
@@ -81,7 +81,7 @@ export function closeTab(path: string): string {
   return neighbour?.path ?? '/dashboard'
 }
 
-export function setProject(projectId: string | null): void {
+export function setProject(projectId: number | null): void {
   update({ projectId, documentId: null })
 }
 

@@ -1,247 +1,258 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
+import { useAuth } from '@/auth/AuthContext'
 import Workspace, { AsidePanel } from '@/components/baubit/Workspace'
-import { StandardTools, ToolMenu, ToolPrimary, ToolSep } from '@/components/baubit/Toolbar'
+import { StandardTools, ToolMenu, ToolSep } from '@/components/baubit/Toolbar'
 import TabStrip from '@/components/baubit/TabStrip'
 import DataGrid from '@/components/baubit/DataGrid'
 import type { GridColumn } from '@/components/baubit/DataGrid'
-import { BbCheckbox, BbInput, BbSelect, Field, StatusSelect } from '@/components/baubit/Form'
+import GridPager from '@/components/baubit/GridPager'
+import { BbCheckbox } from '@/components/baubit/Form'
+import ProjectForm, { PROJECT_FORM_ID } from '@/components/projects/ProjectForm'
+import ProjectAddressesTab from '@/components/projects/ProjectAddressesTab'
+import ProjectPhotosTab from '@/components/projects/ProjectPhotosTab'
 import { Icon } from '@/components/icons'
 import Badge from '@/components/ui/Badge'
-import { DEMO_COMPANY, DEMO_DOCUMENTS, DEMO_PROJECTS, projectDevis, projectSteps } from '@/lib/demo'
-import type { DemoProject } from '@/lib/demo'
+import { useDebounced } from '@/hooks/useDebounced'
+import { SAVE_LABELS } from '@/hooks/useEntityForm'
+import type { SaveState } from '@/hooks/useEntityForm'
+import { useProjectStats } from '@/hooks/useProjects'
+import { useSelection } from '@/hooks/useSelection'
+import { EMPTY_QUERY, useDeleteResource, useResourceItem, useResourceList } from '@/lib/crud'
+import type { GridQuery } from '@/lib/crud'
+import { canSeePrices } from '@/lib/roles'
 import { PROJECT_STATUSES } from '@/lib/status'
-import { setDocument, setProject, useWorkspace } from '@/lib/workspaceStore'
-import type { ProjectStatus } from '@/types'
+import { toast } from '@/lib/toast'
+import { setProject, useWorkspace } from '@/lib/workspaceStore'
+import type { Project, ProjectStatus } from '@/types'
 
-const TABS = ['Général', 'Compléments', 'Adresses', 'Conditions', 'Délais', 'Compétence', 'Journal', 'Photos de référence']
+const STATUSES = Object.keys(PROJECT_STATUSES) as ProjectStatus[]
 
-const STATUS_OPTIONS = (Object.keys(PROJECT_STATUSES) as ProjectStatus[]).map((key) => ({
-  value: key,
-  label: `${PROJECT_STATUSES[key].code} · ${PROJECT_STATUSES[key].label}`,
-  rowClass: PROJECT_STATUSES[key].rowClass,
-}))
-
-const COLUMNS: GridColumn<DemoProject>[] = [
-  { key: 'number', header: 'N° de projet', value: (p) => p.number, width: 90 },
+const COLUMNS: GridColumn<Project>[] = [
+  { key: 'number', header: 'N° de projet', value: (p) => p.number, width: 110 },
   { key: 'designation1', header: 'Désignation 1', value: (p) => p.designation1, width: 380 },
-  { key: 'client', header: '01-Destinataire', value: (p) => p.client, width: 200 },
-  { key: 'street', header: 'Rue', value: (p) => `${p.street} ${p.streetNo}`.trim(), width: 170 },
-  { key: 'zip', header: 'NPA', value: (p) => p.zip, width: 50 },
-  { key: 'city', header: 'Lieu', value: (p) => p.city, width: 110 },
+  { key: 'client', header: 'Client', value: (p) => p.client?.label ?? '', width: 200, noFilter: true },
+  { key: 'street', header: 'Rue', value: (p) => `${p.street ?? ''} ${p.street_no ?? ''}`.trim(), width: 180 },
+  { key: 'zip', header: 'NPA', value: (p) => p.zip, width: 70 },
+  { key: 'city', header: 'Lieu', value: (p) => p.city, width: 130 },
   {
     key: 'status',
     header: 'Statut',
     value: (p) => PROJECT_STATUSES[p.status].label,
-    width: 100,
+    width: 110,
+    noFilter: true,
     render: (p) => <Badge className={PROJECT_STATUSES[p.status].className}>{PROJECT_STATUSES[p.status].label}</Badge>,
   },
+  { key: 'contract_no', header: 'N° contrat', value: (p) => p.contract_no, width: 120 },
   {
-    key: 'devis',
-    header: 'Devis',
-    value: (p) => projectDevis(p.id)?.number ?? '',
-    width: 130,
-    render: (p) => {
-      const devis = projectDevis(p.id)
-      return devis ? (
-        <span className="text-primary-700">{devis.number}</span>
-      ) : (
-        <span className="text-gray-400">Sans devis</span>
-      )
-    },
+    key: 'updated_at',
+    header: 'Date mutation',
+    value: (p) => p.updated_at,
+    width: 140,
+    noFilter: true,
+    render: (p) => new Date(p.updated_at).toLocaleString('fr-CH', { dateStyle: 'short', timeStyle: 'short' }),
   },
-  { key: 'active', header: 'Actif', value: (p) => p.active, type: 'bool', width: 45 },
-  { key: 'model', header: 'Mod…', value: () => false, type: 'bool', width: 45 },
-  { key: 'company', header: 'Entreprise', value: () => DEMO_COMPANY, width: 220 },
-  { key: 'mutation', header: 'Date mutation', value: (p) => p.mutation, width: 120 },
-  { key: 'instructions', header: 'Instructions facture', value: () => '', width: 130 },
 ]
 
-/** Projets : fiche en haut (onglets Général…), liste colorée par statut en bas — comme BauBit. */
+/** Projets : fiche (Général, Adresses, Photos) en haut, liste colorée par statut en bas. */
 export default function ProjectsPage() {
-  const { projectId } = useWorkspace()
-  const navigate = useNavigate()
+  const { user } = useAuth()
+  const canManage = canSeePrices(user) // admin et responsable ; l'ouvrier consulte seulement
+  const { projectId: contextId } = useWorkspace()
+  const { selectedId, isNew, select } = useSelection()
   const [tab, setTab] = useState('Général')
-  const [status, setStatus] = useState<ProjectStatus | null>(null)
+  const [statusFilter, setStatusFilter] = useState<'' | ProjectStatus>('')
+  const [onlyActive, setOnlyActive] = useState(true)
+  const [templates, setTemplates] = useState(false)
+  const [query, setQuery] = useState<GridQuery>(EMPTY_QUERY)
+  const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [formVersion, setFormVersion] = useState(0)
 
-  const selectedId = projectId ?? DEMO_PROJECTS[0].id
-  const project = DEMO_PROJECTS.find((item) => item.id === selectedId) ?? DEMO_PROJECTS[0]
-  const currentStatus = status ?? project.status
-  const documents = DEMO_DOCUMENTS.filter((doc) => doc.projectId === project.id)
-  const steps = projectSteps(project.id)
+  const list = useResourceList<Project>('projects', useDebounced(query, 250), { status: statusFilter, active: onlyActive, templates })
+  const rows = list.data?.data ?? []
+  const stats = useProjectStats()
+  const remove = useDeleteResource('projects')
 
-  function openDocument(documentId: string | null) {
-    setProject(project.id)
-    setDocument(documentId)
-    navigate('/documents')
+  // Sélection : URL, sinon projet courant de la barre de contexte, sinon première ligne.
+  const currentId = isNew ? null : (selectedId ?? contextId ?? rows[0]?.id ?? null)
+  const detail = useResourceItem<Project>('projects', currentId)
+  const project = isNew ? null : (detail.data ?? rows.find((row) => row.id === currentId) ?? null)
+
+  function open(id: number | 'new' | null) {
+    select(id)
+    setSaveState('idle')
+    if (typeof id === 'number') {
+      setProject(id)
+    }
+    if (id === 'new') {
+      setTab('Général')
+    }
   }
 
-  function select(row: DemoProject) {
-    setProject(row.id)
-    setStatus(null)
+  function onDelete() {
+    if (!project || !window.confirm(`Supprimer le projet ${project.number} « ${project.designation1} » ?`)) {
+      return
+    }
+    remove.mutate(project.id, {
+      onSuccess: () => {
+        toast('Projet supprimé.', 'success')
+        setProject(null)
+        select(null)
+      },
+    })
   }
+
+  const tabs = ['Général', `Adresses${project?.addresses?.length ? ` (${project.addresses.length})` : ''}`, `Photos${project?.photos?.length ? ` (${project.photos.length})` : ''}`]
+  const activeTab = tabs.find((item) => item.startsWith(tab)) ?? tabs[0]
+  const chip = (active: boolean) =>
+    `flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[12px] transition ${
+      active ? 'bg-anthracite-800 font-medium text-white' : 'text-gray-600 hover:bg-gray-100'
+    }`
 
   return (
     <Workspace
-      demo
-      entries={DEMO_PROJECTS.length}
+      entries={list.data?.meta.total ?? null}
+      statusRight={SAVE_LABELS[saveState]}
+      tabLabel={templates ? 'Projets - Modèles' : 'Projets'}
+      asideWidth={280}
       toolbar={
         <>
-          <StandardTools newLabel="Nouveau projet" />
-          <ToolMenu icon="import" label="Import" />
-          <ToolMenu icon="export" label="Export" />
+          {canManage && (
+            <>
+              <StandardTools
+                newLabel="Nouveau projet"
+                onNew={() => open('new')}
+                formId={PROJECT_FORM_ID}
+                onUndo={() => {
+                  setFormVersion((value) => value + 1)
+                  setSaveState('idle')
+                }}
+                onDelete={onDelete}
+                canDelete={Boolean(project)}
+              />
+              <ToolMenu icon="export" label="Export" />
+              <ToolSep />
+            </>
+          )}
+          <button type="button" className={chip(statusFilter === '')} onClick={() => setStatusFilter('')}>
+            Tous
+            <span className="opacity-70">{stats.data?.total ?? ''}</span>
+          </button>
+          {STATUSES.map((status) => (
+            <button
+              key={status}
+              type="button"
+              className={chip(statusFilter === status)}
+              onClick={() => {
+                setStatusFilter(statusFilter === status ? '' : status)
+                setQuery({ ...query, page: 1 })
+              }}
+            >
+              <span className={`h-2 w-2 rounded-full border border-black/10 ${PROJECT_STATUSES[status].rowClass.split(' ')[0]}`} />
+              {PROJECT_STATUSES[status].label}
+              <span className="opacity-70">{stats.data?.data[status] ?? ''}</span>
+            </button>
+          ))}
           <ToolSep />
-          <ToolMenu label="Extras" />
+          <BbCheckbox label="Seulement actifs" checked={onlyActive} onChange={(event) => setOnlyActive(event.target.checked)} />
+          <BbCheckbox label="Modèles" checked={templates} onChange={(event) => setTemplates(event.target.checked)} className="ml-3" />
         </>
       }
       aside={
-        <AsidePanel
-          title="Projet"
-          nav={[
-            { icon: 'file', label: 'Devis et documents', active: true },
-            { icon: 'qr', label: 'QR code' },
-          ]}
-        >
-          <div className="mt-1 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Devis du projet</div>
-          <p className="mt-1 text-[12px] text-gray-400">
-            Le devis fixe les étapes du chantier ; rapports, régie et facture en découlent.
-          </p>
-          {documents.length > 0 ? (
-            <ul className="mt-2 space-y-1">
-              {documents.map((doc) => (
-                <li key={doc.id}>
-                  <button
-                    type="button"
-                    onClick={() => openDocument(doc.id)}
-                    className="flex w-full items-center gap-2 rounded-md border border-gray-200 px-2.5 py-2 text-left transition hover:border-primary-200 hover:bg-primary-50"
-                  >
-                    <Icon name="file" className="h-4 w-4 shrink-0 text-primary-600" />
-                    <span className="min-w-0">
-                      <span className="block truncate text-[13px] font-medium text-gray-800">{doc.label}</span>
-                      <span className="block text-[11px] text-gray-400">
-                        {doc.type === 'DEV' ? 'Devis' : doc.type === 'FA' ? 'Facture' : 'Acompte'} · {doc.date.split('-').reverse().join('.')}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="mt-2 rounded-lg border border-dashed border-gray-200 bg-gray-50 p-3 text-[12px] text-gray-500">
-              Aucun devis pour ce projet.
-            </div>
-          )}
-          <div className="mt-3">
-            <ToolPrimary icon="fileplus" label={steps.length ? 'Nouveau document' : 'Créer le devis'} onClick={() => openDocument(null)} />
-          </div>
-
-          {steps.length > 0 && (
+        <AsidePanel title="Projet" nav={[{ icon: 'folder', label: 'Résumé du projet', active: true }]}>
+          {project ? (
             <>
-              <div className="mt-5 text-[12px] font-semibold uppercase tracking-wider text-gray-400">
-                Étapes du chantier
+              <div className="overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                {project.cover_url ? (
+                  <img src={project.cover_url} alt="" className="h-36 w-full object-cover" />
+                ) : (
+                  <div className="flex h-24 items-center justify-center text-gray-300">
+                    <Icon name="image" className="h-8 w-8" />
+                  </div>
+                )}
+                <div className="p-3">
+                  <div className="text-[12px] font-semibold text-gray-400">{project.number}</div>
+                  <div className="text-[13px] font-medium text-gray-800">{project.designation1}</div>
+                  <Badge className={`mt-1.5 ${PROJECT_STATUSES[project.status].className}`}>{PROJECT_STATUSES[project.status].label}</Badge>
+                </div>
               </div>
-              <ul className="mt-2 space-y-0.5 text-[13px] text-gray-700">
-                {steps.map((step) => (
-                  <li key={step.code} className="flex items-center gap-2 px-1">
-                    <span className="w-6 text-[12px] text-gray-400">{step.code}</span>
-                    <span className="truncate">{step.label}</span>
-                  </li>
-                ))}
-              </ul>
+
+              <div className="mt-4 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Client</div>
+              {project.client ? (
+                <div className="mt-1.5 rounded-lg border border-gray-200 p-3 text-[13px]">
+                  {canManage ? (
+                    <Link to={`/clients?id=${project.client.id}`} className="font-medium text-primary-700 hover:underline">
+                      {project.client.label}
+                    </Link>
+                  ) : (
+                    <span className="font-medium text-gray-800">{project.client.label}</span>
+                  )}
+                  {project.client.city && <div className="text-gray-500">{project.client.city}</div>}
+                  {project.client.phone && <div className="mt-1 text-gray-600">{project.client.phone}</div>}
+                </div>
+              ) : (
+                <p className="mt-1.5 text-[13px] text-gray-400">Aucun client lié.</p>
+              )}
+
+              <div className="mt-4 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Chantier</div>
+              <p className="mt-1.5 text-[13px] text-gray-700">
+                {project.street} {project.street_no}
+                <br />
+                {project.zip} {project.city}
+              </p>
+
+              <div className="mt-4 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Devis</div>
+              <p className="mt-1.5 rounded-lg border border-dashed border-gray-200 bg-gray-50 p-3 text-[12px] text-gray-500">
+                Le devis se créera ici, juste après le projet : ses étapes serviront aux rapports journaliers, à la régie
+                et à la facture (phase 3).
+              </p>
             </>
+          ) : (
+            <p className="text-[13px] text-gray-400">{isNew ? 'Nouveau projet en cours de saisie.' : 'Aucun projet sélectionné.'}</p>
           )}
         </AsidePanel>
       }
     >
       <div className="flex h-full flex-col">
-        <div className="shrink-0 border-b border-gray-200 bg-white px-4 pb-5 pt-1">
-          <TabStrip tabs={TABS} active={tab} onChange={setTab} />
-          {tab === 'Général' ? (
-            <form key={project.id} className="mt-4 grid grid-cols-[max-content_max-content] gap-x-12 gap-y-2">
-              <Field label="N° de projet">
-                <BbInput defaultValue={project.number} className="w-64" />
-              </Field>
-              <div className="flex items-center gap-10">
-                <Field label="Actif" labelWidth={50}>
-                  <BbCheckbox defaultChecked={project.active} />
-                </Field>
-                <Field label="Modèles" labelWidth={60}>
-                  <BbCheckbox />
-                </Field>
-              </div>
-
-              <Field label="Entreprise" className="col-span-2">
-                <BbSelect defaultValue={DEMO_COMPANY} className="w-[560px]">
-                  <option>{DEMO_COMPANY}</option>
-                </BbSelect>
-              </Field>
-              <Field label="Désignation 1" className="col-span-2">
-                <BbInput defaultValue={project.designation1} className="w-[560px]" />
-              </Field>
-              <Field label="Désignation 2" className="col-span-2">
-                <BbInput defaultValue={project.designation2} className="w-[560px]" />
-              </Field>
-
-              <Field label="Rue">
-                <BbInput defaultValue={project.street} className="w-40" />
-                <span className="ml-3 text-gray-700">N°</span>
-                <BbInput defaultValue={project.streetNo} className="w-16" />
-              </Field>
-              <Field label="Téléphone" labelWidth={90}>
-                <BbInput defaultValue={project.phone} className="w-48" />
-              </Field>
-
-              <Field label="Pays">
-                <BbInput className="w-20" />
-                <span className="ml-3 text-gray-700">NPA</span>
-                <BbSelect defaultValue={project.zip} className="w-20">
-                  <option>{project.zip}</option>
-                </BbSelect>
-              </Field>
-              <Field label="Fax" labelWidth={90}>
-                <BbInput className="w-48" />
-              </Field>
-
-              <Field label="Lieu">
-                <BbSelect defaultValue={project.city} className="w-64">
-                  <option>{project.city}</option>
-                </BbSelect>
-              </Field>
-              <Field label="Mobile" labelWidth={90}>
-                <BbInput className="w-48" />
-              </Field>
-
-              <Field label="N° contrat" className="col-span-2">
-                <BbInput defaultValue={project.contractNo} className="w-64" />
-              </Field>
-              <Field label="Unité d'imputation" className="col-span-2">
-                <BbInput className="w-64" />
-              </Field>
-              <Field label="Statut" className="col-span-2 mt-1">
-                <StatusSelect
-                  options={STATUS_OPTIONS}
-                  value={currentStatus}
-                  onChange={(value) => setStatus(value as ProjectStatus)}
-                  className="w-64"
-                />
-              </Field>
-            </form>
-          ) : (
-            <div className="mt-4 flex h-[300px] items-center justify-center text-gray-400">
-              Onglet « {tab} » : disponible en phase 2 (fiche projet complète).
-            </div>
+        <div className="shrink-0 border-b border-gray-200 bg-white px-4 pb-4 pt-1">
+          <TabStrip tabs={tabs} active={activeTab} onChange={(value) => setTab(value.split(' ')[0])} />
+          {tab === 'Général' && (
+            <ProjectForm
+              key={`${isNew ? 'new' : (project?.id ?? 'none')}-${formVersion}`}
+              project={project}
+              isNew={isNew}
+              readOnly={!canManage || (!isNew && !project)}
+              onStateChange={setSaveState}
+              onCreated={(created) => open(created.id)}
+            />
           )}
+          {tab === 'Adresses' &&
+            (project ? (
+              <ProjectAddressesTab key={project.id} project={project} readOnly={!canManage} />
+            ) : (
+              <p className="mt-4 h-[300px] text-[13px] text-gray-400">Enregistrez d'abord le projet pour lui ajouter des adresses.</p>
+            ))}
+          {tab === 'Photos' &&
+            (project ? (
+              <ProjectPhotosTab key={project.id} project={project} readOnly={!canManage} />
+            ) : (
+              <p className="mt-4 h-[300px] text-[13px] text-gray-400">Enregistrez d'abord le projet pour lui ajouter des photos.</p>
+            ))}
         </div>
 
         <DataGrid
           className="min-h-0 flex-1"
           columns={COLUMNS}
-          rows={DEMO_PROJECTS}
-          rowKey={(row) => row.id}
-          rowClass={(row) => PROJECT_STATUSES[row.status].rowClass}
-          selectedKey={selectedId}
-          onSelect={select}
+          rows={rows}
+          rowKey={(row) => String(row.id)}
+          rowClass={(row) => (row.is_active ? PROJECT_STATUSES[row.status].rowClass : 'bg-white text-gray-400')}
+          selectedKey={currentId ? String(currentId) : null}
+          onSelect={(row) => open(row.id)}
+          query={query}
+          onQueryChange={(next) => setQuery({ ...next, page: 1 })}
+          emptyText={list.isLoading ? 'Chargement…' : canManage ? 'Aucun projet. Cliquez sur « Nouveau projet ».' : 'Aucun projet.'}
         />
+        <GridPager meta={list.data?.meta} onPage={(page) => setQuery({ ...query, page })} loading={list.isFetching} />
       </div>
     </Workspace>
   )

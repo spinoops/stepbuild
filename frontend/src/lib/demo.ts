@@ -367,3 +367,9 @@ export function projectSteps(projectId: string): DevisStep[] {
   const devis = projectDevis(projectId)
   return devis ? documentSteps(devis) : []
 }
+
+/**
+ * Les pages encore en données d'exemple (rapports, documents) ne suivent pas le projet courant
+ * réel de la barre de contexte : elles gardent leur propre sélection jusqu'à leur phase.
+ */
+export const DEMO_CONTEXT = { projectId: null as string | null, documentId: null as string | null }

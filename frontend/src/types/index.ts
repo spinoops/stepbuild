@@ -121,3 +121,59 @@ export interface SearchResponse {
   groups: SearchGroup[]
   took_ms: number
 }
+
+/** Projet = chantier (GET /api/projects). `addresses` et `photos` ne sont présents que sur la fiche détaillée. */
+export interface Project {
+  id: number
+  number: string
+  designation1: string
+  designation2: string | null
+  client_id: number | null
+  client?: { id: number; label: string; city: string | null; phone: string | null; email: string | null } | null
+  status: ProjectStatus
+  is_active: boolean
+  is_template: boolean
+  street: string | null
+  street_no: string | null
+  zip: string | null
+  city: string | null
+  country: string | null
+  phone: string | null
+  mobile: string | null
+  contract_no: string | null
+  cost_unit: string | null
+  invoice_instructions: string | null
+  remark: string | null
+  cover_url?: string | null
+  addresses?: ProjectAddress[]
+  photos?: ProjectPhoto[]
+  updated_at: string
+}
+
+/** Adresse nommée d'un projet (facturation, architecte, accès…). */
+export interface ProjectAddress {
+  id: number
+  project_id: number
+  label: string
+  address_id: number | null
+  name: string | null
+  street: string | null
+  street_no: string | null
+  zip: string | null
+  city: string | null
+  phone: string | null
+  email: string | null
+  remark: string | null
+  position: number
+}
+
+export interface ProjectPhoto {
+  id: number
+  project_id: number
+  /** Lien signé temporaire (6 h). */
+  url: string
+  original_name: string
+  size: number
+  caption: string | null
+  position: number
+}

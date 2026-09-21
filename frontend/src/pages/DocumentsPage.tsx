@@ -8,6 +8,7 @@ import Tree from '@/components/baubit/Tree'
 import { BbCheckbox, BbInput, BbSelect, BbTextarea, Field, SectionTitle, StatusSelect } from '@/components/baubit/Form'
 import {
   DEMO_ADDRESSES,
+  DEMO_CONTEXT,
   DEMO_CHAPTERS,
   DEMO_COLLABORATORS,
   DEMO_DOCUMENTS,
@@ -18,7 +19,6 @@ import {
 import type { DemoPosition } from '@/lib/demo'
 import { fmtAmount, fmtDate } from '@/lib/format'
 import { toast } from '@/lib/toast'
-import { useWorkspace } from '@/lib/workspaceStore'
 
 const TABS = ['En-tête document', 'Textes document', 'Paramètres', 'Détail document', 'Conditions', 'Récapitulation', 'Complément']
 const LEVELS = [1, 2, 3, 4]
@@ -50,7 +50,7 @@ const COLUMNS: GridColumn<Row>[] = [
 
 /** Documents (devis, acomptes, factures) : arborescence à gauche, en-tête / détail / récapitulation. */
 export default function DocumentsPage() {
-  const { projectId, documentId } = useWorkspace()
+  const { projectId, documentId } = DEMO_CONTEXT
   const documents = DEMO_DOCUMENTS.filter((doc) => !projectId || doc.projectId === projectId)
   const doc = documents.find((item) => item.id === documentId) ?? documents[0] ?? DEMO_DOCUMENTS[0]
   const project = DEMO_PROJECTS.find((item) => item.id === doc.projectId)
