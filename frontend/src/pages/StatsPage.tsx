@@ -19,7 +19,7 @@ export default function StatsPage() {
           title="Statistiques"
           description="Suivi de facturation et synthèses, calculés automatiquement depuis les rapports et les factures."
           icon="chart"
-          phase={5}
+          phase={6}
           features={[
             'Suivi de facturation par chantier : devisé, facturé, coûts réels, marge minimale et réelle, redistribution',
             'Listing annuel des chantiers facturés et des travaux en cours',

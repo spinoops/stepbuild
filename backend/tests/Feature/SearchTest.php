@@ -49,3 +49,21 @@ it('classe les articles les plus utilisés en premier', function () {
 
     expect($items[0]['id'])->toBe($popular->id);
 });
+
+it('fournit un index compact pour la recherche en mémoire, sans titres ni adresses inactives', function () {
+    actingAsRole('responsable');
+
+    $groups = collect($this->getJson('/api/search/index')->assertOk()->json('groups'))->keyBy('key');
+
+    expect($groups['addresses']['items'])->toHaveCount(1);
+    expect($groups['articles']['items'])->toHaveCount(1);
+    expect($groups['articles']['items'][0][1])->toBe('Fourniture et pose carrelage sol');
+    expect($groups['articles']['items'][0][2])->toBe('12.025 · M2');
+    expect($groups['price_elements']['items'][0][1])->toBe('Scie à carrelage');
+});
+
+it('interdit l\'index de recherche à un ouvrier', function () {
+    actingAsRole('ouvrier');
+
+    $this->getJson('/api/search/index')->assertForbidden();
+});

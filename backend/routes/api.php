@@ -42,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Gestion (admin + responsable) : données de base. Jamais accessible aux ouvriers (prix).
     Route::middleware('roles:admin,responsable')->group(function () {
+        Route::get('/search/index', [SearchController::class, 'index']);
         Route::get('/search', SearchController::class);
 
         Route::apiResource('addresses', AddressController::class);

@@ -7,6 +7,7 @@ import { ROLE_LABELS, primaryRole } from '@/lib/roles'
 import { openTab } from '@/lib/workspaceStore'
 import { Icon } from '@/components/icons'
 import Brand from '@/components/Brand'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import Ribbon from '@/components/shell/Ribbon'
 import ContextBar from '@/components/shell/ContextBar'
 import WorkspaceTabs from '@/components/shell/WorkspaceTabs'
@@ -58,7 +59,9 @@ export default function AppLayout() {
       <WorkspaceTabs />
 
       <main className="min-h-0 flex-1 bg-white">
-        <Outlet />
+        <ErrorBoundary resetKey={pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </main>
 
       <StatusBar />

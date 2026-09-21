@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthContext'
 import { NAV_GROUPS } from '@/lib/navigation'
-import { PHASES } from '@/lib/phases'
+import { CURRENT_PHASE, PHASES } from '@/lib/phases'
 import { ROLE_LABELS, hasRole, primaryRole } from '@/lib/roles'
 import { Icon } from '@/components/icons'
 import PageHeader from '@/components/ui/PageHeader'
@@ -90,7 +90,7 @@ export default function DashboardPage() {
       </section>
 
       <section className="mt-8">
-        <Card title="Avancement du développement" aside={<Badge tone="primary">Phase 0</Badge>}>
+        <Card title="Avancement du développement" aside={<Badge tone="primary">Phase {CURRENT_PHASE}</Badge>}>
           <ol className="space-y-3">
             {PHASES.map((phase) => (
               <li key={phase.number} className="flex gap-3">

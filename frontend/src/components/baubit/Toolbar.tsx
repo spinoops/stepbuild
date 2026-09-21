@@ -77,15 +77,36 @@ export function ToolSep() {
   return <span className="mx-1.5 h-5 w-px bg-gray-200" />
 }
 
+interface StandardToolsProps {
+  newLabel?: string
+  onNew?: () => void
+  /** Enregistre via le formulaire d'identifiant donné (bouton submit externe). */
+  formId?: string
+  onUndo?: () => void
+  onDelete?: () => void
+  canDelete?: boolean
+}
+
 /** Jeu de boutons standard : nouveau, enregistrer, annuler, supprimer, colonnes, filtre, imprimer. */
-export function StandardTools({ newLabel = 'Nouveau' }: { newLabel?: string }) {
+export function StandardTools({ newLabel = 'Nouveau', onNew, formId, onUndo, onDelete, canDelete = true }: StandardToolsProps) {
   return (
     <>
-      <ToolPrimary label={newLabel} />
+      <ToolPrimary label={newLabel} onClick={onNew} />
       <ToolSep />
-      <ToolButton icon="save" title="Enregistrer" tone="primary" />
-      <ToolButton icon="undo" title="Annuler les modifications" />
-      <ToolButton icon="trash" title="Supprimer" tone="danger" />
+      {formId ? (
+        <button
+          type="submit"
+          form={formId}
+          title="Enregistrer (Ctrl+S)"
+          className="flex h-8 w-8 items-center justify-center rounded-md transition hover:bg-gray-100"
+        >
+          <Icon name="save" className="h-4 w-4 text-primary-600" />
+        </button>
+      ) : (
+        <ToolButton icon="save" title="Enregistrer" tone="primary" />
+      )}
+      <ToolButton icon="undo" title="Annuler les modifications" onClick={onUndo} />
+      <ToolButton icon="trash" title="Supprimer" tone="danger" onClick={onDelete} disabled={Boolean(onDelete) && !canDelete} />
       <ToolSep />
       <ToolButton icon="table" title="Colonnes" />
       <ToolButton icon="filter" title="Filtre" />

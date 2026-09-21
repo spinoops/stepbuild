@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthContext'
 import { RIBBON_TABS, ribbonTabForPath } from '@/lib/ribbon'
 import type { RibbonItem } from '@/lib/ribbon'
-import { hasRole } from '@/lib/roles'
-import { toast } from '@/lib/toast'
+import { canSeePrices, hasRole } from '@/lib/roles'
 import { Icon } from '@/components/icons'
+import SearchBox from '@/components/shell/SearchBox'
 
 interface RibbonProps {
   /** Logo et nom de l'application (à gauche de l'en-tête). */
@@ -25,22 +25,8 @@ export default function Ribbon({ brand, user: userSlot }: RibbonProps) {
   const { pathname } = useLocation()
   const [choice, setChoice] = useState<{ path: string; tab: string } | null>(null)
   const [collapsed, setCollapsed] = useState(false)
-  const searchRef = useRef<HTMLInputElement>(null)
 
   const activeTab = choice && choice.path === pathname ? choice.tab : ribbonTabForPath(pathname)
-
-  // Ctrl+K (ou Cmd+K) : focus sur la recherche.
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault()
-        searchRef.current?.focus()
-        searchRef.current?.select()
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
 
   const tabs = RIBBON_TABS.map((tab) => ({
     ...tab,
@@ -54,13 +40,6 @@ export default function Ribbon({ brand, user: userSlot }: RibbonProps) {
   function activate(item: RibbonItem) {
     if (item.to) {
       navigate(item.to)
-    }
-  }
-
-  function onSearch(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (searchRef.current?.value.trim()) {
-      toast('Recherche globale : disponible avec les données de base (phase 1).', 'info')
     }
   }
 
@@ -86,18 +65,7 @@ export default function Ribbon({ brand, user: userSlot }: RibbonProps) {
           ))}
         </nav>
 
-        <form onSubmit={onSearch} className="relative ml-auto">
-          <Icon name="search" className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            ref={searchRef}
-            type="search"
-            placeholder="Rechercher un projet, un client, un article…"
-            className="h-8 w-72 rounded-md border border-white/10 bg-white/10 pl-8 pr-12 text-[13px] text-white outline-none transition placeholder:text-gray-400 focus:border-white/30 focus:bg-white/15"
-          />
-          <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-white/20 px-1 text-[10px] text-gray-400">
-            Ctrl K
-          </kbd>
-        </form>
+        {canSeePrices(user) ? <SearchBox /> : <span className="ml-auto" />}
 
         {userSlot}
       </div>

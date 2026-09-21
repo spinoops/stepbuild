@@ -304,7 +304,7 @@ export default function DailyReportsPage() {
             </>
           ) : (
             <div className="flex flex-1 items-center justify-center text-gray-400">
-              Onglet « {tab} » : saisie disponible en phase 3.
+              Onglet « {tab} » : saisie disponible en phase 4.
             </div>
           )}
         </div>

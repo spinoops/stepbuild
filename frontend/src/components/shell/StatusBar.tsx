@@ -1,3 +1,4 @@
+import { CURRENT_PHASE } from '@/lib/phases'
 import { useWorkspace } from '@/lib/workspaceStore'
 
 /** Barre d'état : nombre d'entrées, totaux, indicateurs de la page, version. */
@@ -20,7 +21,7 @@ export default function StatusBar() {
             Données d'exemple
           </span>
         )}
-        <span className="text-gray-500">v0.1 · phase 0</span>
+        <span className="text-gray-500">v0.2 · phase {CURRENT_PHASE}</span>
       </span>
     </div>
   )

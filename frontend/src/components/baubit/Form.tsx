@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import { Icon } from '@/components/icons'
 
 /** Ligne de formulaire : libellé à gauche (largeur fixe), contrôle(s) à droite. */
@@ -33,11 +33,14 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 const BASE =
   'h-8 rounded-md border border-gray-300 bg-white px-2.5 text-[13px] text-gray-800 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 read-only:bg-gray-50 read-only:text-gray-600 disabled:bg-gray-50 disabled:text-gray-400'
 
-export function BbInput({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement>) {
+export function BbInput({ className = '', invalid = false, ...props }: ComponentProps<'input'> & { invalid?: boolean }) {
+  if (invalid) {
+    className = `${className} border-red-400 focus:border-red-500 focus:ring-red-100`
+  }
   return <input className={`${BASE} ${className}`} {...props} />
 }
 
-export function BbSelect({ className = '', children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+export function BbSelect({ className = '', children, ...props }: ComponentProps<'select'>) {
   return (
     <select className={`${BASE} ${className}`} {...props}>
       {children}
@@ -45,7 +48,7 @@ export function BbSelect({ className = '', children, ...props }: SelectHTMLAttri
   )
 }
 
-export function BbTextarea({ className = '', ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function BbTextarea({ className = '', ...props }: ComponentProps<'textarea'>) {
   return (
     <textarea
       className={`rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[13px] text-gray-800 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 ${className}`}
@@ -58,7 +61,7 @@ export function BbCheckbox({
   label,
   className = '',
   ...props
-}: InputHTMLAttributes<HTMLInputElement> & { label?: string }) {
+}: ComponentProps<'input'> & { label?: string }) {
   return (
     <label className={`inline-flex items-center gap-2 text-[13px] text-gray-700 ${className}`}>
       <input type="checkbox" className="h-4 w-4 rounded accent-primary-600" {...props} />

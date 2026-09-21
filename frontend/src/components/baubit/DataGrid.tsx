@@ -40,6 +40,17 @@ interface DataGridProps<T> {
   emptyText?: string
   /** Hauteur (px) des en-têtes verticaux. */
   rotateHeight?: number
+  /**
+   * Mode serveur : la grille ne filtre ni ne trie elle-même, elle remonte l'état.
+   * Les clés de colonnes doivent alors correspondre aux colonnes de l'API.
+   */
+  query?: GridState
+  onQueryChange?: (query: GridState) => void
+}
+
+export interface GridState {
+  filters: Record<string, string>
+  sort: { key: string; dir: 'asc' | 'desc' } | null
 }
 
 function normalize(value: CellValue): string {
@@ -65,11 +76,26 @@ export default function DataGrid<T>({
   className = '',
   emptyText = 'Aucune entrée.',
   rotateHeight = 96,
+  query,
+  onQueryChange,
 }: DataGridProps<T>) {
-  const [filters, setFilters] = useState<Record<string, string>>({})
-  const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null)
+  const [local, setLocal] = useState<GridState>({ filters: {}, sort: null })
+  const controlled = Boolean(query && onQueryChange)
+  const { filters, sort } = controlled ? query! : local
+
+  function update(next: GridState) {
+    if (controlled) {
+      onQueryChange!(next)
+    } else {
+      setLocal(next)
+    }
+  }
 
   const visible = useMemo(() => {
+    if (controlled) {
+      return rows
+    }
+    const factor = sort?.dir === 'desc' ? -1 : 1
     let result = rows.filter((row) =>
       columns.every((column) => {
         const filter = filters[column.key]
@@ -86,24 +112,21 @@ export default function DataGrid<T>({
           const va = column.value(a)
           const vb = column.value(b)
           if (typeof va === 'number' && typeof vb === 'number') {
-            return (va - vb) * sort.dir
+            return (va - vb) * factor
           }
-          return normalize(va).localeCompare(normalize(vb)) * sort.dir
+          return normalize(va).localeCompare(normalize(vb)) * factor
         })
       }
     }
     return result
-  }, [rows, columns, filters, sort])
+  }, [rows, columns, filters, sort, controlled])
 
   const hasFilters = Object.values(filters).some(Boolean)
 
   function toggleSort(key: string) {
-    setSort((current) => {
-      if (!current || current.key !== key) {
-        return { key, dir: 1 }
-      }
-      return current.dir === 1 ? { key, dir: -1 } : null
-    })
+    const next: GridState['sort'] =
+      !sort || sort.key !== key ? { key, dir: 'asc' } : sort.dir === 'asc' ? { key, dir: 'desc' } : null
+    update({ filters, sort: next })
   }
 
   function renderCell(column: GridColumn<T>, row: T): ReactNode {
@@ -156,7 +179,7 @@ export default function DataGrid<T>({
                   <span className="inline-flex items-center gap-1">
                     {column.header}
                     {sort?.key === column.key && (
-                      <Icon name="chevrondown" className={`h-3 w-3 ${sort.dir === -1 ? 'rotate-180' : ''}`} />
+                      <Icon name="chevrondown" className={`h-3 w-3 ${sort.dir === 'desc' ? 'rotate-180' : ''}`} />
                     )}
                   </span>
                 )}
@@ -171,9 +194,7 @@ export default function DataGrid<T>({
                   {column.noFilter || column.type === 'bool' ? null : (
                     <input
                       value={filters[column.key] ?? ''}
-                      onChange={(event) =>
-                        setFilters((current) => ({ ...current, [column.key]: event.target.value }))
-                      }
+                      onChange={(event) => update({ filters: { ...filters, [column.key]: event.target.value }, sort })}
                       aria-label={`Filtrer ${column.header}`}
                       placeholder={column.rotate ? '' : 'Filtrer…'}
                       className={`h-7 w-full min-w-6 rounded-md border px-2 text-[12px] outline-none transition placeholder:text-gray-300 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 ${

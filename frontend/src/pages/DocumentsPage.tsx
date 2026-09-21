@@ -165,7 +165,7 @@ export default function DocumentsPage() {
             <Tree
               nodes={treeNodes}
               selectedId={null}
-              onSelect={(node) => toast(`Ajout de l'étape « ${node.label} » au devis : phase 5.`, 'info')}
+              onSelect={(node) => toast(`Ajout de l'étape « ${node.label} » au devis : phase 3.`, 'info')}
             />
           </div>
           <BbCheckbox label="Synchroniser avec le catalogue" defaultChecked className="mt-3" />
@@ -375,7 +375,7 @@ export default function DocumentsPage() {
 
         {!['Détail document', 'En-tête document', 'Récapitulation'].includes(tab) && (
           <div className="flex flex-1 items-center justify-center text-gray-400">
-            Onglet « {tab} » : disponible en phase 5.
+            Onglet « {tab} » : disponible avec le module devis (phase 3).
           </div>
         )}
       </div>

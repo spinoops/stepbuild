@@ -19,7 +19,7 @@ export default function RegiePage() {
           title="Régie"
           description="Trois niveaux de prix : brut (fournisseur) → majoré (tarifs de l'entreprise) → prix client."
           icon="calculator"
-          phase={4}
+          phase={5}
           features={[
             'Rapport brut aux prix fournisseurs, non majorés',
             'Régie : prix majorés selon les tarifs de l’entreprise',
