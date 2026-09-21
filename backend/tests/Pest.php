@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /*
@@ -47,4 +50,17 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Connecte un utilisateur fraîchement créé avec le rôle indiqué (admin, responsable, ouvrier).
+ */
+function actingAsRole(string $role): User
+{
+    Role::findOrCreate($role);
+    $user = User::factory()->create();
+    $user->assignRole($role);
+    Sanctum::actingAs($user);
+
+    return $user;
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureUserHasAnyRole;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -22,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Alias de middleware : 'admin' réserve une route aux utilisateurs de rôle admin.
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
+            'roles' => EnsureUserHasAnyRole::class, // ex. roles:admin,responsable
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,

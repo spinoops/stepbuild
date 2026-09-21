@@ -1,7 +1,12 @@
 <?php
 
+use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CatalogArticleController;
+use App\Http\Controllers\CatalogChapterController;
 use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\PriceElementController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -34,6 +39,23 @@ Route::get('/settings', [SettingController::class, 'index']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'me']);
+
+    // Gestion (admin + responsable) : données de base. Jamais accessible aux ouvriers (prix).
+    Route::middleware('roles:admin,responsable')->group(function () {
+        Route::get('/search', SearchController::class);
+
+        Route::apiResource('addresses', AddressController::class);
+
+        Route::apiResource('catalog-chapters', CatalogChapterController::class)
+            ->except(['show'])
+            ->parameters(['catalog-chapters' => 'chapter']);
+        Route::apiResource('catalog-articles', CatalogArticleController::class)
+            ->parameters(['catalog-articles' => 'article']);
+
+        Route::get('/price-elements/groups', [PriceElementController::class, 'groups']);
+        Route::apiResource('price-elements', PriceElementController::class)
+            ->parameters(['price-elements' => 'element']);
+    });
 
     // Administration : réservé aux utilisateurs de rôle 'admin'.
     Route::middleware('admin')->group(function () {

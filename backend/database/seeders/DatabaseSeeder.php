@@ -45,5 +45,10 @@ class DatabaseSeeder extends Seeder
             );
             $user->syncRoles([$roles[$role]]);
         }
+
+        // Données d'exemple fictives : uniquement en local, jamais en production ni en test.
+        if (app()->environment('local')) {
+            $this->call(DemoDataSeeder::class);
+        }
     }
 }
