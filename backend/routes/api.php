@@ -6,6 +6,9 @@ use App\Http\Controllers\CatalogArticleController;
 use App\Http\Controllers\CatalogChapterController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PriceElementController;
+use App\Http\Controllers\ProjectAddressController;
+use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectPhotoController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\UserController;
@@ -35,13 +38,28 @@ Route::post('/reset-password', [PasswordResetController::class, 'reset'])->middl
 // pour pouvoir les appliquer même avant la connexion.
 Route::get('/settings', [SettingController::class, 'index']);
 
+// Fichier d'une photo de projet : lien signé temporaire (une balise <img> n'envoie pas de token).
+Route::get('/project-photos/{photo}/file', [ProjectPhotoController::class, 'file'])
+    ->name('project-photos.file')
+    ->middleware('signed');
+
 // Routes protégées : nécessitent un token valide (Authorization: Bearer ...).
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'me']);
 
+    // Projets en lecture : tous les rôles (l'ouvrier choisit son chantier, sans aucun prix).
+    Route::get('/projects/stats', [ProjectController::class, 'stats']);
+    Route::get('/projects', [ProjectController::class, 'index']);
+    Route::get('/projects/{project}', [ProjectController::class, 'show'])->whereNumber('project');
+
     // Gestion (admin + responsable) : données de base. Jamais accessible aux ouvriers (prix).
     Route::middleware('roles:admin,responsable')->group(function () {
+        Route::get('/projects/next-number', [ProjectController::class, 'nextNumber']);
+        Route::apiResource('projects', ProjectController::class)->only(['store', 'update', 'destroy']);
+        Route::apiResource('projects.addresses', ProjectAddressController::class)->only(['store', 'update', 'destroy']);
+        Route::apiResource('projects.photos', ProjectPhotoController::class)->only(['store', 'update', 'destroy']);
+
         Route::get('/search/index', [SearchController::class, 'index']);
         Route::get('/search', SearchController::class);
 

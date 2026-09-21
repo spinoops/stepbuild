@@ -6,6 +6,7 @@ use App\Models\Address;
 use App\Models\CatalogArticle;
 use App\Models\CatalogChapter;
 use App\Models\PriceElement;
+use App\Models\Project;
 use Illuminate\Database\Seeder;
 
 /**
@@ -19,6 +20,7 @@ class DemoDataSeeder extends Seeder
         $this->seedAddresses();
         $this->seedCatalog();
         $this->seedPriceElements();
+        $this->seedProjects();
     }
 
     private function seedAddresses(): void
@@ -147,6 +149,39 @@ class DemoDataSeeder extends Seeder
                     'regie_code' => "{$family}.{$number}", 'unit_factor' => 1,
                 ],
             );
+        }
+    }
+
+    private function seedProjects(): void
+    {
+        // [numéro, désignation, nom du client, rue, n°, NPA, lieu, statut]
+        $rows = [
+            ['2800-001', 'Exemple Dupont - Rénovation salle de bain', 'Dupont', 'Rue de la Gare', '12', '2800', 'Delémont', 'en_cours'],
+            ['2854-001', 'Exemple Muller - Démolition et maçonnerie', 'Muller', 'Rue des Vergers', '3', '2854', 'Bassecourt', 'adjuge'],
+            ['2822-001', 'Exemple Rossi - Aménagements extérieurs', 'Rossi', 'Chemin des Prés', '4', '2822', 'Courroux', 'adjuge'],
+            ['2855-001', 'Exemple Favre - Création mur de soutènement', 'Favre', 'Rue de la Gravière', '8', '2855', 'Glovelier', 'adjuge'],
+            ['2854-002', 'Exemple Bernard - Remplacement fenêtres', 'Bernard', 'Rue Berlincourt', '21', '2854', 'Bassecourt', 'termine'],
+            ['2802-001', 'Exemple Keller - Extension buanderie', 'Keller', 'Rue Principale', '55', '2802', 'Develier', 'refuse'],
+        ];
+
+        foreach ($rows as [$number, $designation, $client, $street, $no, $zip, $city, $status]) {
+            $project = Project::updateOrCreate(
+                ['number' => $number],
+                [
+                    'designation1' => $designation,
+                    'client_id' => Address::where('last_name', $client)->value('id'),
+                    'street' => $street, 'street_no' => $no, 'zip' => $zip, 'city' => $city,
+                    'status' => $status, 'is_active' => true,
+                ],
+            );
+
+            if ($number === '2800-001' && ! $project->addresses()->exists()) {
+                $project->addresses()->create([
+                    'label' => 'Architecte',
+                    'address_id' => Address::where('last_name', 'Architecte')->value('id'),
+                    'name' => 'Architecte Paul', 'city' => 'Delémont', 'phone' => '032 000 00 20',
+                ]);
+            }
         }
     }
 }

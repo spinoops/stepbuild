@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Address;
 use App\Models\CatalogArticle;
 use App\Models\PriceElement;
+use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -57,8 +58,22 @@ class SearchController extends Controller
                 (string) $e->group_code,
             ]);
 
+        $projects = Project::with('client:id,last_name,first_name')
+            ->where('is_active', true)
+            ->where('is_template', false)
+            ->orderByDesc('number')
+            ->get(['id', 'number', 'designation1', 'designation2', 'client_id', 'street', 'zip', 'city', 'contract_no'])
+            ->map(fn (Project $p) => [
+                $p->id,
+                "{$p->number} · {$p->designation1}",
+                trim("{$p->zip} {$p->city}"),
+                0,
+                trim("{$p->designation2} {$p->client_label} {$p->street} {$p->contract_no}"),
+            ]);
+
         return response()->json([
             'groups' => [
+                ['key' => 'projects', 'title' => 'Projets', 'path' => '/projets', 'items' => $projects],
                 ['key' => 'addresses', 'title' => 'Adresses', 'path' => '/clients', 'items' => $addresses],
                 ['key' => 'articles', 'title' => 'Catalogue', 'path' => '/catalogue', 'items' => $articles],
                 ['key' => 'price_elements', 'title' => 'Éléments de coûts', 'path' => '/listes-prix', 'items' => $elements],
