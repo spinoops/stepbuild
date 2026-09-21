@@ -1,0 +1,12 @@
+{
+  "name": "manuel-app-chantier",
+  "private": true,
+  "description": "Génération du mode d'emploi PDF (captures d'écran + mise en page)",
+  "scripts": {
+    "captures": "node capture.cjs",
+    "pdf": "python build_manual.py"
+  },
+  "dependencies": {
+    "puppeteer-core": "^24.0.0"
+  }
+}

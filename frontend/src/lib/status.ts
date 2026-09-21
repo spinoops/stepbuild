@@ -15,7 +15,7 @@ export const PROJECT_STATUSES: Record<ProjectStatus, StatusMeta> = {
   en_cours: { label: 'En cours', code: '1-EC', className: 'bg-amber-100 text-amber-800', rowClass: 'bg-white' },
   adjuge: { label: 'Adjugé', code: '2-ADJ', className: 'bg-green-100 text-green-800', rowClass: 'bg-bb-green' },
   termine: { label: 'Terminé', code: '3-TER', className: 'bg-gray-100 text-gray-700', rowClass: 'bg-bb-grey' },
-  refuse: { label: 'Refusé', code: '4-REF', className: 'bg-gray-700 text-gray-100', rowClass: 'bg-bb-dark text-gray-500' },
+  refuse: { label: 'Refusé', code: '4-REF', className: 'bg-gray-200 text-gray-600', rowClass: 'bg-bb-dark text-gray-500' },
 }
 
 /** Statuts d'un rapport journalier — workflow de validation. */
