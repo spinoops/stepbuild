@@ -22,8 +22,8 @@ pour l'affichage : `frontend/src/lib/phases.ts`.
 | 0 | Socle, rôles, interface (logique BauBit, habillage moderne, charte Lachat) | **fait** |
 | 1 | Adresses, catalogue (chapitres = modèles d'étapes), éléments de coûts, recherche instantanée | **fait** (API + front) ; reste : import de listes de prix |
 | 2 | Projets : fiche, numérotation par NPA, statuts, adresses nommées, photos ; projet courant de la barre de contexte | **fait** (API + front) |
-| 3 | Devis : création depuis le projet, étapes depuis les modèles, positions, chiffrage, récapitulation ; création d'article à la volée | à faire — **prochaine étape** |
-| 4 | Rapports journaliers sur les étapes du devis, workflow en cours → en contrôle → facturé | à faire |
+| 3 | Devis : création depuis le projet, étapes depuis les modèles, saisie rapide des positions, chiffrage, récapitulation, nouvelle version ; création d'article à la volée | **fait** (API + front) ; reste : export PDF (phase 6) |
+| 4 | Rapports journaliers sur les étapes du devis, workflow en cours → en contrôle → facturé | à faire — **prochaine étape** |
 | 5 | Régie (brut → majoré → client), contrôle des heures | à faire |
 | 6 | Acomptes, factures, facture finale, export PDF ; statistiques | à faire |
 | 7 | Reprise des données BauBit, mise en production Infomaniak | à faire |
@@ -100,10 +100,29 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   ouvrant une fiche ; les modules suivants (devis, rapports) doivent s'y rattacher.
 - Composants : `components/projects/` (`ProjectForm`, `ProjectAddressesTab`, `ProjectPhotosTab`), hooks `hooks/useProjects.ts`.
 
+### Devis (phase 3)
+- `documents` (type `devis` | `acompte` | `facture`, même base pour la phase 6) → `document_steps` →
+  `document_positions`. Numéro automatique par projet et par type : `2853-055-DE.1` (`Document::createForProject`).
+  Destinataire = **instantané** du client du projet, modifiable sans toucher au carnet.
+- **Étape** = étape du chantier. Créée depuis un **modèle** (chapitre du catalogue, `catalog_chapter_id`, avec ou
+  sans ses articles) ou libre. Les rapports journaliers (phase 4) devront référencer `document_steps.id`.
+- **Position** : `item` (chiffrée), `title`, `text`. Depuis un article du catalogue (prix repris, `usage_count`
+  incrémenté) ou libre. `amount = quantité × prix` calculé dans le modèle ; `is_optional` = affichée hors total.
+- **Totaux** recalculés côté serveur (`Document::recalculate`) : net hors options, rabais %, TVA (8.1 % par défaut),
+  **arrondi à 5 centimes**, TTC. Chaque action d'étape ou de position **renvoie le document complet** ; le front
+  remplace le cache (`useDocumentActions` dans `hooks/useDocuments.ts`), sans rechargement.
+- **Saisie rapide** (`components/documents/`) : `ArticlePicker` par étape cherche en mémoire dans
+  `/api/catalog-articles/picker` ; Entrée insère, puis quantité → Entrée → prix → Entrée → retour au champ d'ajout.
+  Sans résultat : ligne libre, ou **création de l'article à la volée** dans le chapitre de l'étape.
+  `PositionRow` garde un brouillon local (enregistré à la sortie de ligne ou après 1,5 s) : ne pas resynchroniser
+  ses champs depuis le serveur pendant la saisie.
+- Marge affichée dans la récapitulation (usage interne, seuil 30 %), calculée sur les positions ayant un prix d'achat.
+- Tout le module est réservé à `roles:admin,responsable` (prix). `POST /documents/{id}/duplicate` crée la version suivante.
+
 ### Données d'exemple restantes
-Rapports, contrôle des heures et documents utilisent encore `lib/demo.ts` (avec leur propre
+Rapports journaliers et contrôle des heures utilisent encore `lib/demo.ts` (avec leur propre
 sélection `DEMO_CONTEXT`, découplée du projet courant réel ; badge « Données d'exemple » via la prop
-`demo` de `Workspace`). À remplacer au fil des phases 3 à 6.
+`demo` de `Workspace`). À remplacer en phases 4 et 5.
 Côté base, `DemoDataSeeder` charge des données **fictives** en environnement `local` uniquement.
 
 ## Modules et routes front

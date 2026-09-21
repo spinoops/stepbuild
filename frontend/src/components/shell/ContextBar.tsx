@@ -1,7 +1,10 @@
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useProjectDocuments } from '@/hooks/useDocuments'
 import { useProjectOptions } from '@/hooks/useProjects'
+import { canSeePrices } from '@/lib/roles'
+import { useAuth } from '@/auth/AuthContext'
 import { PROJECT_STATUSES } from '@/lib/status'
-import { setProject, useWorkspace } from '@/lib/workspaceStore'
+import { setDocument, setProject, useWorkspace } from '@/lib/workspaceStore'
 import { Icon } from '@/components/icons'
 
 const SELECT =
@@ -9,8 +12,11 @@ const SELECT =
 
 /** Barre de contexte « Projet / Document » : le projet courant est repris par les pages. */
 export default function ContextBar() {
-  const { projectId } = useWorkspace()
+  const { user } = useAuth()
+  const canManage = canSeePrices(user) // les documents contiennent des prix : jamais pour l'ouvrier
+  const { projectId, documentId } = useWorkspace()
   const projects = useProjectOptions()
+  const documents = useProjectDocuments(projectId, canManage)
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const current = projects.data?.find((project) => project.id === projectId)
@@ -60,8 +66,24 @@ export default function ContextBar() {
         <Icon name="file" className="h-4 w-4 text-gray-300" />
         Document
       </span>
-      <select disabled className={`${SELECT} w-[260px] disabled:border-white/10 disabled:bg-white/10 disabled:text-gray-400`}>
-        <option>Devis du projet : phase 3</option>
+      <select
+        value={documentId ?? ''}
+        disabled={!canManage || !projectId}
+        onChange={(event) => {
+          const id = event.target.value ? Number(event.target.value) : null
+          setDocument(id)
+          navigate(id ? `/documents?id=${id}` : '/documents')
+        }}
+        className={`${SELECT} w-[260px] disabled:border-white/10 disabled:bg-white/10 disabled:text-gray-400`}
+      >
+        <option value="">
+          {!canManage ? 'Réservé à la gestion' : !projectId ? 'Choisir d’abord un projet' : documents.data?.length ? 'Aucun document ouvert' : 'Aucun document'}
+        </option>
+        {(documents.data ?? []).map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.number}
+          </option>
+        ))}
       </select>
 
       <span className="ml-auto flex items-center gap-1.5 text-[12px] text-gray-400">

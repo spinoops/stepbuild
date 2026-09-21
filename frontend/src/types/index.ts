@@ -177,3 +177,71 @@ export interface ProjectPhoto {
   caption: string | null
   position: number
 }
+
+export type DocumentType = 'devis' | 'acompte' | 'facture'
+export type DocumentStatus = 'en_cours' | 'envoye' | 'accepte' | 'refuse'
+
+/** Position d'un devis : article chiffré, sous-titre ou texte libre. */
+export interface DocumentPosition {
+  id: number
+  document_step_id: number
+  catalog_article_id: number | null
+  kind: 'item' | 'title' | 'text'
+  code: string | null
+  description: string
+  unit: string | null
+  quantity: number | null
+  unit_price: number | null
+  cost_price: number | null
+  amount: number | null
+  is_optional: boolean
+  internal_remark: string | null
+  position: number
+}
+
+/** Étape d'un devis = étape du chantier (reprise par les rapports, la régie, la facture). */
+export interface DocumentStep {
+  id: number
+  document_id: number
+  catalog_chapter_id: number | null
+  code: string
+  label: string
+  position: number
+  total: number
+  positions: DocumentPosition[]
+}
+
+/** Document commercial. `steps` n'est présent que sur le document complet. */
+export interface DocumentDetail {
+  id: number
+  project_id: number
+  project?: { id: number; number: string; designation1: string }
+  type: DocumentType
+  sequence: number
+  number: string
+  title: string | null
+  date: string
+  status: DocumentStatus
+  address_id: number | null
+  recipient_title: string | null
+  recipient_name: string | null
+  recipient_first_name: string | null
+  recipient_street: string | null
+  recipient_street_no: string | null
+  recipient_zip: string | null
+  recipient_city: string | null
+  recipient_email: string | null
+  user_id: number | null
+  initials: string | null
+  header_text: string | null
+  footer_text: string | null
+  vat_rate: number
+  discount_percent: number | null
+  total_net: number
+  discount_amount: number
+  total_vat: number
+  rounding: number
+  total_gross: number
+  steps?: DocumentStep[]
+  updated_at: string
+}

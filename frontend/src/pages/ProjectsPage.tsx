@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthContext'
 import Workspace, { AsidePanel } from '@/components/baubit/Workspace'
 import { StandardTools, ToolMenu, ToolSep } from '@/components/baubit/Toolbar'
@@ -16,14 +16,16 @@ import Badge from '@/components/ui/Badge'
 import { useDebounced } from '@/hooks/useDebounced'
 import { SAVE_LABELS } from '@/hooks/useEntityForm'
 import type { SaveState } from '@/hooks/useEntityForm'
+import { useCreateDocument, useProjectDocuments } from '@/hooks/useDocuments'
 import { useProjectStats } from '@/hooks/useProjects'
 import { useSelection } from '@/hooks/useSelection'
 import { EMPTY_QUERY, useDeleteResource, useResourceItem, useResourceList } from '@/lib/crud'
 import type { GridQuery } from '@/lib/crud'
 import { canSeePrices } from '@/lib/roles'
-import { PROJECT_STATUSES } from '@/lib/status'
+import { fmtAmount } from '@/lib/format'
+import { DOCUMENT_STATUSES, PROJECT_STATUSES } from '@/lib/status'
 import { toast } from '@/lib/toast'
-import { setProject, useWorkspace } from '@/lib/workspaceStore'
+import { setDocument, setProject, useWorkspace } from '@/lib/workspaceStore'
 import type { Project, ProjectStatus } from '@/types'
 
 const STATUSES = Object.keys(PROJECT_STATUSES) as ProjectStatus[]
@@ -60,6 +62,8 @@ export default function ProjectsPage() {
   const canManage = canSeePrices(user) // admin et responsable ; l'ouvrier consulte seulement
   const { projectId: contextId } = useWorkspace()
   const { selectedId, isNew, select } = useSelection()
+  const navigate = useNavigate()
+  const createDocument = useCreateDocument()
   const [tab, setTab] = useState('Général')
   const [statusFilter, setStatusFilter] = useState<'' | ProjectStatus>('')
   const [onlyActive, setOnlyActive] = useState(true)
@@ -77,6 +81,31 @@ export default function ProjectsPage() {
   const currentId = isNew ? null : (selectedId ?? contextId ?? rows[0]?.id ?? null)
   const detail = useResourceItem<Project>('projects', currentId)
   const project = isNew ? null : (detail.data ?? rows.find((row) => row.id === currentId) ?? null)
+  const documents = useProjectDocuments(project?.id ?? null, canManage)
+
+  function openDocument(id: number) {
+    if (project) {
+      setProject(project.id)
+    }
+    setDocument(id)
+    navigate(`/documents?id=${id}`)
+  }
+
+  function createQuote() {
+    if (!project) {
+      return
+    }
+    createDocument.mutate(
+      { projectId: project.id, type: 'devis' },
+      {
+        onSuccess: (created) => {
+          toast(`Devis ${created.number} créé.`, 'success')
+          openDocument(created.id)
+        },
+        onError: () => toast("Le devis n'a pas pu être créé.", 'error'),
+      },
+    )
+  }
 
   function open(id: number | 'new' | null) {
     select(id)
@@ -201,11 +230,44 @@ export default function ProjectsPage() {
                 {project.zip} {project.city}
               </p>
 
-              <div className="mt-4 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Devis</div>
-              <p className="mt-1.5 rounded-lg border border-dashed border-gray-200 bg-gray-50 p-3 text-[12px] text-gray-500">
-                Le devis se créera ici, juste après le projet : ses étapes serviront aux rapports journaliers, à la régie
-                et à la facture (phase 3).
-              </p>
+              {canManage && (
+                <>
+                  <div className="mt-4 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Devis et documents</div>
+                  <ul className="mt-1.5 space-y-1">
+                    {(documents.data ?? []).map((item) => (
+                      <li key={item.id}>
+                        <button
+                          type="button"
+                          onClick={() => openDocument(item.id)}
+                          className="flex w-full items-center gap-2 rounded-lg border border-gray-200 px-2.5 py-2 text-left transition hover:border-primary-200 hover:bg-primary-50"
+                        >
+                          <Icon name="file" className="h-4 w-4 shrink-0 text-primary-600" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[13px] font-medium text-gray-800">{item.number}</span>
+                            <span className="block text-[11px] text-gray-400">
+                              {DOCUMENT_STATUSES[item.status].label} · {fmtAmount(item.total_gross)} CHF
+                            </span>
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  {documents.data?.length === 0 && (
+                    <p className="mt-1.5 text-[12px] text-gray-500">
+                      Pas encore de devis. Il fixe les étapes du chantier : rapports, régie et facture en découlent.
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={createQuote}
+                    disabled={createDocument.isPending}
+                    className="mt-2 flex h-8 w-full items-center justify-center gap-1.5 rounded-md bg-accent-600 text-[13px] font-medium text-white hover:bg-accent-700 disabled:opacity-40"
+                  >
+                    <Icon name="fileplus" className="h-4 w-4" />
+                    {documents.data?.length ? 'Nouveau devis' : 'Créer le devis'}
+                  </button>
+                </>
+              )}
             </>
           ) : (
             <p className="text-[13px] text-gray-400">{isNew ? 'Nouveau projet en cours de saisie.' : 'Aucun projet sélectionné.'}</p>

@@ -71,9 +71,9 @@ function editDistance(a: string, b: string, max: number): number {
   return previous[b.length]
 }
 
-/** Mots du vocabulaire à une faute de frappe près du mot saisi (2 fautes dès 8 lettres). */
+/** Mots du vocabulaire proches du mot saisi : 1 faute pour 4-5 lettres, 2 dès 6 lettres (« bagete » → « baguette »). */
 function fuzzyTokens(word: string, vocabulary: string[]): Set<string> {
-  const max = word.length >= 8 ? 2 : 1
+  const max = word.length >= 6 ? 2 : 1
   const matches = new Set<string>()
   for (const token of vocabulary) {
     // Compare au mot entier et à son début (l'utilisateur est peut-être en train de taper).

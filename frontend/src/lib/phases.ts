@@ -36,16 +36,16 @@ export const PHASES: Phase[] = [
   {
     number: 3,
     title: 'Devis : étapes et positions',
-    summary: 'Création du devis depuis le projet, choix des étapes depuis les modèles, positions, chiffrage, récapitulation.',
-    period: 'Octobre 2026',
-    status: 'current',
+    summary: 'Création du devis depuis le projet, étapes depuis les modèles, saisie rapide des positions, chiffrage, récapitulation.',
+    period: 'Septembre 2026',
+    status: 'done',
   },
   {
     number: 4,
     title: 'Rapports journaliers',
     summary: 'Heures, matériaux, machines, sous-traitants saisis sur les étapes du devis ; workflow de validation.',
-    period: 'Novembre 2026',
-    status: 'planned',
+    period: 'Octobre 2026',
+    status: 'current',
   },
   {
     number: 5,

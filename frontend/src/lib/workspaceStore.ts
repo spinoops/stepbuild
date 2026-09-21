@@ -26,7 +26,7 @@ export interface WorkspaceStatus {
 interface WorkspaceState {
   tabs: WorkspaceTab[]
   projectId: number | null
-  documentId: string | null
+  documentId: number | null
   status: WorkspaceStatus
   asideOpen: boolean
 }
@@ -85,7 +85,7 @@ export function setProject(projectId: number | null): void {
   update({ projectId, documentId: null })
 }
 
-export function setDocument(documentId: string | null): void {
+export function setDocument(documentId: number | null): void {
   update({ documentId })
 }
 
