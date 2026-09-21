@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Address;
 use App\Models\CatalogArticle;
 use App\Models\CatalogChapter;
+use App\Models\Document;
 use App\Models\PriceElement;
 use App\Models\Project;
 use Illuminate\Database\Seeder;
@@ -21,6 +22,7 @@ class DemoDataSeeder extends Seeder
         $this->seedCatalog();
         $this->seedPriceElements();
         $this->seedProjects();
+        $this->seedQuote();
     }
 
     private function seedAddresses(): void
@@ -183,5 +185,38 @@ class DemoDataSeeder extends Seeder
                 ]);
             }
         }
+    }
+
+    /** Un devis d'exemple sur le premier projet : étapes issues des modèles, quelques quantités. */
+    private function seedQuote(): void
+    {
+        $project = Project::where('number', '2800-001')->first();
+        if (! $project || Document::where('project_id', $project->id)->exists()) {
+            return;
+        }
+
+        $quote = Document::createForProject($project, 'devis', null, ['title' => 'Rénovation salle de bain']);
+        $quantities = ['02.003' => 3, '03.005' => 1, '12.005' => 1, '12.025' => 12, '12.030' => 30, '12.040' => 8, '12.100' => 20, '18.005' => 10];
+
+        foreach (['02', '03', '12', '18'] as $index => $code) {
+            $chapter = CatalogChapter::where('code', $code)->whereNull('parent_id')->first();
+            $step = $quote->steps()->create([
+                'catalog_chapter_id' => $chapter->id, 'code' => $chapter->code, 'label' => $chapter->label, 'position' => $index + 1,
+            ]);
+
+            $articles = CatalogArticle::where('catalog_chapter_id', $chapter->id)->where('is_title', false)->orderBy('code')->orderBy('sub_code')->get();
+            foreach ($articles as $position => $article) {
+                $fullCode = implode('.', array_filter([$code, $article->code, $article->sub_code]));
+                $step->positions()->create([
+                    'document_id' => $quote->id, 'catalog_article_id' => $article->id, 'code' => $fullCode,
+                    'description' => $article->description, 'unit' => $article->unit,
+                    'quantity' => $quantities[$fullCode] ?? null,
+                    'unit_price' => $article->sale_price, 'cost_price' => $article->purchase_price,
+                    'position' => $position + 1,
+                ]);
+            }
+        }
+
+        $quote->recalculate();
     }
 }

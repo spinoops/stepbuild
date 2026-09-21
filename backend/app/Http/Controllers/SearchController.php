@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Address;
 use App\Models\CatalogArticle;
+use App\Models\Document;
 use App\Models\PriceElement;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
@@ -71,9 +72,21 @@ class SearchController extends Controller
                 trim("{$p->designation2} {$p->client_label} {$p->street} {$p->contract_no}"),
             ]);
 
+        $documents = Document::with('project:id,number,designation1')
+            ->orderByDesc('date')
+            ->get(['id', 'project_id', 'number', 'title', 'recipient_name', 'recipient_first_name', 'recipient_city'])
+            ->map(fn (Document $d) => [
+                $d->id,
+                trim("{$d->number} · ".($d->title ?: $d->project?->designation1)),
+                trim("{$d->recipient_name} {$d->recipient_first_name}"),
+                0,
+                (string) $d->recipient_city,
+            ]);
+
         return response()->json([
             'groups' => [
                 ['key' => 'projects', 'title' => 'Projets', 'path' => '/projets', 'items' => $projects],
+                ['key' => 'documents', 'title' => 'Documents', 'path' => '/documents', 'items' => $documents],
                 ['key' => 'addresses', 'title' => 'Adresses', 'path' => '/clients', 'items' => $addresses],
                 ['key' => 'articles', 'title' => 'Catalogue', 'path' => '/catalogue', 'items' => $articles],
                 ['key' => 'price_elements', 'title' => 'Éléments de coûts', 'path' => '/listes-prix', 'items' => $elements],

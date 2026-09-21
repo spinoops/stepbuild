@@ -42,6 +42,28 @@ class CatalogArticleController extends Controller
         );
     }
 
+    /**
+     * Liste compacte de tous les articles chiffrables, chargée une fois par l'éditeur de devis
+     * pour une recherche en mémoire. Élément : [id, code complet, description, unité, vente, achat, utilisations].
+     */
+    public function picker(): JsonResponse
+    {
+        $items = CatalogArticle::with('chapter:id,code')
+            ->where('is_title', false)
+            ->get(['id', 'catalog_chapter_id', 'code', 'sub_code', 'description', 'unit', 'sale_price', 'purchase_price', 'usage_count'])
+            ->map(fn (CatalogArticle $a) => [
+                $a->id,
+                implode('.', array_filter([$a->chapter?->code, $a->code, $a->sub_code])),
+                $a->description,
+                $a->unit,
+                $a->sale_price,
+                $a->purchase_price,
+                $a->usage_count,
+            ]);
+
+        return response()->json(['data' => $items]);
+    }
+
     public function show(CatalogArticle $article): CatalogArticleResource
     {
         return CatalogArticleResource::make($article->load('chapter'));

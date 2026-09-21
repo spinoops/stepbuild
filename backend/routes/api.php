@@ -4,6 +4,9 @@ use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CatalogArticleController;
 use App\Http\Controllers\CatalogChapterController;
+use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\DocumentPositionController;
+use App\Http\Controllers\DocumentStepController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PriceElementController;
 use App\Http\Controllers\ProjectAddressController;
@@ -68,8 +71,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('catalog-chapters', CatalogChapterController::class)
             ->except(['show'])
             ->parameters(['catalog-chapters' => 'chapter']);
+        Route::get('/catalog-articles/picker', [CatalogArticleController::class, 'picker']);
         Route::apiResource('catalog-articles', CatalogArticleController::class)
             ->parameters(['catalog-articles' => 'article']);
+
+        // Documents (devis, puis acomptes et factures) : étapes et positions.
+        Route::get('/documents', [DocumentController::class, 'index']);
+        Route::post('/projects/{project}/documents', [DocumentController::class, 'store']);
+        Route::get('/documents/{document}', [DocumentController::class, 'show']);
+        Route::put('/documents/{document}', [DocumentController::class, 'update']);
+        Route::delete('/documents/{document}', [DocumentController::class, 'destroy']);
+        Route::post('/documents/{document}/duplicate', [DocumentController::class, 'duplicate']);
+        Route::post('/documents/{document}/steps/reorder', [DocumentStepController::class, 'reorder']);
+        Route::apiResource('documents.steps', DocumentStepController::class)->only(['store', 'update', 'destroy']);
+        Route::post('/documents/{document}/positions/reorder', [DocumentPositionController::class, 'reorder']);
+        Route::apiResource('documents.positions', DocumentPositionController::class)->only(['store', 'update', 'destroy']);
 
         Route::get('/price-elements/groups', [PriceElementController::class, 'groups']);
         Route::apiResource('price-elements', PriceElementController::class)
