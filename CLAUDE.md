@@ -116,6 +116,8 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   Sans résultat : ligne libre, ou **création de l'article à la volée** dans le chapitre de l'étape.
   `PositionRow` garde un brouillon local (enregistré à la sortie de ligne ou après 1,5 s) : ne pas resynchroniser
   ses champs depuis le serveur pendant la saisie.
+  Réordonnancement par **glisser-déposer** natif (poignée `data-handle`, dépose dans l'étape ou vers une autre étape :
+  `updatePosition` avec le nouveau `document_step_id` puis `reorderPositions`) ; au clavier, flèches sur la poignée.
 - Marge affichée dans la récapitulation (usage interne, seuil 30 %), calculée sur les positions ayant un prix d'achat.
 - Tout le module est réservé à `roles:admin,responsable` (prix). `POST /documents/{id}/duplicate` crée la version suivante.
 

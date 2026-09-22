@@ -50,6 +50,7 @@ export type IconName =
   | 'sigma'
   | 'refresh'
   | 'paperclip'
+  | 'grip'
 
 const PATHS: Record<IconName, React.ReactNode> = {
   dashboard: (
@@ -360,6 +361,16 @@ const PATHS: Record<IconName, React.ReactNode> = {
     </>
   ),
   paperclip: <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />,
+  grip: (
+    <>
+      <circle cx="9" cy="5" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="5" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="12" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="12" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="19" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="19" r="1.4" fill="currentColor" stroke="none" />
+    </>
+  ),
 }
 
 interface IconProps extends SVGProps<SVGSVGElement> {

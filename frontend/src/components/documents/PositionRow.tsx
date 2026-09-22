@@ -31,25 +31,37 @@ function toDraft(position: DocumentPosition): Draft {
 const CELL =
   'w-full rounded border border-transparent bg-transparent px-1.5 py-1 text-[13px] outline-none transition hover:border-gray-200 focus:border-primary-400 focus:bg-white focus:ring-2 focus:ring-primary-100'
 
+export type DropPlace = 'above' | 'below'
+
 interface PositionRowProps {
   position: DocumentPosition
   actions: DocumentActions
-  isFirst: boolean
-  isLast: boolean
-  onMove: (direction: -1 | 1) => void
   onSaving: (saving: boolean) => void
+  /** Déplacement au clavier depuis la poignée (flèches haut / bas). */
+  onMove: (direction: -1 | 1) => void
+  /** Glisser-déposer : la ligne saisie par sa poignée, et la ligne survolée. */
+  dragging: boolean
+  dropPlace: DropPlace | null
+  onDragStart: () => void
+  onDragEnd: () => void
+  onDragOver: (place: DropPlace) => void
+  onDrop: (place: DropPlace) => void
 }
 
 /**
  * Ligne de devis éditable en place. Le brouillon local fait foi pendant la saisie ; il est envoyé
  * à la sortie de la ligne ou 1,5 s après la dernière frappe. Entrée : quantité → prix → champ d'ajout.
+ * La poignée (à gauche) se saisit à la souris pour déplacer la ligne ; au clavier, flèches haut et bas.
  */
-export default function PositionRow({ position, actions, isFirst, isLast, onMove, onSaving }: PositionRowProps) {
+export default function PositionRow({
+  position, actions, onSaving, onMove, dragging, dropPlace, onDragStart, onDragEnd, onDragOver, onDrop,
+}: PositionRowProps) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(position))
   const saved = useRef(JSON.stringify(draft))
   const latest = useRef(draft)
   const timer = useRef<number | undefined>(undefined)
   const removed = useRef(false) // ligne supprimée : plus aucun enregistrement
+  const rowRef = useRef<HTMLTableRowElement>(null)
   const isItem = position.kind === 'item'
 
   async function save() {
@@ -115,13 +127,63 @@ export default function PositionRow({ position, actions, isFirst, isLast, onMove
     target?.select()
   }
 
+  /** Côté de la ligne visé par le curseur : moitié haute ou basse. */
+  function placeFromEvent(event: React.DragEvent<HTMLTableRowElement>): DropPlace {
+    const rect = event.currentTarget.getBoundingClientRect()
+    return event.clientY < rect.top + rect.height / 2 ? 'above' : 'below'
+  }
+
   const quantity = toNumber(draft.quantity)
   const price = toNumber(draft.unit_price)
   const amount = isItem && quantity !== null && price !== null ? Math.round(quantity * price * 100) / 100 : null
 
+  const dropClass =
+    dropPlace === 'above' ? 'shadow-[inset_0_3px_0_0_#1d3f9c]' : dropPlace === 'below' ? 'shadow-[inset_0_-3px_0_0_#1d3f9c]' : ''
+
   return (
-    <tr onBlur={onBlur} className={`group border-b border-gray-100 align-top ${draft.is_optional ? 'text-gray-400' : ''}`}>
-      <td className="w-24 py-0.5 pl-3">
+    <tr
+      ref={rowRef}
+      onBlur={onBlur}
+      onDragOver={(event) => {
+        event.preventDefault()
+        onDragOver(placeFromEvent(event))
+      }}
+      onDrop={(event) => {
+        event.preventDefault()
+        onDrop(placeFromEvent(event))
+      }}
+      className={`group border-b border-gray-100 align-top transition-opacity ${draft.is_optional ? 'text-gray-400' : ''} ${
+        dragging ? 'opacity-40' : ''
+      } ${dropClass}`}
+    >
+      <td className="w-7 py-1.5 pl-2 align-middle">
+        <button
+          type="button"
+          draggable
+          onDragStart={(event) => {
+            event.dataTransfer.effectAllowed = 'move'
+            event.dataTransfer.setData('text/plain', String(position.id))
+            if (rowRef.current) {
+              event.dataTransfer.setDragImage(rowRef.current, 24, 18)
+            }
+            onDragStart()
+          }}
+          onDragEnd={onDragEnd}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+              event.preventDefault()
+              onMove(event.key === 'ArrowUp' ? -1 : 1)
+            }
+          }}
+          title="Glisser pour déplacer la ligne (au clavier : flèches haut et bas)"
+          data-handle={position.id}
+          aria-label="Déplacer la ligne"
+          className="flex h-6 w-5 cursor-grab items-center justify-center rounded text-gray-300 transition hover:bg-gray-100 hover:text-gray-600 focus:text-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-100 active:cursor-grabbing group-hover:text-gray-400"
+        >
+          <Icon name="grip" className="h-4 w-4" />
+        </button>
+      </td>
+      <td className="w-24 py-0.5">
         <input value={draft.code} onChange={(e) => change({ code: e.target.value })} className={`${CELL} text-gray-500`} aria-label="Code" />
       </td>
       <td className="py-0.5">
@@ -180,14 +242,8 @@ export default function PositionRow({ position, actions, isFirst, isLast, onMove
           {position.kind === 'title' ? 'Sous-titre' : 'Texte'}
         </td>
       )}
-      <td className="w-24 py-1 pr-2">
-        <span className="flex justify-end gap-0.5 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
-          <button type="button" disabled={isFirst} onClick={() => onMove(-1)} title="Monter" className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-20">
-            <Icon name="chevrondown" className="h-3.5 w-3.5 rotate-180" />
-          </button>
-          <button type="button" disabled={isLast} onClick={() => onMove(1)} title="Descendre" className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-20">
-            <Icon name="chevrondown" className="h-3.5 w-3.5" />
-          </button>
+      <td className="w-12 py-1 pr-2">
+        <span className="flex justify-end opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
           <button
             type="button"
             title="Supprimer la position"

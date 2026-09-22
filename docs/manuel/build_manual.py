@@ -523,7 +523,10 @@ def build_story():
             "Cliquez dans une cellule et modifiez : code, description, unité, quantité, prix. Le <b>montant</b> se "
             "recalcule aussitôt, les totaux un instant après.",
             "La case <b>Opt.</b> marque une <b>option</b> : elle reste affichée mais ne compte pas dans le total.",
-            "Au survol de la ligne, les flèches la déplacent et la corbeille la supprime.",
+            "Pour déplacer une ligne, saisissez la <b>poignée</b> (les six points à gauche) et glissez-la à sa nouvelle place, "
+            "dans la même étape ou dans une autre. Un trait bleu indique où elle sera déposée. Au clavier : cliquez la poignée, "
+            "puis flèches haut et bas.",
+            "Au survol de la ligne, la corbeille la supprime.",
         ]),
         note("Les positions s'enregistrent toutes seules quand vous quittez la ligne. La barre d'état, en bas, "
              "affiche en permanence le net et le TTC du devis."),
