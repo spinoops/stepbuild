@@ -32,4 +32,33 @@ class DocumentStep extends Model
     {
         return $this->hasMany(DocumentPosition::class)->orderBy('position')->orderBy('id');
     }
+
+    /**
+     * Recopie les articles du chapitre (et de ses sous-chapitres) comme positions à chiffrer.
+     */
+    public function importArticles(CatalogChapter $chapter): void
+    {
+        $chapterIds = CatalogChapter::where('parent_id', $chapter->id)->pluck('id')->push($chapter->id);
+
+        $articles = CatalogArticle::with('chapter:id,code')
+            ->whereIn('catalog_chapter_id', $chapterIds)
+            ->where('is_title', false)
+            ->orderBy('code')->orderBy('sub_code')->orderBy('id')
+            ->get();
+
+        $offset = (int) $this->positions()->max('position');
+        foreach ($articles as $index => $article) {
+            $this->positions()->create([
+                'document_id' => $this->document_id,
+                'catalog_article_id' => $article->id,
+                'kind' => 'item',
+                'code' => implode('.', array_filter([$article->chapter?->code, $article->code, $article->sub_code])),
+                'description' => $article->description,
+                'unit' => $article->unit,
+                'unit_price' => $article->sale_price,
+                'cost_price' => $article->purchase_price,
+                'position' => $offset + $index + 1,
+            ]);
+        }
+    }
 }

@@ -8,6 +8,7 @@ use App\Models\CatalogChapter;
 use App\Models\Document;
 use App\Models\PriceElement;
 use App\Models\Project;
+use App\Models\QuoteTemplate;
 use Illuminate\Database\Seeder;
 
 /**
@@ -22,6 +23,7 @@ class DemoDataSeeder extends Seeder
         $this->seedCatalog();
         $this->seedPriceElements();
         $this->seedProjects();
+        $this->seedQuoteTemplate();
         $this->seedQuote();
     }
 
@@ -218,5 +220,28 @@ class DemoDataSeeder extends Seeder
         }
 
         $quote->recalculate();
+    }
+
+    /** Modèle de devis standard : les étapes générales d'un chantier de rénovation. */
+    private function seedQuoteTemplate(): void
+    {
+        if (QuoteTemplate::where('name', 'Rénovation standard')->exists()) {
+            return;
+        }
+
+        $template = QuoteTemplate::create([
+            'name' => 'Rénovation standard',
+            'description' => 'Étapes générales d’un chantier de rénovation, avec les articles du catalogue.',
+            'is_default' => true,
+            'position' => 1,
+        ]);
+
+        foreach (['00', '02', '03', '12', '17', '18'] as $index => $code) {
+            $chapter = CatalogChapter::where('code', $code)->whereNull('parent_id')->first();
+            $template->steps()->create([
+                'catalog_chapter_id' => $chapter->id, 'code' => $chapter->code, 'label' => $chapter->label,
+                'with_articles' => true, 'position' => $index + 1,
+            ]);
+        }
     }
 }

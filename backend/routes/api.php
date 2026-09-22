@@ -12,6 +12,7 @@ use App\Http\Controllers\PriceElementController;
 use App\Http\Controllers\ProjectAddressController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectPhotoController;
+use App\Http\Controllers\QuoteTemplateController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\UserController;
@@ -86,6 +87,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('documents.steps', DocumentStepController::class)->only(['store', 'update', 'destroy']);
         Route::post('/documents/{document}/positions/reorder', [DocumentPositionController::class, 'reorder']);
         Route::apiResource('documents.positions', DocumentPositionController::class)->only(['store', 'update', 'destroy']);
+
+        // Modèles de devis (jeux d'étapes).
+        Route::apiResource('quote-templates', QuoteTemplateController::class)
+            ->except(['show'])
+            ->parameters(['quote-templates' => 'template']);
+        Route::post('/documents/{document}/save-as-template', [QuoteTemplateController::class, 'fromDocument']);
+        Route::post('/quote-templates/{template}/apply/{document}', [QuoteTemplateController::class, 'apply']);
 
         Route::get('/price-elements/groups', [PriceElementController::class, 'groups']);
         Route::apiResource('price-elements', PriceElementController::class)

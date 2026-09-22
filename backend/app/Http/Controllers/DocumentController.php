@@ -7,6 +7,7 @@ use App\Http\Requests\SaveDocumentRequest;
 use App\Http\Resources\DocumentResource;
 use App\Models\Document;
 use App\Models\Project;
+use App\Models\QuoteTemplate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -45,11 +46,18 @@ class DocumentController extends Controller
         $data = $request->validate([
             'type' => ['required', Rule::in(array_keys(Document::TYPES))],
             'title' => ['nullable', 'string', 'max:255'],
+            'quote_template_id' => ['nullable', 'integer', Rule::exists('quote_templates', 'id')->whereNull('deleted_at')],
         ]);
 
         $document = Document::createForProject($project, $data['type'], $request->user(), [
             'title' => $data['title'] ?? null,
         ]);
+
+        // Devis : les étapes du modèle choisi (ou du modèle par défaut) sont créées d'emblée.
+        if ($data['type'] === 'devis') {
+            $template = isset($data['quote_template_id']) ? QuoteTemplate::find($data['quote_template_id']) : QuoteTemplate::default();
+            $template?->applyTo($document);
+        }
 
         return DocumentResource::make($document->refresh()->load(self::FULL))->response()->setStatusCode(201);
     }

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\DocumentResource;
-use App\Models\CatalogArticle;
 use App\Models\CatalogChapter;
 use App\Models\Document;
 use App\Models\DocumentStep;
@@ -40,7 +39,7 @@ class DocumentStepController extends Controller
             ]);
 
             if ($chapter && $request->boolean('with_articles', true)) {
-                $this->importArticles($step, $chapter);
+                $step->importArticles($chapter);
             }
         });
 
@@ -79,33 +78,5 @@ class DocumentStepController extends Controller
         }
 
         return DocumentResource::make($document->load(DocumentController::FULL));
-    }
-
-    /**
-     * Recopie les articles du chapitre (et de ses sous-chapitres) comme positions à chiffrer.
-     */
-    private function importArticles(DocumentStep $step, CatalogChapter $chapter): void
-    {
-        $chapterIds = CatalogChapter::where('parent_id', $chapter->id)->pluck('id')->push($chapter->id);
-
-        $articles = CatalogArticle::with('chapter:id,code')
-            ->whereIn('catalog_chapter_id', $chapterIds)
-            ->where('is_title', false)
-            ->orderBy('code')->orderBy('sub_code')->orderBy('id')
-            ->get();
-
-        foreach ($articles as $index => $article) {
-            $step->positions()->create([
-                'document_id' => $step->document_id,
-                'catalog_article_id' => $article->id,
-                'kind' => 'item',
-                'code' => implode('.', array_filter([$article->chapter?->code, $article->code, $article->sub_code])),
-                'description' => $article->description,
-                'unit' => $article->unit,
-                'unit_price' => $article->sale_price,
-                'cost_price' => $article->purchase_price,
-                'position' => $index + 1,
-            ]);
-        }
     }
 }
