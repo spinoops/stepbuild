@@ -2,8 +2,8 @@
 #  dev.ps1  —  Lance l'environnement de dev complet (backend + frontend).
 #
 #  Ouvre DEUX fenetres PowerShell :
-#    - API Laravel  -> http://localhost:8000   (php artisan serve)
-#    - SPA React    -> http://localhost:5173   (npm run dev, hot-reload Vite)
+#    - API Laravel  -> http://localhost:8001   (php artisan serve)
+#    - SPA React    -> http://localhost:5174   (npm run dev, hot-reload Vite)
 #
 #  Usage :  depuis la racine du projet, clic droit > "Executer avec PowerShell"
 #           ou en terminal :  .\dev.ps1
@@ -55,11 +55,11 @@ if (-not (Test-Path (Join-Path $frontend 'node_modules'))) {
 
 # --- Commandes des deux fenetres --------------------------------------------
 # `$Host (backtick) reste litteral : il s'evalue dans la fenetre enfant.
-$backendCmd  = "`$Host.UI.RawUI.WindowTitle = 'API Laravel  ->  http://localhost:8000'; " +
+$backendCmd  = "`$Host.UI.RawUI.WindowTitle = 'API Laravel  ->  http://localhost:8001'; " +
                "Set-Location '$backend'; " +
-               "& '$php' artisan serve"
+               "& '$php' artisan serve --port=8001"
 
-$frontendCmd = "`$Host.UI.RawUI.WindowTitle = 'SPA React (Vite)  ->  http://localhost:5173'; " +
+$frontendCmd = "`$Host.UI.RawUI.WindowTitle = 'SPA React (Vite)  ->  http://localhost:5174'; " +
                "Set-Location '$frontend'; " +
                "npm run dev"
 
@@ -69,8 +69,8 @@ Start-Process powershell -ArgumentList '-NoExit', '-NoProfile', '-Command', $fro
 # --- Recap -------------------------------------------------------------------
 Write-Host ""
 Write-Host "  Deux serveurs de dev lances (une fenetre chacun) :" -ForegroundColor Green
-Write-Host "    - API  Laravel   http://localhost:8000    (test : /api/health)"
-Write-Host "    - SPA  React      http://localhost:5173"
+Write-Host "    - API  Laravel   http://localhost:8001    (test : /api/health)"
+Write-Host "    - SPA  React      http://localhost:5174"
 Write-Host ""
 Write-Host "  PHP utilise : $php" -ForegroundColor DarkGray
 Write-Host ""

@@ -4,14 +4,14 @@
     {
       "name": "api",
       "runtimeExecutable": "D:/wamp64/bin/php/php8.4.24/php.exe",
-      "runtimeArgs": ["backend/artisan", "serve", "--port=8000"],
-      "port": 8000
+      "runtimeArgs": ["backend/artisan", "serve", "--port=8001"],
+      "port": 8001
     },
     {
       "name": "front",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "frontend", "run", "dev"],
-      "port": 5173
+      "port": 5174
     }
   ]
 }

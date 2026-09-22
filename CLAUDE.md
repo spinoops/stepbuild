@@ -145,7 +145,7 @@ Le `php` du PATH Windows est en **8.1** (trop vieux pour Laravel 13, qui exige *
 - Composer/tests : `$env:Path = 'D:\wamp64\bin\php\php8.4.24;' + $env:Path`.
 
 ## Démarrer
-- **`dev.bat`** (racine) lance le backend (`:8000`) + le frontend (`:5173`). **WAMP (MySQL) doit tourner.**
+- **`dev.bat`** (racine) lance le backend (`:8001`) + le frontend (`:5174`). **WAMP (MySQL) doit tourner.**
 - Base MySQL : `app_chantier`. Plusieurs projets dérivés de baseapp partagent les ports → **un seul lancé à la fois**.
 
 ## Stack

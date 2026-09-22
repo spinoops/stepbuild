@@ -3,8 +3,8 @@ const puppeteer = require('puppeteer-core')
 const path = require('path')
 const fs = require('fs')
 
-const FRONT = 'http://localhost:5173'
-const API = 'http://localhost:8000/api'
+const FRONT = 'http://localhost:5174'
+const API = 'http://localhost:8001/api'
 const OUT = path.join(__dirname, 'shots')
 fs.mkdirSync(OUT, { recursive: true })
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))

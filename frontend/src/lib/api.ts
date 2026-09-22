@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { toast } from '@/lib/toast'
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8001'
 const TOKEN_KEY = 'baseapp_token'
 
 /** Instance axios partagée, préfixée par /api. */
