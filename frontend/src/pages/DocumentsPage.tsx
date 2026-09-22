@@ -10,12 +10,14 @@ import DocumentEditor from '@/components/documents/DocumentEditor'
 import DocumentHeaderForm, { DOCUMENT_FORM_ID } from '@/components/documents/DocumentHeaderForm'
 import DocumentRecap from '@/components/documents/DocumentRecap'
 import StepsPanel from '@/components/documents/StepsPanel'
+import TemplateChooser from '@/components/documents/TemplateChooser'
 import { Icon } from '@/components/icons'
 import Badge from '@/components/ui/Badge'
 import { useDebounced } from '@/hooks/useDebounced'
 import { useCreateDocument, useDocument, useDocumentActions, useProjectDocuments } from '@/hooks/useDocuments'
 import { SAVE_LABELS } from '@/hooks/useEntityForm'
 import type { SaveState } from '@/hooks/useEntityForm'
+import { useQuoteTemplates, useSaveDocumentAsTemplate } from '@/hooks/useQuoteTemplates'
 import { useSelection } from '@/hooks/useSelection'
 import { EMPTY_QUERY, useDeleteResource, useResourceList } from '@/lib/crud'
 import type { GridQuery } from '@/lib/crud'
@@ -65,6 +67,9 @@ export default function DocumentsPage() {
   const doc = detail.data ?? null
   const create = useCreateDocument()
   const remove = useDeleteResource('documents')
+  const templates = useQuoteTemplates()
+  const saveAsTemplate = useSaveDocumentAsTemplate()
+  const [chooserOpen, setChooserOpen] = useState(false)
 
   const activeTab = tab ?? (currentId ? 'Détail' : 'Explorateur')
   const explorer = useResourceList<DocumentDetail>('documents', useDebounced(query, 250), {}, activeTab === 'Explorateur')
@@ -90,14 +95,43 @@ export default function DocumentsPage() {
       toast("Choisissez d'abord un projet dans la barre du haut.", 'info')
       return
     }
+    if ((templates.data?.length ?? 0) > 0) {
+      setChooserOpen(true)
+      return
+    }
+    createWithTemplate(null)
+  }
+
+  function createWithTemplate(templateId: number | null) {
+    if (!projectId) {
+      return
+    }
+    setChooserOpen(false)
     create.mutate(
-      { projectId, type: 'devis' },
+      { projectId, type: 'devis', templateId },
       {
         onSuccess: (created) => {
           toast(`Devis ${created.number} créé.`, 'success')
           open(created.id)
         },
         onError: () => toast("Le devis n'a pas pu être créé.", 'error'),
+      },
+    )
+  }
+
+  function saveTemplate() {
+    if (!doc) {
+      return
+    }
+    const name = window.prompt('Nom du modèle de devis :', doc.title ?? '')
+    if (!name?.trim()) {
+      return
+    }
+    saveAsTemplate.mutate(
+      { documentId: doc.id, name: name.trim() },
+      {
+        onSuccess: (template) => toast(`Modèle « ${template.name} » créé avec ${template.steps?.length ?? 0} étapes.`, 'success'),
+        onError: () => toast("Le modèle n'a pas pu être créé.", 'error'),
       },
     )
   }
@@ -121,6 +155,8 @@ export default function DocumentsPage() {
   const showDocument = activeTab !== 'Explorateur'
 
   return (
+    <>
+    <TemplateChooser open={chooserOpen} onClose={() => setChooserOpen(false)} onChoose={createWithTemplate} busy={create.isPending} />
     <Workspace
       asideWidth={320}
       tabLabel={doc ? `${DOCUMENT_TYPE_LABELS[doc.type]} N° ${doc.number}` : 'Documents'}
@@ -141,6 +177,7 @@ export default function DocumentsPage() {
           <ToolButton icon="trash" title="Supprimer le document" tone="danger" onClick={onDelete} disabled={!doc} />
           <ToolSep />
           {doc ? <DuplicateButton documentId={doc.id} onDone={open} /> : <ToolButton icon="fileplus" title="Nouvelle version" disabled />}
+          <ToolButton icon="tree" title="Enregistrer les étapes de ce devis comme modèle" onClick={saveTemplate} disabled={!doc || !doc.steps?.length} />
           <ToolButton icon="print" title="Imprimer / PDF (phase 6)" />
           {doc && (
             <>
@@ -235,6 +272,7 @@ export default function DocumentsPage() {
         )}
       </div>
     </Workspace>
+    </>
   )
 }
 

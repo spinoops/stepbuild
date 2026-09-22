@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { BbCheckbox, BbInput, BbSelect } from '@/components/baubit/Form'
 import type { DocumentActions } from '@/hooks/useDocuments'
+import { useApplyQuoteTemplate, useQuoteTemplates } from '@/hooks/useQuoteTemplates'
 import { fmtAmount } from '@/lib/format'
 import { toast } from '@/lib/toast'
 import type { CatalogChapter, DocumentDetail, DocumentStep } from '@/types'
@@ -24,6 +26,9 @@ export default function StepsPanel({ document: doc, actions }: StepsPanelProps) 
   const [free, setFree] = useState({ code: '', label: '' })
   const [editing, setEditing] = useState<{ id: number; code: string; label: string } | null>(null)
   const [busy, setBusy] = useState(false)
+  const [templateId, setTemplateId] = useState('')
+  const templates = useQuoteTemplates()
+  const applyTemplate = useApplyQuoteTemplate()
 
   const chapters = useQuery({
     queryKey: ['catalog-chapters'],
@@ -144,7 +149,45 @@ export default function StepsPanel({ document: doc, actions }: StepsPanelProps) 
         {steps.length === 0 && <li className="px-1.5 text-[13px] text-gray-400">Aucune étape pour l'instant.</li>}
       </ul>
 
-      <div className="mt-5 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Ajouter depuis un modèle</div>
+      {(templates.data?.length ?? 0) > 0 && (
+        <>
+          <div className="mt-5 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Appliquer un modèle de devis</div>
+          <div className="mt-2 flex gap-1">
+            <BbSelect value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="min-w-0 flex-1">
+              <option value="">— choisir un modèle —</option>
+              {(templates.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} ({item.steps?.length ?? 0})
+                </option>
+              ))}
+            </BbSelect>
+            <button
+              type="button"
+              disabled={busy || !templateId || applyTemplate.isPending}
+              onClick={() =>
+                applyTemplate.mutate(
+                  { templateId: Number(templateId), documentId: doc.id },
+                  {
+                    onSuccess: () => {
+                      toast('Étapes du modèle ajoutées (les chapitres déjà présents sont ignorés).', 'success')
+                      setTemplateId('')
+                    },
+                    onError: () => toast("Le modèle n'a pas pu être appliqué.", 'error'),
+                  },
+                )
+              }
+              className="h-8 rounded-md bg-anthracite-800 px-3 text-[13px] font-medium text-white hover:bg-anthracite-700 disabled:opacity-40"
+            >
+              Appliquer
+            </button>
+          </div>
+          <Link to="/modeles-devis" className="mt-1 block text-[12px] text-gray-400 hover:text-primary-700 hover:underline">
+            Gérer les modèles de devis
+          </Link>
+        </>
+      )}
+
+      <div className="mt-5 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Ajouter une étape depuis un chapitre</div>
       <div className="mt-2 space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-2.5">
         <BbSelect value={chapterId} onChange={(e) => setChapterId(e.target.value)} className="w-full">
           <option value="">— choisir un modèle d'étape —</option>

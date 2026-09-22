@@ -245,3 +245,24 @@ export interface DocumentDetail {
   steps?: DocumentStep[]
   updated_at: string
 }
+
+/** Étape d'un modèle de devis (chapitre du catalogue ou étape libre). */
+export interface QuoteTemplateStep {
+  id: number
+  catalog_chapter_id: number | null
+  code: string
+  label: string
+  with_articles: boolean
+  position: number
+}
+
+/** Modèle de devis : jeu d'étapes appliqué à la création d'un devis. */
+export interface QuoteTemplate {
+  id: number
+  name: string
+  description: string | null
+  is_default: boolean
+  position: number
+  steps?: QuoteTemplateStep[]
+  updated_at: string
+}

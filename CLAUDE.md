@@ -120,6 +120,12 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `updatePosition` avec le nouveau `document_step_id` puis `reorderPositions`) ; au clavier, flèches sur la poignée.
 - Marge affichée dans la récapitulation (usage interne, seuil 30 %), calculée sur les positions ayant un prix d'achat.
 - Tout le module est réservé à `roles:admin,responsable` (prix). `POST /documents/{id}/duplicate` crée la version suivante.
+- **Modèles de devis** (`quote_templates` → `quote_template_steps`, page `/modeles-devis`) : jeu d'étapes
+  (chapitres, avec ou sans articles, ou libres), un seul `is_default`. `POST /projects/{id}/documents`
+  applique le modèle choisi (`quote_template_id`), sinon le modèle par défaut ; `null` = devis vide.
+  `POST /quote-templates/{t}/apply/{doc}` ajoute les étapes manquantes à un devis ;
+  `POST /documents/{doc}/save-as-template` crée un modèle depuis un devis. Import des articles :
+  `DocumentStep::importArticles()` (partagé par étapes et modèles).
 
 ### Données d'exemple restantes
 Rapports journaliers et contrôle des heures utilisent encore `lib/demo.ts` (avec leur propre

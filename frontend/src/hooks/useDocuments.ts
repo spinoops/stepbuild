@@ -34,8 +34,14 @@ export function useProjectDocuments(projectId: number | null, enabled = true) {
 export function useCreateDocument() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ projectId, type }: { projectId: number; type: DocumentType }) =>
-      (await api.post<{ data: DocumentDetail }>(`/projects/${projectId}/documents`, { type })).data.data,
+    mutationFn: async ({ projectId, type, templateId }: { projectId: number; type: DocumentType; templateId?: number | null }) =>
+      (
+        await api.post<{ data: DocumentDetail }>(`/projects/${projectId}/documents`, {
+          type,
+          // undefined = modèle par défaut ; null = devis vide ; nombre = modèle choisi
+          ...(templateId === undefined ? {} : { quote_template_id: templateId }),
+        })
+      ).data.data,
     onSuccess: (document) => {
       queryClient.setQueryData(itemKey(document.id), document)
       void queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })

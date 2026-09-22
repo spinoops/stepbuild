@@ -99,7 +99,8 @@ export default function ProjectsPage() {
       { projectId: project.id, type: 'devis' },
       {
         onSuccess: (created) => {
-          toast(`Devis ${created.number} créé.`, 'success')
+          const count = created.steps?.length ?? 0
+          toast(count ? `Devis ${created.number} créé avec ${count} étapes du modèle par défaut.` : `Devis ${created.number} créé.`, 'success')
           openDocument(created.id)
         },
         onError: () => toast("Le devis n'a pas pu être créé.", 'error'),

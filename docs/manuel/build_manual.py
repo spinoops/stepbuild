@@ -481,10 +481,22 @@ def build_story():
           "la régie et la facture s'y rattacheront. C'est la principale différence avec BauBit.", LEAD),
         Paragraph('Créer le devis', H2),
         steps([
-            "Depuis la fiche du projet, dans le panneau de gauche, cliquez sur <b>Créer le devis</b>. "
-            "Ou, dans la page Documents, sur <b>Nouveau devis</b> (le projet courant est utilisé).",
+            "Depuis la fiche du projet, dans le panneau de gauche, cliquez sur <b>Créer le devis</b> : le modèle de "
+            "devis par défaut est appliqué. Ou, dans la page Documents, sur <b>Nouveau devis</b> : vous choisissez le "
+            "modèle, ou un devis vide.",
             "Le devis reçoit son numéro : <b>numéro de projet - DE . numéro d'ordre</b>, par exemple 2800-001-DE.1.",
             'Le destinataire est repris du client du projet.',
+        ]),
+        Paragraph('Les modèles de devis', H2),
+        p("Menu <b>Données de base</b>, bouton <b>Modèles de devis</b>. Un modèle rassemble les étapes générales d'un "
+          "type de chantier, dans l'ordre : par exemple architecture, installation de chantier, démontage, carrelage, "
+          "sous-traitants, divers. Cochez <b>Modèle par défaut</b> pour qu'il s'applique à chaque nouveau devis."),
+        bullets([
+            "Ajoutez une étape depuis un <b>chapitre du catalogue</b>, avec ou sans ses articles, ou une <b>étape libre</b>.",
+            "Réordonnez les étapes avec la poignée. Enregistrez avec le bouton ou <b>Ctrl + S</b>.",
+            "Dans un devis, <b>Appliquer un modèle de devis</b> (panneau de gauche) ajoute les étapes manquantes.",
+            "Le bouton <b>Enregistrer comme modèle</b>, dans la barre d'outils du devis, crée un modèle à partir des "
+            "étapes du devis ouvert.",
         ]),
         shot('12-devis-detail.png', "Un devis : ses étapes à gauche, le détail chiffré à droite."),
         Paragraph('Ajouter les étapes', H2),
