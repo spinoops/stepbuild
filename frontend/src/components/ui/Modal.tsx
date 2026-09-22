@@ -5,9 +5,11 @@ interface ModalProps {
   onClose: () => void
   title?: string
   children: ReactNode
+  /** Largeur : fiche courte (md) ou fenêtre de travail (xl). */
+  size?: 'md' | 'xl'
 }
 
-export default function Modal({ open, onClose, title, children }: ModalProps) {
+export default function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
   if (!open) {
     return null
   }
@@ -18,7 +20,7 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg"
+        className={`w-full rounded-xl bg-white p-6 shadow-lg ${size === 'xl' ? 'max-w-5xl' : 'max-w-md'}`}
         onClick={(event) => event.stopPropagation()}
       >
         {title && <h3 className="mb-4 text-lg font-semibold text-gray-900">{title}</h3>}

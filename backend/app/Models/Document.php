@@ -146,16 +146,23 @@ class Document extends Model
                 'header_text', 'footer_text', 'vat_rate', 'discount_percent',
             ]));
 
-            foreach ($this->steps()->with('positions')->get() as $step) {
+            foreach ($this->steps()->with('positions.costs')->get() as $step) {
                 $newStep = $copy->steps()->create($step->only(['catalog_chapter_id', 'code', 'label', 'position']));
                 foreach ($step->positions as $position) {
-                    $newStep->positions()->create([
+                    $newPosition = $newStep->positions()->create([
                         ...$position->only([
                             'catalog_article_id', 'kind', 'code', 'description', 'unit', 'quantity', 'unit_price',
                             'cost_price', 'is_optional', 'internal_remark', 'position',
+                            'dimension', 'dimension_unit', 'price_per_dimension', 'calculated_price',
                         ]),
                         'document_id' => $copy->id,
                     ]);
+                    foreach ($position->costs as $cost) {
+                        $newPosition->costs()->create($cost->only([
+                            'family', 'price_element_id', 'label', 'unit', 'quantity', 'per_dimension', 'pack_size',
+                            'unit_cost', 'markup_percent', 'cost', 'sale', 'note', 'position',
+                        ]));
+                    }
                 }
             }
 

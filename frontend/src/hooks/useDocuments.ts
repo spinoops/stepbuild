@@ -65,6 +65,31 @@ export interface PositionPayload {
   internal_remark?: string | null
 }
 
+/** Ligne envoyée au sous-détail de prix (id présent = mise à jour, absent = création). */
+export interface BreakdownLinePayload {
+  id?: number
+  family: number
+  price_element_id: number | null
+  label: string
+  unit: string | null
+  quantity: number
+  per_dimension: boolean
+  pack_size: number | null
+  unit_cost: number
+  markup_percent: number
+  note: string | null
+}
+
+export interface BreakdownPayload {
+  dimension: number | null
+  dimension_unit: string | null
+  price_per_dimension: boolean
+  internal_remark: string | null
+  lines: BreakdownLinePayload[]
+  /** Reporte le prix calculé dans le prix de vente de la position. */
+  apply_price?: boolean
+}
+
 type DocResponse = { data: DocumentDetail; created_position_id?: number }
 
 /**
@@ -98,6 +123,11 @@ export function useDocumentActions(documentId: number) {
       updatePosition: async (id: number, payload: PositionPayload) =>
         apply((await api.put<DocResponse>(`${base}/positions/${id}`, payload)).data).data,
       deletePosition: async (id: number) => apply((await api.delete<DocResponse>(`${base}/positions/${id}`)).data).data,
+      saveBreakdown: async (id: number, payload: BreakdownPayload) => {
+        const document = apply((await api.put<DocResponse>(`${base}/positions/${id}/breakdown`, payload)).data).data
+        void queryClient.invalidateQueries({ queryKey: ['price-elements'] }) // compteur d'utilisation
+        return document
+      },
       reorderPositions: async (stepId: number, ids: number[]) =>
         apply((await api.post<DocResponse>(`${base}/positions/reorder`, { step_id: stepId, ids })).data).data,
       duplicate: async () => {

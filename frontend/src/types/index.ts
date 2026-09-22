@@ -182,6 +182,23 @@ export type DocumentType = 'devis' | 'acompte' | 'facture'
 export type DocumentStatus = 'en_cours' | 'envoye' | 'accepte' | 'refuse'
 
 /** Position d'un devis : article chiffré, sous-titre ou texte libre. */
+/** Ligne du sous-détail de prix d'une position (famille MO, MAT, MACH, MAT EX, OUT, ST). */
+export interface PositionCost {
+  id: number
+  family: number
+  price_element_id: number | null
+  label: string
+  unit: string | null
+  quantity: number
+  per_dimension: boolean
+  pack_size: number | null
+  unit_cost: number
+  markup_percent: number
+  cost: number
+  sale: number
+  note: string | null
+}
+
 export interface DocumentPosition {
   id: number
   document_step_id: number
@@ -196,6 +213,12 @@ export interface DocumentPosition {
   amount: number | null
   is_optional: boolean
   internal_remark: string | null
+  /** Sous-détail de prix : dimension de référence (9 m²), prix ramené à cette dimension, prix calculé. */
+  dimension: number | null
+  dimension_unit: string | null
+  price_per_dimension: boolean
+  calculated_price: number | null
+  costs: PositionCost[]
   position: number
 }
 

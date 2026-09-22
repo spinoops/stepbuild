@@ -71,7 +71,7 @@ export default function DocumentRecap({ document: doc }: { document: DocumentDet
         <div className="rounded-lg border border-gray-200 p-4">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Marge (usage interne)</div>
           {margin === null ? (
-            <p className="mt-2 text-[13px] text-gray-400">Aucune position chiffrée avec un prix d'achat.</p>
+            <p className="mt-2 text-[13px] text-gray-400">Aucune position chiffrée avec un prix de revient (sous-détail ou prix d'achat).</p>
           ) : (
             <>
               <div className={`mt-2 text-2xl font-semibold ${margin < 30 ? 'text-accent-600' : 'text-green-700'}`}>{fmtAmount(margin, 1)} %</div>
@@ -86,7 +86,8 @@ export default function DocumentRecap({ document: doc }: { document: DocumentDet
                 </div>
               </dl>
               <p className="mt-2 text-[11px] text-gray-400">
-                Calculée sur les {costed.length} positions qui ont un prix d'achat, sur {positions.length} positions chiffrées.
+                Calculée sur les {costed.length} positions qui ont un prix de revient (sous-détail de prix ou prix d'achat de l'article),
+                sur {positions.length} positions chiffrées.
                 {margin < 30 ? ' Sous la marge minimale de 30 %.' : ''}
               </p>
             </>

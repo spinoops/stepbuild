@@ -20,7 +20,7 @@ class DocumentController extends Controller
     private const COLUMNS = ['number', 'title', 'date', 'status', 'recipient_name', 'recipient_city', 'total_net', 'total_gross'];
 
     /** Relations d'un document complet (renvoyé après chaque modification, totaux à jour). */
-    public const FULL = ['project', 'steps.positions'];
+    public const FULL = ['project', 'steps.positions.costs'];
 
     /**
      * Explorateur de documents (tous projets). Filtres : ?type=, ?status=, ?project_id=.

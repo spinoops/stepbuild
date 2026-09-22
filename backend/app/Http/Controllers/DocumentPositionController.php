@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\SaveDocumentPositionRequest;
+use App\Http\Requests\SavePositionBreakdownRequest;
 use App\Http\Resources\DocumentResource;
 use App\Models\CatalogArticle;
 use App\Models\Document;
@@ -66,7 +67,30 @@ class DocumentPositionController extends Controller
         if (isset($data['document_step_id'])) {
             $document->steps()->findOrFail($data['document_step_id']); // l'étape doit appartenir au document
         }
+        if ($position->costs()->exists()) {
+            unset($data['cost_price']); // le prix de revient vient du sous-détail
+        }
         $position->update($data);
+
+        return DocumentResource::make($document->recalculate()->load(DocumentController::FULL));
+    }
+
+    /**
+     * Sous-détail de prix de la position : dimension, lignes de coûts (remplacement complet),
+     * et report facultatif du prix calculé dans le prix de vente.
+     */
+    public function breakdown(SavePositionBreakdownRequest $request, Document $document, DocumentPosition $position): DocumentResource
+    {
+        abort_unless($position->document_id === $document->id && $position->kind === 'item', 404);
+        $data = $request->validated();
+
+        DB::transaction(function () use ($data, $position) {
+            $position->fill(collect($data)->only(['dimension', 'dimension_unit', 'price_per_dimension', 'internal_remark'])->all())->save();
+            $position->syncBreakdown($data['lines']);
+            if (! empty($data['apply_price']) && $position->calculated_price !== null) {
+                $position->update(['unit_price' => $position->calculated_price]);
+            }
+        });
 
         return DocumentResource::make($document->recalculate()->load(DocumentController::FULL));
     }

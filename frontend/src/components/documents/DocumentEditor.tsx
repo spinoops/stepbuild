@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
 import ArticlePicker from '@/components/documents/ArticlePicker'
+import CostBreakdownDialog from '@/components/documents/CostBreakdownDialog'
 import PositionRow from '@/components/documents/PositionRow'
 import type { DropPlace } from '@/components/documents/PositionRow'
 import { useCreateArticleOnTheFly } from '@/hooks/useDocuments'
@@ -41,6 +42,11 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
   }
   const [target, setTarget] = useState<DropTarget | null>(null)
   const steps = doc.steps ?? []
+  // Sous-détail de prix ouvert, et nombre de reports de prix par position : la ligne du devis est
+  // remontée (clé) après un report, pour reprendre le prix venu du serveur sans toucher à la saisie en cours.
+  const [breakdownId, setBreakdownId] = useState<number | null>(null)
+  const [applied, setApplied] = useState<Record<number, number>>({})
+  const breakdownPosition = breakdownId === null ? null : steps.flatMap((step) => step.positions).find((item) => item.id === breakdownId) ?? null
 
   /** Ajoute une position puis place le curseur sur sa quantité (ou reste sur le champ d'ajout). */
   async function add(step: DocumentStep, payload: PositionPayload, focusQuantity: boolean) {
@@ -195,7 +201,7 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
               </tr>
               {step.positions.map((position, index) => (
                 <PositionRow
-                  key={position.id}
+                  key={`${position.id}-${applied[position.id] ?? 0}`}
                   position={position}
                   actions={actions}
                   onSaving={onSaving}
@@ -209,6 +215,7 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
                   }}
                   onDragOver={(place) => hover(step.id, position.id, place)}
                   onDrop={(place) => void drop({ stepId: step.id, positionId: position.id, place })}
+                  onOpenBreakdown={() => setBreakdownId(position.id)}
                 />
               ))}
               <tr
@@ -240,6 +247,16 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
           )
         })}
       </table>
+      {breakdownPosition && (
+        <CostBreakdownDialog
+          key={breakdownPosition.id}
+          position={breakdownPosition}
+          actions={actions}
+          onSaving={onSaving}
+          onPriceApplied={() => setApplied((value) => ({ ...value, [breakdownPosition.id]: (value[breakdownPosition.id] ?? 0) + 1 }))}
+          onClose={() => setBreakdownId(null)}
+        />
+      )}
     </div>
   )
 }

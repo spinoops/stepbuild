@@ -118,7 +118,17 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   ses champs depuis le serveur pendant la saisie.
   Réordonnancement par **glisser-déposer** natif (poignée `data-handle`, dépose dans l'étape ou vers une autre étape :
   `updatePosition` avec le nouveau `document_step_id` puis `reorderPositions`) ; au clavier, flèches sur la poignée.
-- Marge affichée dans la récapitulation (usage interne, seuil 30 %), calculée sur les positions ayant un prix d'achat.
+- **Sous-détail de prix** par position (fenêtre ouverte depuis la ligne, icône calculatrice) : remplace les formules
+  notées en « remarques internes » dans BauBit. `document_position_costs` = lignes par famille (1 MO, 2 MAT, 3 MACH,
+  4 MAT EX, 5 OUT, 6 ST = familles des éléments de coûts, `price_element_id` facultatif) : quantité (× `dimension`
+  de la position si `per_dimension`, arrondie au conditionnement `pack_size`) × coût unitaire → `cost`, majorée →
+  `sale`. La position reçoit `cost_price` (coût, alimente la marge) et `calculated_price` (vente), divisés par la
+  dimension si `price_per_dimension`. `PUT /documents/{id}/positions/{pos}/breakdown` remplace tout le sous-détail ;
+  `apply_price` reporte le prix calculé dans `unit_price` (sinon le prix reste saisi à la main, écart affiché).
+  Front : `CostBreakdownDialog` (autosave 1 s, sauvegardes en file), familles et calcul dans `lib/costFamilies.ts`.
+  À venir : le client fournira un fichier de calculs par élément (à intégrer comme sous-détails types par article).
+- Marge affichée dans la récapitulation (usage interne, seuil 30 %), calculée sur les positions ayant un prix de revient
+  (sous-détail ou prix d'achat).
 - Tout le module est réservé à `roles:admin,responsable` (prix). `POST /documents/{id}/duplicate` crée la version suivante.
 - **Modèles de devis** (`quote_templates` → `quote_template_steps`, page `/modeles-devis`) : jeu d'étapes
   (chapitres, avec ou sans articles, ou libres), un seul `is_default`. `POST /projects/{id}/documents`

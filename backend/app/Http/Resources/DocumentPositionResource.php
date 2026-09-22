@@ -26,6 +26,11 @@ class DocumentPositionResource extends JsonResource
             'amount' => $this->amount,
             'is_optional' => $this->is_optional,
             'internal_remark' => $this->internal_remark,
+            'dimension' => $this->dimension,
+            'dimension_unit' => $this->dimension_unit,
+            'price_per_dimension' => $this->price_per_dimension,
+            'calculated_price' => $this->calculated_price,
+            'costs' => DocumentPositionCostResource::collection($this->whenLoaded('costs')),
             'position' => $this->position,
         ];
     }

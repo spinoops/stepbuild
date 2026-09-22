@@ -46,6 +46,8 @@ interface PositionRowProps {
   onDragEnd: () => void
   onDragOver: (place: DropPlace) => void
   onDrop: (place: DropPlace) => void
+  /** Ouvre le sous-détail de prix (coûts par famille → prix calculé). */
+  onOpenBreakdown: () => void
 }
 
 /**
@@ -54,7 +56,7 @@ interface PositionRowProps {
  * La poignée (à gauche) se saisit à la souris pour déplacer la ligne ; au clavier, flèches haut et bas.
  */
 export default function PositionRow({
-  position, actions, onSaving, onMove, dragging, dropPlace, onDragStart, onDragEnd, onDragOver, onDrop,
+  position, actions, onSaving, onMove, dragging, dropPlace, onDragStart, onDragEnd, onDragOver, onDrop, onOpenBreakdown,
 }: PositionRowProps) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(position))
   const saved = useRef(JSON.stringify(draft))
@@ -136,6 +138,8 @@ export default function PositionRow({
   const quantity = toNumber(draft.quantity)
   const price = toNumber(draft.unit_price)
   const amount = isItem && quantity !== null && price !== null ? Math.round(quantity * price * 100) / 100 : null
+  const hasBreakdown = position.calculated_price !== null
+  const priceDiffers = hasBreakdown && price !== null && Math.abs(price - (position.calculated_price ?? 0)) >= 0.01
 
   const dropClass =
     dropPlace === 'above' ? 'shadow-[inset_0_3px_0_0_#1d3f9c]' : dropPlace === 'below' ? 'shadow-[inset_0_-3px_0_0_#1d3f9c]' : ''
@@ -223,6 +227,16 @@ export default function PositionRow({
               className={`${CELL} text-right`}
               aria-label="Prix unitaire"
             />
+            {hasBreakdown && (
+              <button
+                type="button"
+                onClick={onOpenBreakdown}
+                title={priceDiffers ? 'Prix calculé par le sous-détail : le prix saisi en diffère' : 'Prix calculé par le sous-détail'}
+                className={`block w-full px-1.5 text-right text-[11px] tabular-nums hover:underline ${priceDiffers ? 'text-accent-600' : 'text-gray-400'}`}
+              >
+                calc. {fmtAmount(position.calculated_price)}
+              </button>
+            )}
           </td>
           <td className="w-28 px-3 py-1.5 text-right tabular-nums">
             {amount !== null ? fmtAmount(amount) : <span className="text-gray-300">—</span>}
@@ -242,8 +256,20 @@ export default function PositionRow({
           {position.kind === 'title' ? 'Sous-titre' : 'Texte'}
         </td>
       )}
-      <td className="w-12 py-1 pr-2">
-        <span className="flex justify-end opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
+      <td className="w-16 py-1 pr-2">
+        <span className="flex justify-end">
+          {isItem && (
+            <button
+              type="button"
+              title={hasBreakdown ? 'Sous-détail de prix (coûts par famille)' : 'Créer le sous-détail de prix de cette position'}
+              onClick={onOpenBreakdown}
+              className={`rounded p-1 transition hover:bg-primary-50 hover:text-primary-700 ${
+                hasBreakdown ? 'text-primary-600' : 'text-gray-400 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'
+              }`}
+            >
+              <Icon name="calculator" className="h-3.5 w-3.5" />
+            </button>
+          )}
           <button
             type="button"
             title="Supprimer la position"
@@ -255,7 +281,7 @@ export default function PositionRow({
                 toast('Suppression impossible.', 'error')
               })
             }}
-            className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
+            className="rounded p-1 text-gray-400 opacity-0 transition hover:bg-red-50 hover:text-red-600 group-focus-within:opacity-100 group-hover:opacity-100"
           >
             <Icon name="trash" className="h-3.5 w-3.5" />
           </button>

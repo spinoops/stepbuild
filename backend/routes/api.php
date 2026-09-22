@@ -86,6 +86,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/documents/{document}/steps/reorder', [DocumentStepController::class, 'reorder']);
         Route::apiResource('documents.steps', DocumentStepController::class)->only(['store', 'update', 'destroy']);
         Route::post('/documents/{document}/positions/reorder', [DocumentPositionController::class, 'reorder']);
+        Route::put('/documents/{document}/positions/{position}/breakdown', [DocumentPositionController::class, 'breakdown']);
         Route::apiResource('documents.positions', DocumentPositionController::class)->only(['store', 'update', 'destroy']);
 
         // Modèles de devis (jeux d'étapes).
