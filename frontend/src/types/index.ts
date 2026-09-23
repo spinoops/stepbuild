@@ -289,3 +289,98 @@ export interface QuoteTemplate {
   steps?: QuoteTemplateStep[]
   updated_at: string
 }
+
+/** Collaborateur de l'entreprise (GET /api/collaborators). Le tarif n'est renvoyé qu'à la gestion. */
+export interface Collaborator {
+  id: number
+  number: string | null
+  last_name: string
+  first_name: string | null
+  name: string
+  hourly_cost?: number | null
+  user_id?: number | null
+  user_email?: string | null
+  is_active: boolean
+  updated_at: string
+}
+
+/** Colonne supplémentaire de la grille des heures (repas, kilomètres, formation…). */
+export interface WorkType {
+  id: number
+  code: string
+  label: string
+  unit: string
+}
+
+export interface ReportStep {
+  id: number
+  code: string
+  label: string
+}
+
+/** Cellule de la grille « Salaire » : collaborateur × étape (ou type de travail). */
+export interface DailyReportHour {
+  id: number
+  collaborator_id: number
+  document_step_id: number | null
+  work_type_id: number | null
+  quantity: number
+  hourly_cost?: number | null
+  amount?: number
+}
+
+/** Ressource consommée (famille 2 à 6 des éléments de coûts). */
+export interface DailyReportItem {
+  id: number
+  family: number
+  document_step_id: number | null
+  price_element_id: number | null
+  label: string
+  unit: string | null
+  quantity: number
+  unit_cost?: number | null
+  amount?: number
+  note: string | null
+  position: number
+}
+
+export interface DailyReportFile {
+  id: number
+  url: string
+  original_name: string
+  mime: string | null
+  size: number
+  is_image: boolean
+  caption: string | null
+  position: number
+}
+
+/** Rapport journalier (GET /api/daily-reports/{id}). Les montants n'existent que pour la gestion. */
+export interface DailyReport {
+  id: number
+  project_id: number
+  project?: { id: number; number: string; designation1: string }
+  document_id: number | null
+  document?: { id: number; number: string; status: DocumentStatus } | null
+  steps?: ReportStep[]
+  sequence: number
+  number: string
+  date: string
+  status: ReportStatus
+  is_regie: boolean
+  responsible_id: number | null
+  responsible?: string | null
+  created_by: number | null
+  remark: string | null
+  events: string | null
+  weather: string | null
+  temp_min: number | null
+  temp_max: number | null
+  total_hours: number
+  total_amount?: number
+  can_edit: boolean
+  hours?: DailyReportHour[]
+  items?: DailyReportItem[]
+  files?: DailyReportFile[]
+  updated_at: string
+}

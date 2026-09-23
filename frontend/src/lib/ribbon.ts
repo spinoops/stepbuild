@@ -130,7 +130,7 @@ export const RIBBON_TABS: RibbonTab[] = [
           { label: 'Eléments de coûts', icon: 'tag', to: '/listes-prix', roles: GESTION },
           { label: 'Tarifs régie', icon: 'calculator', to: '/listes-prix', roles: GESTION },
           { label: 'Types de travail', icon: 'table', roles: GESTION },
-          { label: 'Collaborateurs', icon: 'users', roles: GESTION },
+          { label: 'Collaborateurs', icon: 'users', to: '/collaborateurs', roles: GESTION },
         ],
       },
     ],

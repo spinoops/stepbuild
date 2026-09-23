@@ -71,6 +71,11 @@ class DocumentController extends Controller
     {
         $document->update($request->validated());
 
+        // Devis accepté → le chantier est adjugé (s'il était encore en cours).
+        if ($document->type === 'devis' && $document->wasChanged('status') && $document->status === 'accepte') {
+            $document->project()->where('status', 'en_cours')->update(['status' => 'adjuge']);
+        }
+
         return DocumentResource::make($document->recalculate()->load(self::FULL));
     }
 

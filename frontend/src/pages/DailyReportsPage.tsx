@@ -1,316 +1,289 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useAuth } from '@/auth/AuthContext'
 import Workspace, { AsidePanel } from '@/components/baubit/Workspace'
-import { StandardTools, ToolButton, ToolMenu, ToolSep } from '@/components/baubit/Toolbar'
+import { StandardTools, ToolButton, ToolSep } from '@/components/baubit/Toolbar'
 import TabStrip from '@/components/baubit/TabStrip'
 import DataGrid from '@/components/baubit/DataGrid'
 import type { GridColumn } from '@/components/baubit/DataGrid'
-import { BbInput, BbSelect, BbTextarea, Field, StatusSelect } from '@/components/baubit/Form'
+import GridPager from '@/components/baubit/GridPager'
+import { BbInput, BbSelect, BbTextarea } from '@/components/baubit/Form'
+import HoursGrid from '@/components/reports/HoursGrid'
+import ReportFilesTab from '@/components/reports/ReportFilesTab'
+import ReportHeaderForm, { REPORT_FORM_ID } from '@/components/reports/ReportHeaderForm'
+import ReportItemsTab from '@/components/reports/ReportItemsTab'
 import { Icon } from '@/components/icons'
 import Badge from '@/components/ui/Badge'
-import {
-  DEMO_COLLABORATORS,
-  DEMO_CONTEXT,
-  DEMO_EXTRA_COLUMNS,
-  DEMO_PROJECTS,
-  DEMO_REPORTS,
-  WEATHER_OPTIONS,
-  collaboratorName,
-  projectDevis,
-  projectSteps,
-} from '@/lib/demo'
-import type { DemoReport } from '@/lib/demo'
+import { useCollaborators, useCreateDailyReport, useDailyReport, useDailyReportActions, useDailyReports, useWorkTypes } from '@/hooks/useDailyReports'
+import { useProjectDocuments } from '@/hooks/useDocuments'
+import { SAVE_LABELS } from '@/hooks/useEntityForm'
+import type { SaveState } from '@/hooks/useEntityForm'
+import { useProjectOptions } from '@/hooks/useProjects'
+import { useSelection } from '@/hooks/useSelection'
+import { EMPTY_QUERY } from '@/lib/crud'
+import type { GridQuery } from '@/lib/crud'
 import { fmtAmount, fmtDate } from '@/lib/format'
 import { canSeePrices } from '@/lib/roles'
 import { REPORT_STATUSES } from '@/lib/status'
-import type { ReportStatus } from '@/types'
+import { toast } from '@/lib/toast'
+import { setProject, useWorkspace } from '@/lib/workspaceStore'
+import type { DailyReport, ReportStatus } from '@/types'
 
-const TABS = ['Salaire', 'Matériaux', 'Machines', 'Mat. exploitation', 'Outillage', 'Tiers', 'Evénements', 'Fichiers', 'Photos']
-
-const STATUS_OPTIONS = (Object.keys(REPORT_STATUSES) as ReportStatus[]).map((key) => ({
-  value: key,
-  label: `${REPORT_STATUSES[key].code} · ${REPORT_STATUSES[key].label}`,
-  rowClass: REPORT_STATUSES[key].rowClass,
-}))
-
-const LIST_COLUMNS: GridColumn<DemoReport>[] = [
-  { key: 'date', header: 'Date', value: (r) => fmtDate(r.date, true), width: 92 },
-  { key: 'number', header: 'Numéro', value: (r) => r.number, width: 60 },
-  { key: 'resp', header: 'Responsable', value: (r) => collaboratorName(r.responsableId), width: 120 },
-  {
-    key: 'status',
-    header: 'Statut',
-    value: (r) => REPORT_STATUSES[r.status].label,
-    width: 110,
-    render: (r) => <Badge className={REPORT_STATUSES[r.status].className}>{REPORT_STATUSES[r.status].label}</Badge>,
-  },
-  { key: 'regie', header: 'Régie', value: (r) => r.regie, type: 'bool', width: 40 },
+const TABS = [
+  { key: 'salaire', label: 'Salaire' },
+  { key: 'f2', label: 'Matériaux' },
+  { key: 'f3', label: 'Machines' },
+  { key: 'f4', label: 'Mat. exploitation' },
+  { key: 'f5', label: 'Outillage' },
+  { key: 'f6', label: 'Tiers' },
+  { key: 'events', label: 'Evénements' },
+  { key: 'files', label: 'Fichiers' },
+  { key: 'photos', label: 'Photos' },
 ]
 
-interface HourLine {
-  id: string
-  name: string
-  base: number
-  hours: Record<string, number>
-  total: number
-}
-
-/** Rapports journaliers : liste à gauche, en-tête du rapport, grille des heures par type de travail. */
+/**
+ * Rapports journaliers : liste du projet courant à gauche, en-tête du rapport, grille des heures sur
+ * les étapes du devis, puis ressources, événements, fichiers et photos. Même logique que BauBit.
+ */
 export default function DailyReportsPage() {
   const { user } = useAuth()
-  const { projectId } = DEMO_CONTEXT
   const showPrices = canSeePrices(user)
-
-  const reports = useMemo(
-    () => DEMO_REPORTS.filter((report) => !projectId || report.projectId === projectId),
-    [projectId],
-  )
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const { projectId } = useWorkspace()
+  const { selectedId, select } = useSelection()
+  const [query, setQuery] = useState<GridQuery>(EMPTY_QUERY)
+  const [month, setMonth] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
   const [tab, setTab] = useState('Salaire')
-  const [status, setStatus] = useState<ReportStatus | null>(null)
+  const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [saving, setSaving] = useState(false)
 
-  const report = reports.find((item) => item.id === selectedId) ?? reports[0] ?? null
-  const project = DEMO_PROJECTS.find((item) => item.id === (projectId ?? report?.projectId))
+  const list = useDailyReports(query, { project_id: projectId, month: month || null, status: statusFilter || null })
+  const report = useDailyReport(selectedId)
+  const actions = useDailyReportActions(selectedId ?? 0)
+  const collaborators = useCollaborators()
+  const workTypes = useWorkTypes()
+  const projects = useProjectOptions()
+  const create = useCreateDailyReport()
+  const documents = useProjectDocuments(report.data?.project_id ?? null, showPrices)
 
-  // Les étapes du rapport sont celles du devis du projet : tout le suivi s'y rattache.
-  const devis = project ? projectDevis(project.id) : null
-  const steps = project ? projectSteps(project.id) : []
-  const HOUR_CODES = steps.map((step) => step.code)
+  const rows = list.data?.data ?? []
+  const current = report.data ?? null
+  const project = projects.data?.find((item) => item.id === projectId) ?? null
+  const index = current ? rows.findIndex((row) => row.id === current.id) : -1
 
-  const lines: HourLine[] = (report?.lines ?? []).map((line) => {
-    const collaborator = DEMO_COLLABORATORS.find((item) => item.id === line.collaboratorId)
-    const total = HOUR_CODES.reduce((sum, code) => sum + (line.hours[code] ?? 0), 0)
-    return {
-      id: line.collaboratorId,
-      name: collaboratorName(line.collaboratorId),
-      base: collaborator?.base ?? 0,
-      hours: line.hours,
-      total,
+  function createReport() {
+    if (!projectId) {
+      toast('Choisissez d’abord un projet dans la barre du haut.', 'info')
+      return
     }
-  })
+    create.mutate(
+      { projectId },
+      {
+        onSuccess: (created) => {
+          select(created.id)
+          setTab('Salaire')
+          if (!created.document_id) {
+            toast('Ce projet n’a pas encore de devis : les heures ne pourront pas être saisies par étape.', 'info')
+          }
+        },
+        onError: () => toast("Le rapport n'a pas pu être créé.", 'error'),
+      },
+    )
+  }
 
-  const reportHours = lines.reduce((sum, line) => sum + line.total, 0)
-  const reportAmount = lines.reduce((sum, line) => sum + line.total * line.base, 0)
-  const allHours = reports.flatMap((item) => item.lines).reduce(
-    (sum, line) => sum + HOUR_CODES.reduce((inner, code) => inner + (line.hours[code] ?? 0), 0),
-    0,
-  )
-  const allAmount = reports
-    .flatMap((item) => item.lines)
-    .reduce((sum, line) => {
-      const base = DEMO_COLLABORATORS.find((c) => c.id === line.collaboratorId)?.base ?? 0
-      return sum + HOUR_CODES.reduce((inner, code) => inner + (line.hours[code] ?? 0), 0) * base
-    }, 0)
+  function deleteReport() {
+    if (!current || !window.confirm(`Supprimer le rapport ${current.number} du ${fmtDate(current.date)} ?`)) {
+      return
+    }
+    void actions
+      .remove()
+      .then(() => {
+        select(null)
+        toast('Rapport supprimé.', 'success')
+      })
+      .catch(() => toast('Suppression impossible.', 'error'))
+  }
 
-  const columnTotal = (code: string) => lines.reduce((sum, line) => sum + (line.hours[code] ?? 0), 0)
-
-  const hourColumns: GridColumn<HourLine>[] = [
-    { key: 'name', header: 'Collaborateur', value: (l) => l.name, width: 130 },
-    ...(showPrices
-      ? [{ key: 'base', header: 'Base', value: (l: HourLine) => l.base, type: 'number' as const, width: 50 }]
-      : []),
-    ...steps.map<GridColumn<HourLine>>((type) => ({
-      key: type.code,
-      header: `${type.code} ${type.label}`,
-      value: (l) => l.hours[type.code] ?? null,
-      type: 'number',
-      rotate: true,
-      width: 46,
-    })),
+  const columns: GridColumn<DailyReport>[] = [
+    { key: 'date', header: 'Date', value: (r) => fmtDate(r.date, true), width: 96 },
+    { key: 'number', header: 'N°', value: (r) => r.number, width: 44 },
+    ...(!projectId ? [{ key: 'project', header: 'Projet', value: (r: DailyReport) => r.project?.number ?? '', width: 80, noFilter: true }] : []),
+    { key: 'responsible', header: 'Responsable', value: (r) => r.responsible ?? '', width: 120, noFilter: true },
     {
-      key: 'total',
-      header: 'Total Rendement',
-      value: (l) => l.total || null,
-      type: 'number',
-      width: 60,
-      cellClass: () => 'bg-gray-100 font-medium',
-      headerClass: 'whitespace-normal',
+      key: 'status',
+      header: 'Statut',
+      value: (r) => REPORT_STATUSES[r.status].label,
+      width: 100,
+      noFilter: true,
+      render: (r) => <Badge className={REPORT_STATUSES[r.status].className}>{REPORT_STATUSES[r.status].label}</Badge>,
     },
-    ...DEMO_EXTRA_COLUMNS.map<GridColumn<HourLine>>((type) => ({
-      key: type.code,
-      header: `${type.code} ${type.label}`,
-      value: (l) => l.hours[type.code] ?? null,
-      type: 'number',
-      decimals: 0,
-      rotate: true,
-      width: 46,
-    })),
+    { key: 'total_hours', header: 'Heures', value: (r) => r.total_hours || null, type: 'number', width: 60, noFilter: true },
   ]
 
+  const listHours = rows.reduce((sum, row) => sum + row.total_hours, 0)
+  const listAmount = rows.reduce((sum, row) => sum + (row.total_amount ?? 0), 0)
   const statusLeft = showPrices
-    ? `Montant total: ${fmtAmount(allAmount)} CHF   |   Heures sal.: ${fmtAmount(allHours)}`
-    : `Heures sal.: ${fmtAmount(allHours)}`
-  const statusRight = showPrices
-    ? `Montant total rapport: ${fmtAmount(reportAmount)} CHF   |   Rapport h. sal.: ${fmtAmount(reportHours)}`
-    : `Rapport h. sal.: ${fmtAmount(reportHours)}`
+    ? `Montant total : ${fmtAmount(listAmount)} CHF   |   Heures : ${fmtAmount(listHours)}`
+    : `Heures : ${fmtAmount(listHours)}`
+  const statusRight = current
+    ? [
+        showPrices ? `Rapport : ${fmtAmount(current.total_amount ?? 0)} CHF` : null,
+        `Heures du rapport : ${fmtAmount(current.total_hours)}`,
+        saving ? 'Enregistrement…' : SAVE_LABELS[saveState],
+      ]
+        .filter(Boolean)
+        .join('   |   ')
+    : undefined
+
+  const readOnly = !current?.can_edit
+  const tabLabel = project ? `Rapports journaliers : ${project.number} - ${project.designation1}` : 'Rapports journaliers'
 
   return (
     <Workspace
-      demo
-      asideWidth={420}
-      tabLabel={project ? `Rapports journaliers : ${project.number} - ${project.designation1}` : 'Rapports journaliers'}
+      asideWidth={430}
+      tabLabel={tabLabel}
+      entries={list.data?.meta.total ?? null}
       statusLeft={statusLeft}
       statusRight={statusRight}
       toolbar={
         <>
-          <StandardTools newLabel="Nouveau rapport" />
-          <ToolMenu icon="import" label="Import" />
-          <ToolMenu icon="export" label="Export" />
+          <StandardTools newLabel="Nouveau rapport" onNew={createReport} formId={REPORT_FORM_ID} onDelete={deleteReport} canDelete={Boolean(current?.can_edit)} />
+          <ToolButton icon="arrow" title="Rapport précédent" tone="primary" disabled={index <= 0} onClick={() => select(rows[index - 1].id)} />
+          <ToolButton icon="arrow" title="Rapport suivant" tone="primary" disabled={index < 0 || index >= rows.length - 1} onClick={() => select(rows[index + 1].id)} />
           <ToolSep />
-          <ToolButton icon="arrow" title="Rapport précédent" tone="primary" />
-          <ToolButton icon="arrow" title="Rapport suivant" tone="primary" />
-          <ToolSep />
-          <ToolButton icon="table" title="Types de travail" tone="primary" />
-          <ToolButton icon="save" title="Valider le rapport" tone="success" />
-          <ToolButton icon="users" title="Copier l'équipe de la veille" tone="primary" />
-          <ToolButton icon="paperclip" title="Fichiers joints" />
-          <ToolSep />
-          <ToolMenu label="Extras" />
+          <ToolButton
+            icon="users"
+            title="Reprendre l'équipe du rapport précédent"
+            tone="primary"
+            disabled={readOnly}
+            onClick={() => void actions.copyTeam().then(() => toast('Équipe du rapport précédent reprise.', 'success')).catch(() => toast("Aucune équipe n'a pu être reprise.", 'error'))}
+          />
+          <ToolButton
+            icon="check"
+            title={current?.status === 'en_cours' ? 'Passer le rapport en contrôle' : 'Rapport déjà transmis au contrôle'}
+            tone="success"
+            disabled={!current || current.status !== 'en_cours' || readOnly}
+            onClick={() => void actions.updateHeader({ status: 'en_controle' }).then(() => toast('Rapport transmis au contrôle.', 'success')).catch(() => toast('Changement de statut impossible.', 'error'))}
+          />
         </>
       }
       aside={
         <AsidePanel
+          title="Rapports"
           nav={[
-            { icon: 'calendar', label: 'Rapports journaliers par mois' },
-            { icon: 'calendar', label: 'Rapports journaliers par semaine' },
-            { icon: 'table', label: 'Tous les rapports journaliers', active: true },
-            { icon: 'settings', label: 'Données de base' },
+            { icon: 'table', label: projectId ? 'Rapports du projet' : 'Tous les rapports', active: true },
+            { icon: 'folder', label: 'Tous les projets', onClick: () => setProject(null) },
           ]}
         >
-          <Field label="Recherche" labelWidth={60} className="mt-1">
-            <BbInput className="flex-1" placeholder="" />
-            <Icon name="search" className="h-4 w-4 text-bb-blue" />
-          </Field>
-          <button
-            type="button"
-            className="mt-2 flex h-8 w-full items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-2 text-[13px] text-gray-600 hover:bg-gray-50"
-          >
-            <Icon name="filter" className="h-4 w-4 text-gray-400" />
-            Filtre types de travail
-          </button>
-          <div className="mb-2 mt-4 text-[13px] font-semibold text-gray-800">Tous les rapports journaliers</div>
+          <div className="mt-1 flex items-center gap-2">
+            <BbInput type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-40" title="Mois" />
+            <BbSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="min-w-0 flex-1">
+              <option value="">Tous les statuts</option>
+              {(Object.keys(REPORT_STATUSES) as ReportStatus[]).map((key) => (
+                <option key={key} value={key}>
+                  {REPORT_STATUSES[key].code} · {REPORT_STATUSES[key].label}
+                </option>
+              ))}
+            </BbSelect>
+          </div>
+          <div className="mb-2 mt-3 text-[13px] font-semibold text-gray-800">
+            {project ? `${project.number} · ${project.designation1}` : 'Tous les projets'}
+          </div>
           <DataGrid
-            className="max-h-[420px] overflow-hidden rounded-lg border border-gray-200"
-            columns={LIST_COLUMNS}
-            rows={reports}
-            rowKey={(row) => row.id}
+            className="rounded-lg border border-gray-200"
+            columns={columns}
+            rows={rows}
+            rowKey={(row) => String(row.id)}
             rowClass={(row) => REPORT_STATUSES[row.status].rowClass}
-            selectedKey={report?.id ?? null}
-            onSelect={(row) => {
-              setSelectedId(row.id)
-              setStatus(null)
-            }}
-            emptyText="Aucun rapport pour ce projet."
+            selectedKey={selectedId === null ? null : String(selectedId)}
+            onSelect={(row) => select(row.id)}
+            query={{ filters: query.filters, sort: query.sort }}
+            onQueryChange={(state) => setQuery({ ...state, page: 1 })}
+            emptyText={list.isLoading ? 'Chargement…' : projectId ? 'Aucun rapport pour ce projet.' : 'Aucun rapport.'}
           />
+          <GridPager meta={list.data?.meta} onPage={(page) => setQuery({ ...query, page })} loading={list.isFetching} />
         </AsidePanel>
       }
     >
-      {report ? (
+      {current ? (
         <div className="flex h-full flex-col">
-          <form key={report.id} className="shrink-0 space-y-2 px-4 pb-5 pt-4">
-            <div className="flex items-center gap-10">
-              <Field label="Numéro" labelWidth={80}>
-                <BbInput defaultValue={report.number} readOnly className="w-48" />
-              </Field>
-              <Field label="Date" labelWidth={70}>
-                <BbInput defaultValue={fmtDate(report.date, true)} className="w-52" />
-                <button type="button" className="rounded-md px-1.5 text-gray-400 hover:bg-gray-100" title="Jour précédent">‹</button>
-                <button type="button" className="rounded-md px-1.5 text-gray-400 hover:bg-gray-100" title="Jour suivant">›</button>
-              </Field>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="w-[80px] shrink-0 pt-1.5 text-[13px] text-gray-500">Remarque</span>
-              <BbTextarea defaultValue={report.remark} rows={6} className="w-[570px]" />
-            </div>
-            <div className="flex items-center gap-10">
-              <Field label="Météo" labelWidth={80}>
-                <BbSelect defaultValue={report.weather} className="w-48">
-                  {WEATHER_OPTIONS.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </BbSelect>
-              </Field>
-              <Field label="Temp. min/max" labelWidth={90}>
-                <BbInput defaultValue={report.tempMin} className="w-12 text-right" />
-                <BbInput defaultValue={report.tempMax} className="w-12 text-right" />
-                <Icon name="sun" className="ml-2 h-4 w-4 text-amber-500" />
-              </Field>
-            </div>
-            <div className="flex items-center gap-10">
-              <Field label="Responsable" labelWidth={80}>
-                <BbSelect defaultValue={report.responsableId} className="w-48">
-                  {DEMO_COLLABORATORS.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.lastName} {item.firstName}
-                    </option>
-                  ))}
-                </BbSelect>
-              </Field>
-              <Field label="Statut" labelWidth={90}>
-                <StatusSelect
-                  options={STATUS_OPTIONS}
-                  value={status ?? report.status}
-                  onChange={(value) => setStatus(value as ReportStatus)}
-                  className="w-64"
-                />
-              </Field>
-            </div>
-          </form>
+          <ReportHeaderForm
+            key={current.id}
+            report={current}
+            actions={actions}
+            collaborators={collaborators.data ?? []}
+            documents={documents.data ?? []}
+            showPrices={showPrices}
+            onStateChange={setSaveState}
+          />
+          <TabStrip tabs={TABS.map((item) => item.label)} active={tab} onChange={setTab} className="shrink-0 px-4" />
 
-          <TabStrip tabs={TABS} active={tab} onChange={setTab} className="shrink-0 px-4" />
-
-          {tab === 'Salaire' && !devis ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-2 text-gray-500">
-              <Icon name="file" className="h-8 w-8 text-gray-300" />
-              <p className="font-medium text-gray-700">Ce projet n'a pas encore de devis.</p>
-              <p className="max-w-md text-center text-[13px]">
-                Les heures se saisissent sur les étapes du devis. Créez d'abord le devis du projet, ses étapes
-                apparaîtront ici en colonnes.
-              </p>
-            </div>
-          ) : tab === 'Salaire' ? (
+          {tab === 'Salaire' && (
             <>
-            <div className="flex h-9 shrink-0 items-center gap-2 bg-primary-50/60 px-4 text-[12px] text-primary-800">
-              <Icon name="file" className="h-3.5 w-3.5" />
-              Étapes issues du devis <span className="font-semibold">{devis?.number}</span>
-              <span className="text-primary-600">· {steps.length} étape{steps.length > 1 ? 's' : ''}</span>
-            </div>
-            <DataGrid
-              className="min-h-0 flex-1"
-              columns={hourColumns}
-              rows={lines}
-              rowKey={(row) => row.id}
-              footer={
-                <tr className="text-[12px] text-gray-700">
-                  <td className="border-t border-gray-200" />
-                  <td className="border-t border-gray-200 px-3 py-2">Total</td>
-                  {showPrices && <td className="border-t border-gray-200" />}
-                  {steps.map((type) => (
-                    <td key={type.code} className="border-t border-gray-200 px-3 py-2 text-right">
-                      {columnTotal(type.code) ? fmtAmount(columnTotal(type.code)) : ''}
-                    </td>
-                  ))}
-                  <td className="border-t border-gray-200 bg-gray-100 px-3 py-2 text-right font-semibold">
-                    {fmtAmount(reportHours)}
-                  </td>
-                  {DEMO_EXTRA_COLUMNS.map((type) => (
-                    <td key={type.code} className="border-t border-gray-200 px-3 py-2 text-right">
-                      {columnTotal(type.code) ? fmtAmount(columnTotal(type.code), 0) : ''}
-                    </td>
-                  ))}
-                </tr>
-              }
-            />
+              {current.document && (
+                <div className="flex h-9 shrink-0 items-center gap-2 bg-primary-50/60 px-4 text-[12px] text-primary-800">
+                  <Icon name="file" className="h-3.5 w-3.5" />
+                  Étapes issues du devis <span className="font-semibold">{current.document.number}</span>
+                  <span className="text-primary-600">
+                    · {current.steps?.length ?? 0} étape{(current.steps?.length ?? 0) > 1 ? 's' : ''}
+                  </span>
+                </div>
+              )}
+              <HoursGrid
+                key={current.id}
+                report={current}
+                actions={actions}
+                collaborators={collaborators.data ?? []}
+                workTypes={workTypes.data ?? []}
+                readOnly={readOnly}
+                showPrices={showPrices}
+                onSaving={setSaving}
+              />
             </>
-          ) : (
-            <div className="flex flex-1 items-center justify-center text-gray-400">
-              Onglet « {tab} » : saisie disponible en phase 4.
+          )}
+          {['Matériaux', 'Machines', 'Mat. exploitation', 'Outillage', 'Tiers'].includes(tab) && (
+            <ReportItemsTab
+              key={`${current.id}-${tab}`}
+              report={current}
+              family={Number(TABS.find((item) => item.label === tab)?.key.slice(1))}
+              actions={actions}
+              readOnly={readOnly}
+              showPrices={showPrices}
+              onSaving={setSaving}
+            />
+          )}
+          {tab === 'Evénements' && (
+            <div className="flex flex-1 flex-col gap-2 p-4">
+              <p className="text-[12px] text-gray-500">Incidents, visites, livraisons, décisions prises sur le chantier.</p>
+              <BbTextarea
+                key={current.id}
+                defaultValue={current.events ?? ''}
+                disabled={readOnly}
+                rows={10}
+                className="w-full max-w-[800px] disabled:border-transparent disabled:bg-transparent"
+                onBlur={(event) => {
+                  const events = event.target.value.trim() || null
+                  if (events !== (current.events ?? null)) {
+                    setSaving(true)
+                    void actions.updateHeader({ events }).catch(() => toast("Les événements n'ont pas pu être enregistrés.", 'error')).finally(() => setSaving(false))
+                  }
+                }}
+              />
             </div>
           )}
+          {tab === 'Fichiers' && <ReportFilesTab key={`${current.id}-files`} report={current} actions={actions} mode="files" readOnly={readOnly} />}
+          {tab === 'Photos' && <ReportFilesTab key={`${current.id}-photos`} report={current} actions={actions} mode="photos" readOnly={readOnly} />}
         </div>
       ) : (
-        <div className="flex h-full items-center justify-center text-gray-400">
-          Aucun rapport journalier pour le projet sélectionné.
+        <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-gray-500">
+          <Icon name="clipboard" className="h-8 w-8 text-gray-300" />
+          <p className="font-medium text-gray-700">{report.isLoading ? 'Chargement du rapport…' : 'Aucun rapport sélectionné.'}</p>
+          {!report.isLoading && (
+            <p className="max-w-md text-[13px]">
+              {projectId
+                ? 'Choisissez un rapport dans la liste ou créez le rapport du jour avec « Nouveau rapport ».'
+                : 'Choisissez un projet dans la barre du haut pour saisir un rapport.'}
+            </p>
+          )}
         </div>
       )}
     </Workspace>

@@ -61,6 +61,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Gestion (admin ou responsable) : voit les prix, les marges et tous les rapports.
+     */
+    public function canSeePrices(): bool
+    {
+        return $this->hasAnyRole(['admin', 'responsable']);
+    }
+
+    /**
      * Journalise les changements de nom/email (jamais le mot de passe).
      */
     public function getActivitylogOptions(): LogOptions

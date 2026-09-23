@@ -53,6 +53,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/catalogue', label: "Catalogue d'articles", icon: 'book', roles: GESTION },
       { to: '/listes-prix', label: 'Listes de prix', icon: 'tag', roles: GESTION },
       { to: '/modeles-devis', label: 'Modèles de devis', icon: 'tree', roles: GESTION },
+      { to: '/collaborateurs', label: 'Collaborateurs', icon: 'users', roles: GESTION },
     ],
   },
   {

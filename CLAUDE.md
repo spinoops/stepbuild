@@ -23,8 +23,8 @@ pour l'affichage : `frontend/src/lib/phases.ts`.
 | 1 | Adresses, catalogue (chapitres = modèles d'étapes), éléments de coûts, recherche instantanée | **fait** (API + front) ; reste : import de listes de prix |
 | 2 | Projets : fiche, numérotation par NPA, statuts, adresses nommées, photos ; projet courant de la barre de contexte | **fait** (API + front) |
 | 3 | Devis : création depuis le projet, étapes depuis les modèles, saisie rapide des positions, chiffrage, récapitulation, nouvelle version ; création d'article à la volée | **fait** (API + front) ; reste : export PDF (phase 6) |
-| 4 | Rapports journaliers sur les étapes du devis, workflow en cours → en contrôle → facturé | à faire — **prochaine étape** |
-| 5 | Régie (brut → majoré → client), contrôle des heures | à faire |
+| 4 | Rapports journaliers sur les étapes du devis, workflow en cours → en contrôle → facturé ; collaborateurs | **fait** (API + front) |
+| 5 | Régie (brut → majoré → client), contrôle des heures | à faire — **prochaine étape** |
 | 6 | Acomptes, factures, facture finale, export PDF ; statistiques | à faire |
 | 7 | Reprise des données BauBit, mise en production Infomaniak | à faire |
 | 8 | Vue mobile / tablette (ouvriers) | janvier 2027 |
@@ -44,8 +44,8 @@ rapport < 10 s au clavier, sauvegarde automatique, création d'article à la vol
    **sur les étapes du devis** (pas sur une liste globale de types de travail).
 4. **Régie / contrôle des heures** puis **facture** : tout se rattache au devis du projet.
 Conséquence pour le modèle de données : `étape` appartient au devis (document), les lignes de
-rapport référencent une étape du devis ; les « modèles d'étapes » sont des gabarits réutilisables.
-Côté front, `projectSteps()` / `documentSteps()` dans `lib/demo.ts` illustrent ce lien.
+rapport référencent une étape du devis (`daily_report_hours.document_step_id`) ; les « modèles
+d'étapes » sont des gabarits réutilisables.
 
 ## Rôles
 - `admin` : tout (utilisateurs, configuration).
@@ -137,17 +137,41 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `POST /documents/{doc}/save-as-template` crée un modèle depuis un devis. Import des articles :
   `DocumentStep::importArticles()` (partagé par étapes et modèles).
 
+### Rapports journaliers (phase 4)
+- **Accès tous rôles** : la gestion voit tout ; l'ouvrier ne voit que **ses** rapports (créés par lui, dont il est
+  responsable ou où il a des heures — `DailyReport::scopeVisibleTo`) et **jamais un montant** (`DailyReportResource`
+  n'émet `hourly_cost`, `amount`, `unit_cost`, `total_amount` que si `User::canSeePrices()`). Trait
+  `AuthorizesDailyReports` : 404 si invisible, 403 si non modifiable.
+- **Workflow** `en_cours → en_controle → facture` : la gestion modifie tout sauf un rapport facturé (retour de statut
+  possible) ; l'ouvrier modifie ses rapports en cours et peut seulement les passer « en contrôle ».
+- `daily_reports` : numéro `001` par projet, rattaché au **devis accepté** du projet sinon au dernier
+  (`DailyReport::defaultDocumentId`), responsable = collaborateur lié au compte (`collaborators.user_id`).
+  Devis accepté → projet **adjugé** automatiquement (`DocumentController::update`).
+- **Heures** (`daily_report_hours`) = cellule collaborateur × étape du devis, ou × type de travail (`work_types` :
+  samedi, repas, km, formation ; seule l'unité `h` compte dans les heures et le coût). Une ligne sans étape ni type =
+  présence dans le rapport. `PUT /daily-reports/{id}/hours` enregistre une cellule (0 = effacée) ; `copy-team` reprend
+  l'équipe du rapport précédent. `hourly_cost` = instantané du tarif du collaborateur.
+- **Ressources** (`daily_report_items`, familles 2–6 des éléments de coûts) et **fichiers/photos**
+  (`daily_report_files`, disque `local`, lien signé `daily-report-files.file`). Totaux `total_hours` (productives) et
+  `total_amount` (coût brut) recalculés par `DailyReport::recalculate()` ; chaque action renvoie le rapport complet.
+- Front : `pages/DailyReportsPage` (liste du projet courant, en-tête `ReportHeaderForm` avec autosave, onglets
+  BauBit), `components/reports/HoursGrid` (Entrée = ligne suivante, flèches, enregistrement à la sortie de cellule),
+  `ReportItemsTab`, `ReportFilesTab`, `components/shared/ElementPicker` (partagé avec le sous-détail de prix).
+  Hooks `hooks/useDailyReports.ts`. Collaborateurs : `/collaborateurs` (`CollaboratorsPage`, gestion).
+- Reste pour la phase 5 : trois niveaux de prix (brut → majoré → client) sur les lignes, statut « facturé » alimenté
+  par la facturation, gestion des types de travail (liste en lecture seule sur la page Collaborateurs).
+
 ### Données d'exemple restantes
-Rapports journaliers et contrôle des heures utilisent encore `lib/demo.ts` (avec leur propre
-sélection `DEMO_CONTEXT`, découplée du projet courant réel ; badge « Données d'exemple » via la prop
-`demo` de `Workspace`). À remplacer en phases 4 et 5.
-Côté base, `DemoDataSeeder` charge des données **fictives** en environnement `local` uniquement.
+Le contrôle des heures utilise encore `lib/demo.ts` (badge « Données d'exemple » via la prop `demo` de
+`Workspace`). À remplacer en phase 5.
+Côté base, `DemoDataSeeder` charge des données **fictives** en environnement `local` uniquement (dont collaborateurs,
+types de travail et trois rapports sur le devis d'exemple).
 
 ## Modules et routes front
 Navigation dans `frontend/src/lib/navigation.ts` (groupes calqués sur les rubans BauBit),
 filtrée par rôle. Pages dans `frontend/src/pages/` :
 `/dashboard`, `/projets`, `/clients`, `/rapports`, `/regie`, `/controle-heures`,
-`/documents`, `/statistiques`, `/catalogue`, `/listes-prix`, `/users`, `/settings`.
+`/documents`, `/statistiques`, `/catalogue`, `/listes-prix`, `/modeles-devis`, `/collaborateurs`, `/users`, `/settings`.
 Les modules non développés utilisent `components/ModulePlaceholder.tsx` : **remplacer**
 le placeholder par la vraie page lors de la phase concernée.
 

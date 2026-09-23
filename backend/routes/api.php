@@ -4,6 +4,11 @@ use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CatalogArticleController;
 use App\Http\Controllers\CatalogChapterController;
+use App\Http\Controllers\CollaboratorController;
+use App\Http\Controllers\DailyReportController;
+use App\Http\Controllers\DailyReportFileController;
+use App\Http\Controllers\DailyReportHourController;
+use App\Http\Controllers\DailyReportItemController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentPositionController;
 use App\Http\Controllers\DocumentStepController;
@@ -47,10 +52,34 @@ Route::get('/project-photos/{photo}/file', [ProjectPhotoController::class, 'file
     ->name('project-photos.file')
     ->middleware('signed');
 
+// Fichier joint à un rapport journalier : lien signé temporaire.
+Route::get('/daily-report-files/{file}/file', [DailyReportFileController::class, 'file'])
+    ->name('daily-report-files.file')
+    ->middleware('signed');
+
 // Routes protégées : nécessitent un token valide (Authorization: Bearer ...).
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'me']);
+
+    // Rapports journaliers : tous les rôles (l'ouvrier ne voit que les siens, jamais de montant).
+    Route::get('/collaborators', [CollaboratorController::class, 'index']);
+    Route::get('/work-types', [CollaboratorController::class, 'workTypes']);
+    Route::get('/daily-reports', [DailyReportController::class, 'index']);
+    Route::post('/projects/{project}/daily-reports', [DailyReportController::class, 'store'])->whereNumber('project');
+    Route::get('/daily-reports/{report}', [DailyReportController::class, 'show']);
+    Route::put('/daily-reports/{report}', [DailyReportController::class, 'update']);
+    Route::delete('/daily-reports/{report}', [DailyReportController::class, 'destroy']);
+    Route::post('/daily-reports/{report}/copy-team', [DailyReportController::class, 'copyTeam']);
+    Route::post('/daily-reports/{report}/collaborators', [DailyReportHourController::class, 'addCollaborator']);
+    Route::delete('/daily-reports/{report}/collaborators/{collaborator}', [DailyReportHourController::class, 'removeCollaborator']);
+    Route::put('/daily-reports/{report}/hours', [DailyReportHourController::class, 'setCell']);
+    Route::post('/daily-reports/{report}/items', [DailyReportItemController::class, 'store']);
+    Route::put('/daily-reports/{report}/items/{item}', [DailyReportItemController::class, 'update']);
+    Route::delete('/daily-reports/{report}/items/{item}', [DailyReportItemController::class, 'destroy']);
+    Route::post('/daily-reports/{report}/files', [DailyReportFileController::class, 'store']);
+    Route::put('/daily-reports/{report}/files/{file}', [DailyReportFileController::class, 'update']);
+    Route::delete('/daily-reports/{report}/files/{file}', [DailyReportFileController::class, 'destroy']);
 
     // Projets en lecture : tous les rôles (l'ouvrier choisit son chantier, sans aucun prix).
     Route::get('/projects/stats', [ProjectController::class, 'stats']);
@@ -95,6 +124,8 @@ Route::middleware('auth:sanctum')->group(function () {
             ->parameters(['quote-templates' => 'template']);
         Route::post('/documents/{document}/save-as-template', [QuoteTemplateController::class, 'fromDocument']);
         Route::post('/quote-templates/{template}/apply/{document}', [QuoteTemplateController::class, 'apply']);
+
+        Route::apiResource('collaborators', CollaboratorController::class)->except(['index']);
 
         Route::get('/price-elements/groups', [PriceElementController::class, 'groups']);
         Route::apiResource('price-elements', PriceElementController::class)

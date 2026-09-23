@@ -5,10 +5,14 @@ namespace Database\Seeders;
 use App\Models\Address;
 use App\Models\CatalogArticle;
 use App\Models\CatalogChapter;
+use App\Models\Collaborator;
+use App\Models\DailyReport;
 use App\Models\Document;
 use App\Models\PriceElement;
 use App\Models\Project;
 use App\Models\QuoteTemplate;
+use App\Models\User;
+use App\Models\WorkType;
 use Illuminate\Database\Seeder;
 
 /**
@@ -25,6 +29,69 @@ class DemoDataSeeder extends Seeder
         $this->seedProjects();
         $this->seedQuoteTemplate();
         $this->seedQuote();
+        $this->seedCollaborators();
+        $this->seedDailyReports();
+    }
+
+    private function seedCollaborators(): void
+    {
+        foreach (WorkType::DEFAULTS as $position => [$code, $label, $unit]) {
+            WorkType::updateOrCreate(['code' => $code], ['label' => $label, 'unit' => $unit, 'position' => $position]);
+        }
+
+        // [numéro, nom, prénom, tarif horaire, compte de connexion]
+        $rows = [
+            ['101', 'Martin', 'Pierre', 52.78, 'responsable@chantier.test'],
+            ['102', 'Rossi', 'Luca', 50.00, 'ouvrier@chantier.test'],
+            ['103', 'Keller', 'Anna', 52.78, null],
+            ['104', 'Nguyen', 'Thi', 50.00, null],
+            ['105', 'Favre', 'Jean', 55.00, null],
+            ['106', 'Bernard', 'Léa', 48.50, null],
+        ];
+        foreach ($rows as [$number, $last, $first, $cost, $email]) {
+            Collaborator::updateOrCreate(
+                ['number' => $number],
+                ['last_name' => $last, 'first_name' => $first, 'hourly_cost' => $cost, 'user_id' => $email ? User::where('email', $email)->value('id') : null, 'is_active' => true],
+            );
+        }
+    }
+
+    /** Trois rapports sur le devis d'exemple : séance sur place, démontage, carrelage. */
+    private function seedDailyReports(): void
+    {
+        $project = Project::where('number', '2800-001')->first();
+        $quote = $project ? Document::where('project_id', $project->id)->where('type', 'devis')->first() : null;
+        if (! $project || ! $quote || DailyReport::where('project_id', $project->id)->exists()) {
+            return;
+        }
+
+        $steps = $quote->steps()->get()->keyBy('code');
+        $who = Collaborator::all()->keyBy('number');
+        $user = User::where('email', 'responsable@chantier.test')->first();
+        $meal = WorkType::where('code', '1110')->first();
+
+        $reports = [
+            ['2026-08-26', 'en_controle', 'Partiellement nuageux', 21, 28, "RAPPORT :\n\nSuivi de chantier : séance sur place pour voir travaux à faire", [['101', '02', 1], ['103', '02', 1]]],
+            ['2026-08-27', 'en_controle', 'Couvert', 18, 24, "RAPPORT 2 :\n\nDémontage : démontage sol carrelage", [['102', '03', 8.5], ['104', '03', 8.5]]],
+            ['2026-08-28', 'en_cours', 'Pluie, couvert', 17, 20, "RAPPORT 3 :\n\nDémontage : démontage sol carrelage\n\nCarrelage : pose couche de fond et pose carrelage", [['102', '12', 5], ['105', '03', 3], ['104', '12', 5]]],
+        ];
+
+        foreach ($reports as [$date, $status, $weather, $min, $max, $remark, $lines]) {
+            $report = DailyReport::createForProject($project, $user, [
+                'document_id' => $quote->id, 'date' => $date, 'status' => $status, 'weather' => $weather,
+                'temp_min' => $min, 'temp_max' => $max, 'remark' => $remark, 'responsible_id' => $who['101']->id,
+            ]);
+            foreach ($lines as [$number, $code, $hours]) {
+                $report->hours()->create([
+                    'collaborator_id' => $who[$number]->id, 'document_step_id' => $steps[$code]->id,
+                    'quantity' => $hours, 'hourly_cost' => $who[$number]->hourly_cost,
+                ]);
+                if ($hours >= 8 && $meal) {
+                    $report->hours()->create(['collaborator_id' => $who[$number]->id, 'work_type_id' => $meal->id, 'quantity' => 1, 'hourly_cost' => $who[$number]->hourly_cost]);
+                }
+            }
+            $report->recalculate();
+        }
     }
 
     private function seedAddresses(): void
