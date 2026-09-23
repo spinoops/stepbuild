@@ -123,7 +123,13 @@ export const RIBBON_TABS: RibbonTab[] = [
     label: 'Données de base',
     groups: [
       { title: 'Catalogue', items: [{ label: "Catalogue d'articles", icon: 'book', to: '/catalogue', big: true, roles: GESTION }] },
-      { title: 'Devis', items: [{ label: 'Modèles de devis', icon: 'tree', to: '/modeles-devis', roles: GESTION }] },
+      {
+        title: 'Devis',
+        items: [
+          { label: 'Modèles de devis', icon: 'tree', to: '/modeles-devis', roles: GESTION },
+          { label: 'Sous-détails types', icon: 'calculator', to: '/sous-details-types', roles: GESTION },
+        ],
+      },
       {
         title: 'Listes de prix',
         items: [

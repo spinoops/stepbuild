@@ -125,8 +125,16 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `sale`. La position reçoit `cost_price` (coût, alimente la marge) et `calculated_price` (vente), divisés par la
   dimension si `price_per_dimension`. `PUT /documents/{id}/positions/{pos}/breakdown` remplace tout le sous-détail ;
   `apply_price` reporte le prix calculé dans `unit_price` (sinon le prix reste saisi à la main, écart affiché).
-  Front : `CostBreakdownDialog` (autosave 1 s, sauvegardes en file), familles et calcul dans `lib/costFamilies.ts`.
-  À venir : le client fournira un fichier de calculs par élément (à intégrer comme sous-détails types par article).
+  Front : `CostBreakdownDialog` (autosave 1 s, sauvegardes en file) + `BreakdownLinesTable` (tableau partagé),
+  familles et calcul dans `lib/costFamilies.ts`, brouillons de lignes dans `lib/breakdown.ts`.
+- **Sous-détails types** (`breakdown_templates` → `breakdown_template_lines`, page `/sous-details-types`) : la
+  bibliothèque d'ouvrages du métreur (110 ouvrages transcrits de « Remarques avec calculs devis », dans
+  `database/data/breakdown_templates.json`, chargés par `BreakdownTemplateSeeder` dans **tous** les environnements,
+  jamais écrasés une fois présents). Conventions du métreur : main-d'œuvre vendue **750.- la personne-jour, 90.-
+  l'heure** (lignes MO à prix de vente, majoration 0), prix fournisseurs **+30 %**. Dans la fenêtre du sous-détail,
+  `TemplatePicker` charge un modèle (lignes remplacées, DIM saisie conservée, `POST …/used` compte l'usage) ;
+  « Enregistrer comme sous-détail type » crée un modèle depuis une position. `catalog_article_id` est prévu pour
+  rattacher un modèle à un article à la reprise du catalogue BauBit (chargement automatique à l'insertion).
 - Marge affichée dans la récapitulation (usage interne, seuil 30 %), calculée sur les positions ayant un prix de revient
   (sous-détail ou prix d'achat).
 - Tout le module est réservé à `roles:admin,responsable` (prix). `POST /documents/{id}/duplicate` crée la version suivante.

@@ -46,6 +46,9 @@ class DatabaseSeeder extends Seeder
             $user->syncRoles([$roles[$role]]);
         }
 
+        // Sous-détails de prix types du métreur (données réelles, tous environnements).
+        $this->call(BreakdownTemplateSeeder::class);
+
         // Données d'exemple fictives : uniquement en local, jamais en production ni en test.
         if (app()->environment('local')) {
             $this->call(DemoDataSeeder::class);

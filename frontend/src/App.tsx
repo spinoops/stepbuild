@@ -14,6 +14,7 @@ import CatalogPage from '@/pages/CatalogPage'
 import PriceListsPage from '@/pages/PriceListsPage'
 import QuoteTemplatesPage from '@/pages/QuoteTemplatesPage'
 import CollaboratorsPage from '@/pages/CollaboratorsPage'
+import BreakdownTemplatesPage from '@/pages/BreakdownTemplatesPage'
 import UsersPage from '@/pages/UsersPage'
 import SettingsPage from '@/pages/SettingsPage'
 import ProtectedRoute from '@/components/ProtectedRoute'
@@ -46,6 +47,7 @@ export default function App() {
             <Route path="/listes-prix" element={<PriceListsPage />} />
             <Route path="/modeles-devis" element={<QuoteTemplatesPage />} />
             <Route path="/collaborateurs" element={<CollaboratorsPage />} />
+            <Route path="/sous-details-types" element={<BreakdownTemplatesPage />} />
           </Route>
 
           {/* Administration : admin uniquement */}

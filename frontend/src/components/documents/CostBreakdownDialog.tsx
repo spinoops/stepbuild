@@ -1,28 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Modal from '@/components/ui/Modal'
-import ElementPicker from '@/components/shared/ElementPicker'
+import BreakdownLinesTable from '@/components/documents/BreakdownLinesTable'
+import TemplatePicker from '@/components/documents/TemplatePicker'
 import { toNumber } from '@/lib/crud'
 import { fmtAmount } from '@/lib/format'
 import { toast } from '@/lib/toast'
-import { COST_FAMILIES, computedQuantity, costFamily, round2 } from '@/lib/costFamilies'
-import type { BreakdownLinePayload, DocumentActions } from '@/hooks/useDocuments'
-import type { DocumentPosition, PositionCost } from '@/types'
+import { round2 } from '@/lib/costFamilies'
+import { evaluateLines, hasLabel, insertLine, lineFromData, numberText, toLinePayload } from '@/lib/breakdown'
+import type { LineDraft } from '@/lib/breakdown'
+import type { DocumentActions } from '@/hooks/useDocuments'
+import { fetchTemplateForUse, useSaveBreakdownTemplate } from '@/hooks/useBreakdownTemplates'
+import type { DocumentPosition } from '@/types'
 import { Icon } from '@/components/icons'
-
-interface LineDraft {
-  key: number
-  id?: number
-  family: number
-  price_element_id: number | null
-  label: string
-  unit: string
-  quantity: string
-  per_dimension: boolean
-  pack_size: string
-  unit_cost: string
-  markup_percent: string
-  note: string
-}
 
 interface BreakdownState {
   dimension: string
@@ -41,37 +30,15 @@ interface CostBreakdownDialogProps {
   onClose: () => void
 }
 
-let nextKey = 1
-const text = (value: number | null) => (value === null ? '' : String(value))
-
-function fromCost(cost: PositionCost): LineDraft {
-  return {
-    key: nextKey++,
-    id: cost.id,
-    family: cost.family,
-    price_element_id: cost.price_element_id,
-    label: cost.label,
-    unit: cost.unit ?? '',
-    quantity: text(cost.quantity),
-    per_dimension: cost.per_dimension,
-    pack_size: text(cost.pack_size),
-    unit_cost: text(cost.unit_cost),
-    markup_percent: text(cost.markup_percent),
-    note: cost.note ?? '',
-  }
-}
-
 function fromPosition(position: DocumentPosition): BreakdownState {
   return {
-    dimension: text(position.dimension),
+    dimension: numberText(position.dimension),
     dimension_unit: position.dimension_unit ?? '',
     price_per_dimension: position.price_per_dimension,
     internal_remark: position.internal_remark ?? '',
-    lines: (position.costs ?? []).map(fromCost),
+    lines: (position.costs ?? []).map((cost) => lineFromData(cost)),
   }
 }
-
-const hasLabel = (line: LineDraft) => line.label.trim() !== ''
 
 /** Charge utile envoyée au serveur, et sa forme comparable (sans les ids) pour ne rien renvoyer d'inchangé. */
 function serialize(state: BreakdownState) {
@@ -81,47 +48,16 @@ function serialize(state: BreakdownState) {
     dimension_unit: state.dimension_unit.trim() || null,
     price_per_dimension: state.price_per_dimension,
     internal_remark: state.internal_remark.trim() || null,
-    lines: sent.map(toPayloadLine),
+    lines: sent.map(toLinePayload),
   }
   return { sent, payload, serialized: JSON.stringify({ ...payload, lines: payload.lines.map((line) => ({ ...line, id: undefined })) }) }
 }
 
-function toPayloadLine(line: LineDraft): BreakdownLinePayload {
-  return {
-    ...(line.id !== undefined ? { id: line.id } : {}),
-    family: line.family,
-    price_element_id: line.price_element_id,
-    label: line.label.trim(),
-    unit: line.unit.trim() || null,
-    quantity: toNumber(line.quantity) ?? 0,
-    per_dimension: line.per_dimension,
-    pack_size: toNumber(line.pack_size),
-    unit_cost: toNumber(line.unit_cost) ?? 0,
-    markup_percent: toNumber(line.markup_percent) ?? 0,
-    note: line.note.trim() || null,
-  }
-}
-
-/** Coût, vente et quantité comptée d'une ligne, pour l'affichage immédiat (même règle que le serveur). */
-function evaluate(line: LineDraft, dimension: number | null) {
-  const numbers = {
-    quantity: toNumber(line.quantity) ?? 0,
-    per_dimension: line.per_dimension,
-    pack_size: toNumber(line.pack_size),
-  }
-  const counted = computedQuantity(numbers, dimension)
-  const cost = round2(counted * (toNumber(line.unit_cost) ?? 0))
-  const sale = round2(cost * (1 + (toNumber(line.markup_percent) ?? 0) / 100))
-  return { counted, cost, sale }
-}
-
-const CELL =
-  'w-full rounded border border-transparent bg-transparent px-1.5 py-1 text-[13px] outline-none transition hover:border-gray-200 focus:border-primary-400 focus:bg-white focus:ring-2 focus:ring-primary-100'
-
 /**
  * Sous-détail de prix d'une position : le prix de vente se construit à partir des coûts par famille
- * (MO, MAT, MACH, MAT EX, OUT, ST) rapportés à la dimension de l'ouvrage, puis majorés. Enregistré
- * automatiquement ; « Reporter » copie le prix calculé dans la ligne du devis.
+ * (MO, MAT, MACH, MAT EX, OUT, ST) rapportés à la dimension de l'ouvrage, puis majorés. Un sous-détail
+ * type (bibliothèque du métreur) se charge d'un mot ; enregistré automatiquement ; « Reporter » copie le
+ * prix calculé dans la ligne du devis.
  */
 export default function CostBreakdownDialog({ position, actions, onSaving, onPriceApplied, onClose }: CostBreakdownDialogProps) {
   const [state, setState] = useState<BreakdownState>(() => fromPosition(position))
@@ -129,10 +65,11 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
   const saved = useRef(serialize(fromPosition(position)).serialized)
   const timer = useRef<number | undefined>(undefined)
   const [status, setStatus] = useState<'idle' | 'saving' | 'error'>('idle')
+  const saveTemplate = useSaveBreakdownTemplate()
 
   const dimension = toNumber(state.dimension)
   const divisor = state.price_per_dimension && dimension !== null && dimension > 0 ? dimension : 1
-  const evaluated = useMemo(() => state.lines.map((line) => ({ line, ...evaluate(line, dimension) })), [state.lines, dimension])
+  const evaluated = useMemo(() => evaluateLines(state.lines, dimension), [state.lines, dimension])
   const totalCost = round2(evaluated.reduce((sum, item) => sum + item.cost, 0))
   const totalSale = round2(evaluated.reduce((sum, item) => sum + item.sale, 0))
   const calculatedPrice = round2(totalSale / divisor)
@@ -149,41 +86,55 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
     timer.current = window.setTimeout(() => void save(), delay)
   }
 
-  function updateLine(key: number, patch: Partial<LineDraft>) {
+  const updateLine = (key: number, patch: Partial<LineDraft>) =>
     update((current) => ({ ...current, lines: current.lines.map((line) => (line.key === key ? { ...line, ...patch } : line)) }))
-  }
+  const addLine = (line: LineDraft) => update((current) => ({ ...current, lines: insertLine(current.lines, line) }))
+  const removeLine = (key: number) => update((current) => ({ ...current, lines: current.lines.filter((line) => line.key !== key) }), 300)
 
-  function addLine(family: number, values: Partial<LineDraft>) {
-    const key = nextKey++
-    const line: LineDraft = {
-      key,
-      family,
-      price_element_id: null,
-      label: '',
-      unit: '',
-      quantity: '1',
-      per_dimension: false,
-      pack_size: '',
-      unit_cost: '',
-      markup_percent: String(costFamily(family).defaultMarkup),
-      note: '',
-      ...values,
+  /** Charge un sous-détail type : ses lignes remplacent les lignes actuelles, la DIM saisie est conservée. */
+  async function loadTemplate(id: number) {
+    if (hasLines && !window.confirm('Remplacer les lignes actuelles par celles du modèle ?')) {
+      return
     }
-    // Insérée à la fin de sa famille, les familles restant dans l'ordre MO → ST.
-    update((current) => {
-      const lines = [...current.lines]
-      let index = lines.length
-      while (index > 0 && lines[index - 1].family > family) {
-        index -= 1
-      }
-      lines.splice(index, 0, line)
-      return { ...current, lines }
-    })
-    window.setTimeout(() => window.document.querySelector<HTMLInputElement>(`[data-bq="${key}"]`)?.select(), 40)
+    try {
+      const template = await fetchTemplateForUse(id)
+      update((current) => ({
+        ...current,
+        dimension: current.dimension.trim() || numberText(template.dimension),
+        dimension_unit: template.dimension_unit ?? current.dimension_unit,
+        price_per_dimension: template.price_per_dimension,
+        internal_remark: current.internal_remark.trim() || [`Modèle : ${template.name}`, template.note].filter(Boolean).join(' — '),
+        lines: (template.lines ?? []).map((line) => lineFromData(line, false)),
+      }), 0)
+      window.setTimeout(() => window.document.querySelector<HTMLInputElement>('[data-dim]')?.select(), 40)
+    } catch {
+      toast("Le modèle n'a pas pu être chargé.", 'error')
+    }
   }
 
-  function removeLine(key: number) {
-    update((current) => ({ ...current, lines: current.lines.filter((line) => line.key !== key) }), 300)
+  /** Enregistre le sous-détail courant comme modèle réutilisable. */
+  function saveAsTemplate() {
+    const name = window.prompt('Nom du sous-détail type (ouvrage) :', position.description.split('\n')[0].slice(0, 80))
+    if (!name?.trim()) {
+      return
+    }
+    const current = latest.current
+    saveTemplate.mutate(
+      {
+        id: null,
+        payload: {
+          name: name.trim(),
+          dimension: toNumber(current.dimension),
+          dimension_unit: current.dimension_unit.trim() || null,
+          price_per_dimension: current.price_per_dimension,
+          lines: current.lines.filter(hasLabel).map((line) => ({ ...toLinePayload(line), id: undefined })),
+        },
+      },
+      {
+        onSuccess: () => toast('Sous-détail type enregistré.', 'success'),
+        onError: () => toast("Le modèle n'a pas pu être enregistré.", 'error'),
+      },
+    )
   }
 
   // Les enregistrements se suivent dans l'ordre : un clic sur « Reporter » pendant une sauvegarde
@@ -274,12 +225,12 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
               DIM
             </span>
             <input
+              data-dim
               value={state.dimension}
               onChange={(e) => update({ dimension: e.target.value })}
               inputMode="decimal"
               placeholder="9"
               className="h-7 w-20 rounded-md border border-gray-300 px-2 text-right text-[13px] outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-              autoFocus={!hasLines}
             />
             <input
               value={state.dimension_unit}
@@ -290,157 +241,16 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
             />
           </label>
           <label className="flex items-center gap-2 text-gray-600">
-            <input
-              type="checkbox"
-              checked={state.price_per_dimension}
-              onChange={(e) => update({ price_per_dimension: e.target.checked }, 0)}
-              className="h-4 w-4 accent-primary-600"
-            />
+            <input type="checkbox" checked={state.price_per_dimension} onChange={(e) => update({ price_per_dimension: e.target.checked }, 0)} className="h-4 w-4 accent-primary-600" />
             Prix de la position par {unitLabel} (total ÷ DIM)
           </label>
-          <span className="ml-auto text-[12px] text-gray-400">
-            Quantité × coût unitaire, arrondi au conditionnement, puis majoration.
+          <span className="ml-auto">
+            <TemplatePicker onPick={(template) => void loadTemplate(template.id)} />
           </span>
         </div>
 
-        <div className="mt-3 max-h-[52vh] overflow-auto rounded-lg border border-gray-200">
-          <table className="w-full border-collapse text-[13px]">
-            <thead className="sticky top-0 z-10 bg-bb-ribbon text-[11px] font-semibold text-gray-500">
-              <tr>
-                <th className="border-b border-gray-200 px-2 py-1.5 text-left">Ressource</th>
-                <th className="w-20 border-b border-gray-200 px-1 py-1.5 text-right">Quantité</th>
-                <th className="w-14 border-b border-gray-200 px-1 py-1.5 text-left">Un.</th>
-                <th className="w-12 border-b border-gray-200 px-1 py-1.5 text-center" title="Quantité par unité de dimension (× DIM)">
-                  × DIM
-                </th>
-                <th className="w-16 border-b border-gray-200 px-1 py-1.5 text-right" title="Conditionnement : arrondi au sac, à la pièce entière…">
-                  Cond.
-                </th>
-                <th className="w-20 border-b border-gray-200 px-1 py-1.5 text-right">Comptée</th>
-                <th className="w-24 border-b border-gray-200 px-1 py-1.5 text-right">Coût unit.</th>
-                <th className="w-24 border-b border-gray-200 px-2 py-1.5 text-right">Coût</th>
-                <th className="w-16 border-b border-gray-200 px-1 py-1.5 text-right">Maj. %</th>
-                <th className="w-24 border-b border-gray-200 px-2 py-1.5 text-right">Vente</th>
-                <th className="w-8 border-b border-gray-200" />
-              </tr>
-            </thead>
-            {COST_FAMILIES.map((family) => {
-              const rows = evaluated.filter((item) => item.line.family === family.id)
-              const subtotal = round2(rows.reduce((sum, item) => sum + item.sale, 0))
-              return (
-                <tbody key={family.id}>
-                  <tr className="bg-gray-100">
-                    <td colSpan={9} className="px-2 py-1 text-[12px] font-semibold uppercase tracking-wide text-gray-700">
-                      {family.code}
-                      <span className="ml-2 font-normal normal-case tracking-normal text-gray-400">{family.label}</span>
-                    </td>
-                    <td className="px-2 py-1 text-right text-[12px] font-semibold tabular-nums text-gray-700">
-                      {rows.length > 0 ? fmtAmount(subtotal) : ''}
-                    </td>
-                    <td />
-                  </tr>
-                  {rows.map(({ line, counted, cost, sale }) => (
-                    <tr key={line.key} className="group border-b border-gray-100">
-                      <td className="py-0.5 pl-1">
-                        <input
-                          value={line.label}
-                          onChange={(e) => updateLine(line.key, { label: e.target.value })}
-                          placeholder="Libellé"
-                          maxLength={255}
-                          className={CELL}
-                          aria-label="Ressource"
-                        />
-                      </td>
-                      <td className="py-0.5">
-                        <input
-                          data-bq={line.key}
-                          value={line.quantity}
-                          onChange={(e) => updateLine(line.key, { quantity: e.target.value })}
-                          inputMode="decimal"
-                          className={`${CELL} text-right`}
-                          aria-label="Quantité"
-                        />
-                      </td>
-                      <td className="py-0.5">
-                        <input value={line.unit} onChange={(e) => updateLine(line.key, { unit: e.target.value })} maxLength={20} className={CELL} aria-label="Unité" />
-                      </td>
-                      <td className="py-0.5 text-center">
-                        <input
-                          type="checkbox"
-                          checked={line.per_dimension}
-                          onChange={(e) => updateLine(line.key, { per_dimension: e.target.checked })}
-                          title="Quantité par unité de dimension : × DIM"
-                          className="h-4 w-4 accent-primary-600"
-                        />
-                      </td>
-                      <td className="py-0.5">
-                        <input
-                          value={line.pack_size}
-                          onChange={(e) => updateLine(line.key, { pack_size: e.target.value })}
-                          inputMode="decimal"
-                          placeholder="—"
-                          title="Conditionnement (ex. sac de 25 kg, ou 1 pour arrondir à l'unité)"
-                          className={`${CELL} text-right`}
-                          aria-label="Conditionnement"
-                        />
-                      </td>
-                      <td className="px-1 py-1 text-right tabular-nums text-gray-500">
-                        {fmtAmount(counted, counted % 1 === 0 ? 0 : 2)}
-                        {line.pack_size && toNumber(line.pack_size) ? <span className="text-gray-400"> × {line.pack_size}</span> : null}
-                      </td>
-                      <td className="py-0.5">
-                        <input
-                          value={line.unit_cost}
-                          onChange={(e) => updateLine(line.key, { unit_cost: e.target.value })}
-                          inputMode="decimal"
-                          className={`${CELL} text-right`}
-                          aria-label="Coût unitaire"
-                        />
-                      </td>
-                      <td className="px-2 py-1 text-right tabular-nums">{fmtAmount(cost)}</td>
-                      <td className="py-0.5">
-                        <input
-                          value={line.markup_percent}
-                          onChange={(e) => updateLine(line.key, { markup_percent: e.target.value })}
-                          inputMode="decimal"
-                          className={`${CELL} text-right`}
-                          aria-label="Majoration"
-                        />
-                      </td>
-                      <td className="px-2 py-1 text-right font-medium tabular-nums">{fmtAmount(sale)}</td>
-                      <td className="py-0.5 pr-1">
-                        <button
-                          type="button"
-                          onClick={() => removeLine(line.key)}
-                          title="Retirer la ligne"
-                          className="rounded p-1 text-gray-300 opacity-0 transition hover:bg-red-50 hover:text-red-600 group-focus-within:opacity-100 group-hover:opacity-100"
-                        >
-                          <Icon name="trash" className="h-3.5 w-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  <tr>
-                    <td colSpan={11} className="border-b border-gray-100 px-1 py-0.5">
-                      <ElementPicker
-                        family={family.id}
-                        placeholder={`Ajouter ${family.label.toLowerCase()} : élément de coûts ou libellé, puis Entrée`}
-                        onPick={(element) =>
-                          addLine(family.id, {
-                            price_element_id: element.id,
-                            label: element.description,
-                            unit: element.unit ?? '',
-                            unit_cost: text(element.net_price ?? element.supplier_price ?? element.regie_price),
-                          })
-                        }
-                        onFree={(label) => addLine(family.id, { label })}
-                      />
-                    </td>
-                  </tr>
-                </tbody>
-              )
-            })}
-          </table>
+        <div className="mt-3">
+          <BreakdownLinesTable evaluated={evaluated} onUpdateLine={updateLine} onAddLine={addLine} onRemoveLine={removeLine} />
         </div>
 
         <div className="mt-3 flex flex-wrap items-start gap-4">
@@ -483,8 +293,13 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
         </div>
 
         <div className="mt-4 flex items-center justify-between">
-          <span className="text-[12px] text-gray-400">
+          <span className="flex items-center gap-3 text-[12px] text-gray-400">
             {status === 'saving' ? 'Enregistrement…' : status === 'error' ? 'Non enregistré' : 'Enregistré automatiquement'}
+            {hasLines && (
+              <button type="button" onClick={saveAsTemplate} disabled={saveTemplate.isPending} className="text-gray-500 hover:text-primary-700 hover:underline">
+                Enregistrer comme sous-détail type
+              </button>
+            )}
           </span>
           <div className="flex gap-2">
             <button type="button" onClick={close} className="h-8 rounded-md px-3 text-[13px] text-gray-600 hover:bg-gray-100">

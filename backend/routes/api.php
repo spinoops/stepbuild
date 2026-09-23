@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BreakdownTemplateController;
 use App\Http\Controllers\CatalogArticleController;
 use App\Http\Controllers\CatalogChapterController;
 use App\Http\Controllers\CollaboratorController;
@@ -124,6 +125,11 @@ Route::middleware('auth:sanctum')->group(function () {
             ->parameters(['quote-templates' => 'template']);
         Route::post('/documents/{document}/save-as-template', [QuoteTemplateController::class, 'fromDocument']);
         Route::post('/quote-templates/{template}/apply/{document}', [QuoteTemplateController::class, 'apply']);
+
+        // Sous-détails de prix types (bibliothèque d'ouvrages du métreur).
+        Route::apiResource('breakdown-templates', BreakdownTemplateController::class)
+            ->parameters(['breakdown-templates' => 'template']);
+        Route::post('/breakdown-templates/{template}/used', [BreakdownTemplateController::class, 'used']);
 
         Route::apiResource('collaborators', CollaboratorController::class)->except(['index']);
 

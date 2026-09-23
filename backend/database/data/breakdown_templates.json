@@ -1,0 +1,627 @@
+{
+  "_": "Sous-détails de prix types, transcrits du document « Remarques avec calculs devis » du métreur (septembre 2026). Ligne = [famille, libellé, unité, quantité, par dimension (1/0), conditionnement, coût unitaire, majoration %, remarque]. Familles : 1 MO, 2 MAT, 3 MACH, 4 MAT EX, 5 OUT, 6 ST. Main-d'œuvre vendue : 750.- la personne-jour, 90.- l'heure.",
+  "templates": [
+    {"group": "Terrassement et extérieurs", "name": "Terrassement (fouille)", "dimension_unit": "m3", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Sable de fouille 0/4", "m3", 1.1, 0, null, 31, 0, null],
+      [3, "Pelle 2.7 t", "forfait", 1, 0, null, 180, 0, null],
+      [3, "Gazoil", "forfait", 1, 0, null, 50, 0, null]]},
+    {"group": "Terrassement et extérieurs", "name": "Terrassement avec évacuation", "dimension_unit": "m3", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [3, "Pelle 2.7 t", "forfait", 1, 0, null, 760, 0, null],
+      [3, "Gazoil", "forfait", 1, 0, null, 20, 0, null],
+      [6, "Évacuation déblais (25 m³ + foisonnement)", "m3", 33, 0, null, 20, 0, null],
+      [6, "Bennes", "pce", 3, 0, null, 270, 0, null]]},
+    {"group": "Terrassement et extérieurs", "name": "Enrobé", "dimension_unit": "m2", "note": "Prix Colas : 260.-/t + 30 % = 338.-/t ; taxe Valormat 32.5.-/t.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Enrobé selon devis Colas (140 kg/m²)", "t", 0.14, 1, null, 260, 30, null],
+      [2, "Installation de chantier (devis Colas)", "forfait", 1, 0, null, 250, 30, null],
+      [6, "Taxe Valormat", "t", 0.14, 1, null, 32.5, 0, null]]},
+    {"group": "Terrassement et extérieurs", "name": "Pavés filtrants", "dimension": 13, "dimension_unit": "m2", "price_per_dimension": true, "note": "Compter 135.-/m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 5 h)", "h", 10, 0, null, 90, 0, null],
+      [1, "Coupes", "ml", 10.2, 0, null, 25, 0, null],
+      [2, "Gravier 2-4 siliceux (6 cm)", "m3", 0.06, 1, null, 115, 0, null],
+      [2, "Géotextile", "m2", 1, 1, null, 1.5, 0, null],
+      [2, "Pavés Créabéton 12.5×12.5×6", "m2", 1, 1, null, 30, 0, null],
+      [5, "Scie", "forfait", 1, 0, null, 45, 0, null]]},
+    {"group": "Terrassement et extérieurs", "name": "Cailloux décoratifs gris des Ardennes", "dimension": 18, "dimension_unit": "m2", "note": "DIM : 8 × 2.2 = 18 m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Sarnacol (0.6 kg/m², bidon de 20 kg)", "kg", 0.6, 1, 20, 300, 0, null],
+      [2, "Gravier gris des Ardennes (épaisseur 6 cm)", "m3", 0.06, 1, null, 336, 0, "épaisseur à ajuster"],
+      [2, "Géotextile", "m2", 1, 1, null, 1.5, 0, null]]},
+    {"group": "Terrassement et extérieurs", "name": "Planie", "dimension": 85, "dimension_unit": "m2", "price_per_dimension": true, "note": "Vendu 25.-/m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Groise (6 cm)", "m3", 0.06, 1, null, 28, 0, null],
+      [3, "Pelle", "forfait", 1, 0, null, 200, 0, null],
+      [3, "Pied de mouton", "forfait", 1, 0, null, 200, 0, null]]},
+    {"group": "Terrassement et extérieurs", "name": "Chaille", "dimension_unit": "m3", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Chaille", "m3", 1, 1, null, 40, 0, null],
+      [3, "Pelle 2.7 t", "forfait", 1, 0, null, 760, 0, null],
+      [3, "Gazoil", "forfait", 1, 0, null, 20, 0, null],
+      [6, "Évacuation déblais (25 m³ + foisonnement)", "m3", 33, 0, null, 20, 0, null],
+      [6, "Bennes", "pce", 3, 0, null, 270, 0, null]]},
+    {"group": "Terrassement et extérieurs", "name": "Delta MS et étanchéité bitume", "dimension": 60, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Étanchéité bitume (3 L/m² pour 2 mm, bidon de 30 L)", "L", 3, 1, 30, 175, 0, null],
+      [2, "Delta MS + fixations", "m2", 1, 1, null, 2, 0, null],
+      [5, "Perceuse", "forfait", 1, 0, null, 90, 0, null]]},
+    {"group": "Terrassement et extérieurs", "name": "Bande TOK", "dimension_unit": "ml", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 h)", "h", 2, 0, null, 90, 0, null],
+      [2, "Bande TOK", "ml", 1, 1, null, 6.5, 0, null]]},
+    {"group": "Terrassement et extérieurs", "name": "Canalisations (drainage)", "dimension_unit": "ml", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Drainage perforé Ø125 (tube de 6 ml)", "ml", 1, 1, 6, 90, 0, null],
+      [2, "Coudes, raccords", "pce", 5, 0, null, 5, 0, null],
+      [2, "Stratex / géotextile", "m2", 10, 0, null, 1.5, 0, null],
+      [2, "Sable", "m3", 2, 0, null, 30, 0, null],
+      [3, "Pelle", "forfait", 1, 0, null, 90, 0, null],
+      [5, "Meuleuse", "forfait", 1, 0, null, 15, 0, null]]},
+    {"group": "Terrassement et extérieurs", "name": "Dalles de jardin 60×120", "dimension": 52, "dimension_unit": "m2", "price_per_dimension": true, "note": "Vendu 125.-/m² (+10 % de chutes) ; coupes 25.-/ml.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 2.5 J)", "J", 5, 0, null, 750, 0, null],
+      [1, "Coupes", "ml", 16, 0, null, 25, 0, null],
+      [2, "Dalles de jardin 60×120 (+10 %)", "m2", 1.1, 1, null, 68, 0, null],
+      [2, "Gravier 2/4 (3 cm)", "m3", 0.03, 1, null, 115, 0, null],
+      [2, "Colle carrelage", "sac", 1, 0, null, 25, 0, null],
+      [5, "Scie à eau", "forfait", 1, 0, null, 90, 0, null],
+      [5, "Meuleuse", "forfait", 1, 0, null, 45, 0, null],
+      [6, "Transport", "forfait", 1, 0, null, 200, 0, null]]},
+    {"group": "Terrassement et extérieurs", "name": "Mur de soutènement brut", "dimension_unit": "ml", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1.5 J)", "J", 3, 0, null, 750, 0, null],
+      [2, "IPE + UPE", "forfait", 1, 0, null, 786.6, 30, null],
+      [2, "Traverses bois", "forfait", 1, 0, null, 3500, 30, null],
+      [2, "Béton (0.5 × 0.5 × 0.8 × 13 × 2)", "m3", 5.2, 0, null, 230, 0, null],
+      [3, "Pelle 1.5 t", "forfait", 1, 0, null, 2000, 0, null],
+      [6, "Transport béton", "m3", 5.2, 0, null, 50, 0, null],
+      [6, "Pompe", "forfait", 1, 0, null, 700, 0, null]]},
+    {"group": "Terrassement et extérieurs", "name": "Mur de soutènement peint + antirouille", "dimension_unit": "ml", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1.5 J)", "J", 3, 0, null, 750, 0, null],
+      [2, "IPE + UPE antirouille", "forfait", 1, 0, null, 904.1, 30, null],
+      [2, "Traverses bois", "forfait", 1, 0, null, 3500, 30, null],
+      [2, "Béton (0.5 × 0.5 × 0.8 × 13 × 2)", "m3", 5.2, 0, null, 230, 0, null],
+      [2, "Peinture", "forfait", 1, 0, null, 350, 0, null],
+      [3, "Pelle 1.5 t", "forfait", 1, 0, null, 2000, 0, null],
+      [6, "Transport béton", "m3", 5.2, 0, null, 50, 0, null],
+      [6, "Pompe", "forfait", 1, 0, null, 700, 0, null]]},
+    {"group": "Terrassement et extérieurs", "name": "Fourniture et pose murs en L", "dimension": 36, "dimension_unit": "ml", "lines": [
+      [1, "Main-d'œuvre (3 pers. × 2.5 J)", "J", 7.5, 0, null, 750, 0, null],
+      [2, "Murs en L 2.05 m haut, 1 m large, pied 1.15 m", "pce", 22, 0, null, 450, 0, null],
+      [2, "Murs en L 1.55 m haut, 1 m large, pied 0.85 m", "pce", 15, 0, null, 282, 0, null],
+      [3, "Pelle 12 t", "forfait", 1, 0, null, 2000, 0, null],
+      [6, "Livraison", "forfait", 1, 0, null, 200, 0, null]]},
+    {"group": "Terrassement et extérieurs", "name": "Lames Weo (façade)", "dimension": 85, "dimension_unit": "m2", "note": "Calculé 19'870.- ; MO + MAT = 235.-/m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 3.5 J)", "J", 7, 0, null, 750, 0, null],
+      [2, "Lames Weo 3.90 × 0.14 (0.55 m²/pce)", "m2", 1, 1, 0.55, 70, 0, null],
+      [2, "Visserie Weo (12 vis/m², sachet de 200)", "pce", 12, 1, 200, 40, 0, null],
+      [2, "Visserie tasseaux", "forfait", 1, 0, null, 200, 0, null],
+      [2, "Profils aluminium (3 ml/pce)", "pce", 30, 0, null, 60, 0, null],
+      [2, "Tasseaux bois 27×40, entraxe 60 cm", "ml", 350, 0, null, 0.85, 0, null],
+      [2, "Bande EPDM sur tasseaux (rouleau de 25 ml)", "pce", 3, 0, null, 90, 0, null],
+      [5, "Scie plongeante", "forfait", 1, 0, null, 250, 0, null],
+      [5, "Visseuse", "forfait", 1, 0, null, 250, 0, null],
+      [5, "Perforateur", "forfait", 1, 0, null, 100, 0, null]]},
+
+    {"group": "Coffrage et béton", "name": "Coffrage droit", "dimension_unit": "ml", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1.5 J)", "J", 3, 0, null, 750, 0, null],
+      [2, "Vis", "forfait", 1, 0, null, 50, 0, null],
+      [2, "Clous", "forfait", 1, 0, null, 50, 0, null],
+      [4, "Location coffrage", "ml", 50, 0, null, 15, 0, null],
+      [5, "Scie", "h", 4, 0, null, 45, 0, null]]},
+    {"group": "Coffrage et béton", "name": "Coffrage dalle", "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 2 J)", "J", 4, 0, null, 750, 0, null],
+      [4, "Location coffrage", "m2", 65, 0, null, 15, 0, null],
+      [5, "Scie", "h", 3, 0, null, 45, 0, null]]},
+    {"group": "Coffrage et béton", "name": "Coffrage poteaux ronds Ø25", "dimension_unit": "ml", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 5 h)", "h", 5, 0, null, 90, 0, null],
+      [2, "Coffrage poteaux ronds Ø25", "ml", 1, 1, null, 145, 0, null]]},
+    {"group": "Coffrage et béton", "name": "Isolation gaufrée", "dimension": 50, "dimension_unit": "m2", "note": "750.- de pose + 60.-/m² d'isolant.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Isolant gaufré", "m2", 1, 1, null, 60, 0, null],
+      [5, "Scie", "forfait", 1, 0, null, 90, 0, null]]},
+    {"group": "Coffrage et béton", "name": "Gouttes pendantes", "dimension": 60, "dimension_unit": "ml", "price_per_dimension": true, "note": "Vendu 9.50/ml.", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 5 h)", "h", 5, 0, null, 90, 0, null],
+      [2, "Baguette PVC", "ml", 1, 1, null, 1, 0, null]]},
+    {"group": "Coffrage et béton", "name": "Ferrofix", "dimension": 60, "dimension_unit": "ml", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 1 h)", "h", 1, 0, null, 90, 0, null],
+      [2, "Ferrofix", "ml", 1, 1, null, 2.5, 0, null]]},
+    {"group": "Coffrage et béton", "name": "Armatures", "dimension_unit": "kg", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 5 J)", "J", 10, 0, null, 750, 0, null],
+      [2, "Aciers d'armature", "kg", 4500, 0, null, 0.9, 0, null],
+      [2, "Ligatures", "rlx", 4, 0, null, 30, 0, null],
+      [6, "Transport", "forfait", 1, 0, null, 200, 0, null]]},
+    {"group": "Coffrage et béton", "name": "Béton de propreté / maigre", "dimension_unit": "m2", "note": "Vendu 25.-/m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Béton", "m3", 3, 0, null, 200, 0, null],
+      [3, "Transport béton", "forfait", 1, 0, null, 150, 0, null],
+      [5, "Règle vibrante", "forfait", 1, 0, null, 150, 0, null]]},
+    {"group": "Coffrage et béton", "name": "Fondation", "dimension": 10, "dimension_unit": "m3", "price_per_dimension": true, "note": "Vendu 325.-/m³.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 2 h)", "h", 4, 0, null, 90, 0, null],
+      [2, "Béton", "m3", 1, 1, null, 200, 0, null],
+      [5, "Vibrateur", "forfait", 1, 0, null, 90, 0, null],
+      [6, "Transport béton", "forfait", 1, 0, null, 700, 0, null]]},
+    {"group": "Coffrage et béton", "name": "Radier", "dimension": 12, "dimension_unit": "m3", "price_per_dimension": true, "note": "Vendu 350.-/m³ ; béton filtrant 195.-/m³.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Béton", "m3", 1, 1, null, 230, 0, null],
+      [5, "Vibrateur", "forfait", 1, 0, null, 135, 0, null],
+      [6, "Transport béton", "forfait", 1, 0, null, 600, 0, null]]},
+    {"group": "Coffrage et béton", "name": "Dalle béton", "dimension": 20, "dimension_unit": "m3", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Béton", "m3", 1, 1, null, 230, 0, null],
+      [5, "Vibrateur", "forfait", 1, 0, null, 180, 0, null],
+      [6, "Transport béton", "m3", 1, 1, null, 50, 0, null]]},
+    {"group": "Coffrage et béton", "name": "Talochage", "dimension_unit": "m2", "price_per_dimension": true, "note": "Vendu 15.-/m².", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 6 h)", "h", 6, 0, null, 90, 0, null],
+      [5, "Hélicoptère", "h", 3, 0, null, 110, 0, null]]},
+    {"group": "Coffrage et béton", "name": "Chaînage", "dimension_unit": "ml", "note": "Quantités à saisir selon le chantier.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Coffrage", "ml", 1, 1, null, 15, 0, null],
+      [2, "Armatures", "kg", 1, 0, null, 1, 0, null],
+      [2, "Béton", "m3", 1, 0, null, 230, 0, null],
+      [2, "Ligatures", "rlx", 1, 0, null, 50, 0, null]]},
+
+    {"group": "Maçonnerie", "name": "Maçonnerie briques 42.5", "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 2 J)", "J", 4, 0, null, 750, 0, null],
+      [2, "Briques 42.5", "pce", 960, 0, null, 9, 0, null],
+      [2, "Colle 900D (15 m²/sac)", "sac", 4, 0, null, 42, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 135, 0, null],
+      [5, "Scie", "forfait", 1, 0, null, 200, 0, null]]},
+    {"group": "Maçonnerie", "name": "DIN (profils acier)", "dimension_unit": "ml", "note": "Longueurs à saisir.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 2 J)", "J", 4, 0, null, 750, 0, null],
+      [2, "HEA 160", "ml", 1, 0, null, 60, 0, null],
+      [2, "HEB 200", "ml", 1, 0, null, 100, 0, null],
+      [2, "HEB 300 antirouille et coupes", "ml", 1, 0, null, 160, 30, null]]},
+    {"group": "Maçonnerie", "name": "Rhabillage DIN", "dimension": 3, "dimension_unit": "m2", "note": "DIM : 5 ml de DIN × 0.20 × 3 = 3 m².", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 1 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Plaque Wedi (1.5 m²/pce)", "m2", 1, 1, 1.5, 36, 0, null],
+      [2, "Isolant", "m2", 1, 1, null, 20, 0, null],
+      [2, "Treillis", "m2", 1, 1, null, 2, 0, null],
+      [2, "Baguettes", "ml", 10, 0, null, 2.15, 0, null],
+      [2, "Granol 260", "sac", 0.5, 0, null, 29, 0, null],
+      [2, "Colle de montage Tilca", "pce", 4, 0, null, 7.5, 0, null],
+      [2, "Colle carrelage", "kg", 5, 0, null, 1, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 15, 0, null]]},
+    {"group": "Maçonnerie", "name": "Terre cuite 25 cm", "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Briques TC 25", "pce", 150, 0, null, 3.35, 0, null],
+      [2, "Colle (10 m²/sac)", "sac", 1, 0, null, 42, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 45, 0, null],
+      [5, "Scie", "forfait", 1, 0, null, 45, 0, null]]},
+    {"group": "Maçonnerie", "name": "Terre cuite 15 cm", "dimension_unit": "m2", "note": "10 pces/m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1.5 J)", "J", 3, 0, null, 750, 0, null],
+      [2, "Briques TC 15 (10 pces/m²)", "pce", 10, 1, null, 3, 0, null],
+      [2, "Colle (10 m²/sac)", "sac", 0.1, 1, 1, 42, 0, null],
+      [5, "Malaxeur", "h", 2, 0, null, 45, 0, null],
+      [5, "Scie", "h", 1, 0, null, 45, 0, null]]},
+    {"group": "Maçonnerie", "name": "Briques MXE ECO 12.5", "dimension_unit": "m2", "note": "0.4 × 0.25 = 0.1 m²/brique.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1.5 J)", "J", 3, 0, null, 750, 0, null],
+      [2, "Briques MXE ECO 12.5 (10 pces/m²)", "pce", 10, 1, null, 2.85, 0, null],
+      [2, "Colle (10 m²/sac)", "sac", 0.1, 1, 1, 42, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 20, 0, null],
+      [5, "Scie", "h", 1, 0, null, 45, 0, null]]},
+    {"group": "Maçonnerie", "name": "Briques silico-calcaire 15 cm (Kubrix K 12/19)", "dimension_unit": "m2", "note": "Brique 25 × 19 cm = 0.05 m²/pce.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1.5 J)", "J", 3, 0, null, 750, 0, null],
+      [2, "Briques silico-calcaire K 12/19 (20 pces/m²)", "pce", 20, 1, null, 2.55, 0, null],
+      [2, "Mortier (50 kg/m², sac de 25 kg)", "kg", 50, 1, 25, 15, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 20, 0, null],
+      [5, "Scie", "h", 1, 0, null, 45, 0, null]]},
+    {"group": "Maçonnerie", "name": "Roka lith", "dimension": 9, "dimension_unit": "ml", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Roka lith", "ml", 1, 1, null, 475, 0, null],
+      [2, "Fixations", "forfait", 1, 0, null, 200, 0, null]]},
+    {"group": "Maçonnerie", "name": "Linteau Stahlton 15", "dimension_unit": "ml", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 0.5 J)", "J", 0.5, 0, null, 750, 0, null],
+      [2, "Linteau Stahlton 15", "ml", 1, 1, null, 35, 0, null]]},
+    {"group": "Maçonnerie", "name": "Linteau Stahlton 17.5", "dimension": 8, "dimension_unit": "ml", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 2 h)", "h", 2, 0, null, 90, 0, null],
+      [2, "Linteau Stahlton 17.5", "ml", 1, 1, null, 38, 0, null],
+      [2, "Mortier", "sac", 2, 0, null, 10, 0, null],
+      [5, "Scie", "forfait", 1, 0, null, 45, 0, null]]},
+    {"group": "Maçonnerie", "name": "Arasement, appuis de déformation", "dimension_unit": "ml", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Mortier", "sac", 5, 0, null, 40, 0, null],
+      [2, "Appuis de déformation", "ml", 18, 0, null, 40, 0, null]]},
+    {"group": "Maçonnerie", "name": "Arasement, appuis de glissement", "dimension_unit": "ml", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Mortier isolant", "sac", 14, 0, null, 27, 0, null],
+      [2, "Appuis de glissement", "ml", 23, 0, null, 30, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 45, 0, null]]},
+    {"group": "Maçonnerie", "name": "Sika 211", "dimension": 1.8, "dimension_unit": "m2", "note": "16 kg/cm/m², 4 cm ; DIM 6 ml × 0.30 = 1.8 m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Sika 211 (16 kg/cm/m², 4 cm, sac de 25 kg)", "kg", 64, 1, 25, 90, 0, null]]},
+
+    {"group": "Crépissage", "name": "Couche de fond", "dimension": 55, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 2 h)", "h", 2, 0, null, 90, 0, null],
+      [2, "Couche de fond (0.4 kg/m²)", "kg", 0.4, 1, null, 5.5, 0, null],
+      [2, "Manchon", "pce", 1, 0, null, 11, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 22.5, 0, null]]},
+    {"group": "Crépissage", "name": "Baguettes d'angles", "dimension": 200, "dimension_unit": "ml", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Baguettes", "ml", 1, 1, null, 1, 0, null],
+      [2, "Colle carrelage", "sac", 3, 0, null, 22, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 90, 0, null]]},
+    {"group": "Crépissage", "name": "Lissage soubassement SKL", "dimension": 51.5, "dimension_unit": "m2", "note": "Total calculé 2'850.-.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "SKL (7 kg/m², sac de 25 kg)", "kg", 7, 1, 25, 75, 0, null],
+      [2, "Treillis 200 g (rouleau de 50 m²)", "m2", 1, 1, 50, 150, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 75, 0, null]]},
+    {"group": "Crépissage", "name": "Crépi de socle", "dimension": 9, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Granol 150 (24 kg/m² pour 15 mm, sac de 25 kg)", "kg", 24, 1, 25, 15, 0, null]]},
+    {"group": "Crépissage", "name": "Ribage fin (socle)", "dimension": 11, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 0.5 J)", "J", 0.5, 0, null, 750, 0, null],
+      [2, "Granol 300 (8 kg/m² pour 5 mm, sac de 25 kg)", "kg", 8, 1, 25, 32, 0, null]]},
+    {"group": "Crépissage", "name": "Enduit et lissage plafond", "dimension": 55, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1.5 J)", "J", 3, 0, null, 750, 0, null],
+      [2, "Granol 270 (1.4 kg/mm, 3 mm = 4.2 kg/m², sac de 25 kg)", "kg", 4.2, 1, 25, 21, 0, null],
+      [2, "Plâtre Rigips", "sac", 1, 0, null, 65, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 45, 0, null],
+      [5, "Crépisseuse G4", "h", 1, 0, null, 90, 0, null]]},
+    {"group": "Crépissage", "name": "Crépi 6-7 mm projeté / truelle", "dimension": 32, "dimension_unit": "m2", "note": "Total calculé 1'600.-.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Granol 250 (10 kg/m², sac de 25 kg)", "kg", 10, 1, 25, 37, 0, null],
+      [5, "Tyrolienne", "forfait", 1, 0, null, 100, 0, null],
+      [5, "Compresseur", "forfait", 1, 0, null, 250, 0, null]]},
+    {"group": "Crépissage", "name": "Crépi de fond intérieur", "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 5 J)", "J", 10, 0, null, 750, 0, null],
+      [2, "Granol 900 (16 kg/m² pour 15 mm, sac de 30 kg)", "kg", 16, 1, 30, 20.5, 0, null],
+      [2, "Baguettes", "ml", 1, 0, null, 1.9, 0, "longueur à saisir"],
+      [5, "Malaxeur", "forfait", 1, 0, null, 180, 0, null]]},
+    {"group": "Crépissage", "name": "Enduit et lissage mur", "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 4.5 J)", "J", 9, 0, null, 750, 0, null],
+      [2, "Granol 61 (1 kg/mm, 2 mm = 2 kg/m², sac de 25 kg)", "kg", 2, 1, 25, 60, 0, null],
+      [2, "Plâtre Rigips", "sac", 2, 0, null, 65, 0, null],
+      [2, "Isofinish (1 L/m² pour 2 mm, seau de 16 L)", "L", 1, 1, 16, 40, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 90, 0, null],
+      [5, "Crépisseuse G4", "h", 2, 0, null, 90, 0, null]]},
+    {"group": "Crépissage", "name": "Enduit et lissage mur GSPA", "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1.5 J)", "J", 3, 0, null, 750, 0, null],
+      [2, "Elotop (1.5 à 3 kg/m²)", "kg", 2, 1, null, 3.6, 0, null],
+      [2, "Bande fibre de verre (rouleau de 90 ml)", "ml", 1, 0, 90, 26.5, 0, "longueur à saisir"]]},
+    {"group": "Crépissage", "name": "Crépissage plafond", "dimension": 130.5, "dimension_unit": "m2", "price_per_dimension": true, "note": "Vendu 30.-/m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 2 J)", "J", 4, 0, null, 750, 0, null],
+      [2, "Granol 260 (5 kg/m² pour 10 mm, sac de 25 kg)", "kg", 5, 1, 25, 29, 0, null],
+      [5, "Crépisseuse G4", "forfait", 1, 0, null, 380, 0, null]]},
+    {"group": "Crépissage", "name": "Crépi extérieur de fond", "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Crépi de fond (3.1 kg/m², 2 m²/sac)", "sac", 0.5, 1, 1, 19, 0, null],
+      [3, "Crépisseuse G4", "h", 1.5, 0, null, 100, 0, null]]},
+    {"group": "Crépissage", "name": "Crépi extérieur de finition", "dimension_unit": "m2", "note": "Compter 31.5.-/m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Crépi de finition (2 kg/m², 6 m²/bidon)", "bidon", 0.1667, 1, 1, 50, 0, null],
+      [2, "Couche de fond G111 (0.25 kg/m²)", "kg", 0.25, 1, null, 4, 0, null]]},
+    {"group": "Crépissage", "name": "Styrolit", "dimension": 203, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 2.5 J)", "J", 5, 0, null, 750, 0, null],
+      [2, "Couche de fond G170 (0.25 kg/m²)", "kg", 0.25, 1, null, 10.2, 0, null],
+      [2, "Marmoran Styrolit (2 kg/m²)", "kg", 2, 1, null, 4.5, 0, null],
+      [5, "Tyrolienne", "h", 8, 0, null, 45, 0, null],
+      [5, "Compresseur", "h", 1, 0, null, 85, 0, null]]},
+    {"group": "Crépissage", "name": "Filet d'armature", "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Treillis d'armature", "m2", 1, 1, null, 11.5, 0, null]]},
+    {"group": "Crépissage", "name": "Lissage extérieur", "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 2 J)", "J", 4, 0, null, 750, 0, null],
+      [2, "Sanogran 2000 (4 kg/m² pour 3 mm, sac de 25 kg)", "kg", 4, 1, 25, 62, 0, null]]},
+    {"group": "Crépissage", "name": "Pré-giclage", "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Granol 170 (6 kg/m², sac de 25 kg)", "kg", 6, 1, 25, 25, 0, null],
+      [3, "Crépisseuse G4", "h", 3, 0, null, 90, 0, null]]},
+    {"group": "Crépissage", "name": "Crépi de fond extérieur (Gasogran 900)", "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 2 J)", "J", 4, 0, null, 750, 0, null],
+      [2, "Gasogran 900 (16 kg/m², 1 sac pour 2 m²)", "sac", 0.5, 1, 1, 19, 0, null],
+      [3, "Machine", "forfait", 1, 0, null, 500, 0, null]]},
+    {"group": "Crépissage", "name": "Crépi de finition extérieur silicone (Weber)", "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 2.5 J)", "J", 5, 0, null, 750, 0, null],
+      [2, "Weber marmoran C211 crépi silicone (3.2 kg/m²)", "kg", 3.2, 1, null, 5, 0, null],
+      [2, "Weber marmoran G210 couche de fond (0.25 kg/m², bidon de 20 kg)", "kg", 0.25, 1, 20, 148, 0, null]]},
+    {"group": "Crépissage", "name": "Peinture extérieure silicone", "dimension": 30, "dimension_unit": "m2", "price_per_dimension": true, "note": "Vendu 30.-/m².", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 0.5 J)", "J", 0.5, 0, null, 750, 0, null],
+      [2, "Pittura Granol silicone (0.5 kg/m² pour 2 couches)", "kg", 0.5, 1, null, 10, 0, null]]},
+
+    {"group": "Chapes", "name": "Papier goudronné", "dimension": 55, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Papier goudronné", "m2", 1, 1, null, 7.5, 0, null],
+      [5, "Chalumeau + gaz", "forfait", 1, 0, null, 100, 0, null]]},
+    {"group": "Chapes", "name": "Isolant Swisspor PIR premium", "dimension": 55, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Isolant PIR", "m2", 1, 1, null, 27, 0, null]]},
+    {"group": "Chapes", "name": "Alu kraft isolant 3 cm", "dimension": 55, "dimension_unit": "m2", "price_per_dimension": true, "note": "Vendu 15.-/m².", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 0.5 J)", "J", 0.5, 0, null, 750, 0, null],
+      [2, "Isolant alu kraft 3 cm", "m2", 1, 1, null, 9, 0, null]]},
+    {"group": "Chapes", "name": "Bande de rive", "dimension": 100, "dimension_unit": "ml", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 1 h)", "h", 1, 0, null, 90, 0, null],
+      [2, "Bande de rive 12 cm (rouleau de 50 ml)", "ml", 1, 1, null, 1.5, 0, null],
+      [5, "Agrafeuse", "forfait", 1, 0, null, 50, 0, null]]},
+    {"group": "Chapes", "name": "Chape liquide", "dimension_unit": "m2", "price_per_dimension": true, "note": "Prix +30 % déjà appliqué.", "lines": [
+      [1, "Main-d'œuvre (0.1 h/m²)", "h", 0.1, 1, null, 90, 0, null],
+      [2, "Chape liquide (120 kg/m², 275.-/t)", "t", 0.12, 1, null, 275, 0, null],
+      [6, "Transport (forfait)", "forfait", 1, 0, null, 425, 0, null]]},
+    {"group": "Chapes", "name": "Polyane + bande de rive sous chape", "dimension": 60, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 1 h)", "h", 1, 0, null, 90, 0, null],
+      [2, "Polyane", "m2", 1, 1, null, 1.6, 0, null],
+      [2, "Bande de rive", "ml", 60, 0, null, 1.3, 0, null],
+      [5, "Agrafeuse", "forfait", 1, 0, null, 25, 0, null]]},
+    {"group": "Chapes", "name": "Ponçage chape", "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 2 h)", "h", 2, 0, null, 90, 0, null],
+      [5, "Ponceuse", "forfait", 1, 0, null, 85, 0, null]]},
+    {"group": "Chapes", "name": "Chape sèche Fermacell", "dimension": 11, "dimension_unit": "m2", "note": "Matériaux env. 45.-/m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Plaques Fermacell", "m2", 1, 1, null, 14.18, 0, null],
+      [2, "Granules d'égalisation (sac de 50 L)", "sac", 10, 0, null, 30, 0, null],
+      [2, "Rouleau anti-fluage (75 m²)", "forfait", 1, 0, null, 25, 0, null],
+      [2, "Bande de rive", "forfait", 1, 0, null, 15, 0, null],
+      [2, "Scotch", "forfait", 1, 0, null, 10, 0, null],
+      [2, "Enduit joint (0.2 kg/m²)", "m2", 1, 1, null, 1, 0, null],
+      [2, "Enduit de lissage (0.3 L/m²)", "m2", 1, 1, null, 2, 0, null],
+      [2, "Bande joint", "m2", 1, 1, null, 1, 0, null],
+      [2, "Vis (26 pces/m²)", "m2", 1, 1, null, 1, 0, null],
+      [5, "Visseuse", "h", 1.5, 0, null, 45, 0, null]]},
+    {"group": "Chapes", "name": "Chape douche italienne", "dimension": 3, "dimension_unit": "m2", "note": "100 kg/m² pour 5 cm ; 2 douches de 1.5 m².", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 0.5 J)", "J", 0.5, 0, null, 750, 0, null],
+      [2, "Chape (100 kg/m² pour 5 cm, sac de 25 kg)", "kg", 100, 1, 25, 23, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 135, 0, null]]},
+
+    {"group": "Sols", "name": "Parquet collé", "dimension": 343, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 14.5 J)", "J", 29, 0, null, 750, 0, null],
+      [2, "Parquet", "m2", 1, 1, null, 65, 0, null],
+      [2, "Kerakoll L34 (1 kg/m²)", "kg", 1, 1, null, 11, 0, null],
+      [2, "Primaire Sika Primer (0.25 kg/m²)", "kg", 0.25, 1, null, 38, 0, null],
+      [5, "Scie", "forfait", 1, 0, null, 500, 0, null]]},
+    {"group": "Sols", "name": "Parquet flottant", "dimension": 46, "dimension_unit": "m2", "price_per_dimension": true, "note": "Vendu 110.-/m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1.5 J)", "J", 3, 0, null, 750, 0, null],
+      [2, "Parquet", "m2", 1, 1, null, 45, 0, null],
+      [2, "Sous-couche Akustik Protect 100", "m2", 1, 1, null, 5, 0, null],
+      [5, "Scie", "forfait", 1, 0, null, 150, 0, null]]},
+    {"group": "Sols", "name": "Plinthes parquet", "dimension": 50, "dimension_unit": "ml", "price_per_dimension": true, "note": "Vendu 25.-/ml.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Plinthe", "ml", 1, 1, null, 10, 0, null],
+      [2, "Vis + chevilles (200 pces)", "forfait", 1, 0, null, 15, 0, null],
+      [5, "Visseuse", "h", 1, 0, null, 45, 0, null],
+      [5, "Perforateur", "h", 1, 0, null, 45, 0, null]]},
+    {"group": "Sols", "name": "Revêtement PVC collé", "dimension": 64.5, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 3 J)", "J", 6, 0, null, 750, 0, null],
+      [2, "PVC à coller", "m2", 1, 1, null, 45, 0, null],
+      [2, "Colle Sikabond 180 premium (0.5 kg/m²)", "kg", 0.5, 1, null, 10, 0, null],
+      [2, "Couche d'accrochage Sikafloor 01 (70 g/m²)", "kg", 0.07, 1, null, 8.3, 0, null],
+      [5, "Scie", "forfait", 1, 0, null, 150, 0, null]]},
+    {"group": "Sols", "name": "Panneaux OSB", "dimension": 90, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 5 J)", "J", 10, 0, null, 750, 0, null],
+      [2, "OSB", "m2", 1, 1, null, 20, 0, null],
+      [2, "Vis (10 pces/m², 15.-/100 pces)", "pce", 10, 1, 100, 15, 0, null],
+      [5, "Scie", "forfait", 1, 0, null, 90, 0, null],
+      [5, "Visseuse", "forfait", 1, 0, null, 90, 0, null]]},
+    {"group": "Sols", "name": "Plancher bois surélevé", "dimension": 15, "dimension_unit": "m2", "note": "Chambre de 15 m² : planches 60 mm tous les 40 cm + renforts.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 2 J)", "J", 4, 0, null, 750, 0, null],
+      [2, "Planches 60 mm (0.06 × 0.2, 40 ml)", "m3", 0.5, 0, null, 815, 0, null],
+      [2, "Muralière 60 × 200 mm (20 ml)", "m3", 0.25, 0, null, 850, 0, null],
+      [2, "Fixations, tiges filetées, scellement chimique", "forfait", 1, 0, null, 200, 0, null],
+      [2, "Sabots", "pce", 45, 0, null, 3, 0, null],
+      [2, "Clous", "forfait", 1, 0, null, 50, 0, null],
+      [2, "Vis", "forfait", 1, 0, null, 50, 0, null],
+      [2, "Pare-vapeur", "m2", 1, 1, null, 2, 0, null],
+      [2, "OSB 25 mm", "m2", 1, 1, null, 18, 0, null],
+      [5, "Perceuse", "forfait", 1, 0, null, 100, 0, null],
+      [5, "Scie", "forfait", 1, 0, null, 100, 0, null]]},
+
+    {"group": "Plâtrerie", "name": "Faux plafond plaques de plâtre", "dimension": 20, "dimension_unit": "m2", "price_per_dimension": true, "note": "Vendu 175.-/m² ; matériaux env. 55.-/m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1.5 J)", "J", 3, 0, null, 750, 0, null],
+      [2, "Plaques de plâtre", "m2", 1, 1, null, 11.23, 0, null],
+      [2, "Montants / rails (2 ml/m²)", "ml", 2, 1, null, 7.41, 0, null],
+      [2, "Pare-vapeur Isover Xtra Vario", "m2", 1, 1, null, 5, 0, null],
+      [2, "Scotch étanche Vario Multitape (rouleau de 25 ml)", "pce", 1, 0, null, 30, 0, null],
+      [2, "Scotch périphérique Vario Double Twin (rouleau de 50 ml)", "pce", 1, 0, null, 50, 0, null],
+      [2, "Suspentes (3 pces/m²)", "pce", 3, 1, null, 1.5, 0, null],
+      [2, "Isolation laine de verre 100 mm", "m2", 1, 1, null, 13.73, 0, null],
+      [2, "Enduit 167 PRO (0.5 kg/m², sac de 25 kg)", "kg", 0.5, 1, 25, 27.5, 0, null],
+      [2, "Bande (1.5 ml/m²)", "ml", 1.5, 1, null, 0.65, 0, null],
+      [2, "Vis (18 pces/m²)", "pce", 18, 1, null, 0.06, 0, null],
+      [5, "Visseuse", "h", 1.5, 0, null, 45, 0, null]]},
+    {"group": "Plâtrerie", "name": "Doublage plaques de plâtre", "dimension": 95, "dimension_unit": "m2", "price_per_dimension": true, "note": "Vendu 165.-/m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 4.5 J)", "J", 9, 0, null, 750, 0, null],
+      [2, "Plaques de plâtre", "m2", 1, 1, null, 11.23, 0, null],
+      [2, "Pare-vapeur", "m2", 1, 1, null, 1.75, 0, null],
+      [2, "Montants / rails (2.5 ml/m²)", "ml", 2.5, 1, null, 7.41, 0, null],
+      [2, "Appuis (1.5 pces/m²)", "pce", 1.5, 1, null, 3, 0, null],
+      [2, "Isolation laine de verre 100 mm", "m2", 1, 1, null, 13.73, 0, null],
+      [2, "Enduit 167 PRO (0.5 kg/m², sac de 25 kg)", "kg", 0.5, 1, 25, 27.5, 0, null],
+      [2, "Bande (1.5 ml/m²)", "ml", 1.5, 1, null, 0.65, 0, null],
+      [2, "Vis (12 pces/m²)", "pce", 12, 1, null, 0.06, 0, null],
+      [5, "Visseuse", "h", 5, 0, null, 45, 0, null],
+      [5, "Malaxeur", "h", 2, 0, null, 45, 0, null]]},
+    {"group": "Plâtrerie", "name": "Cloisons plaques de plâtre", "dimension": 10, "dimension_unit": "m2", "note": "Deux faces : 2 m² de plaques par m² de cloison.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 0.5 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Plaques de plâtre (2 faces)", "m2", 2, 1, null, 11.23, 0, null],
+      [2, "Montants / rails (3.5 ml/m²)", "ml", 3.5, 1, null, 7.41, 0, null],
+      [2, "Isolation Isovox 45 mm", "m2", 1.3, 1, null, 6.5, 0, null],
+      [2, "Enduit 167 PRO (1 kg/m², sac de 25 kg)", "kg", 1, 1, 25, 27.5, 0, null],
+      [2, "Bande (3 ml/m²)", "ml", 3, 1, null, 0.65, 0, null],
+      [2, "Vis (28 pces/m²)", "pce", 28, 1, null, 0.06, 0, null],
+      [5, "Visseuse", "h", 1, 0, null, 45, 0, null],
+      [5, "Malaxeur", "h", 0.5, 0, null, 45, 0, null],
+      [5, "Perforateur", "h", 0.5, 0, null, 45, 0, null]]},
+    {"group": "Plâtrerie", "name": "Alba Hydro", "dimension": 2.4, "dimension_unit": "m2", "price_per_dimension": true, "note": "Vendu 95.-/m².", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 0.5 J)", "J", 0.5, 0, null, 750, 0, null],
+      [2, "Alba Hydro", "m2", 1, 1, null, 78, 0, null],
+      [2, "Colle", "sac", 1, 0, null, 32, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 25, 0, null]]},
+    {"group": "Plâtrerie", "name": "Faux plafond Fermacell 12.5", "dimension_unit": "m2", "note": "Matériaux env. 51.-/m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1.5 J)", "J", 3, 0, null, 750, 0, null],
+      [2, "Plaques Fermacell", "m2", 1, 1, null, 14.18, 0, null],
+      [2, "Montants / rails", "m2", 1, 1, null, 15, 0, null],
+      [2, "Suspentes (3 pces/m²)", "m2", 1, 1, null, 3, 0, null],
+      [2, "Isolation laine de verre 100 mm", "m2", 1, 1, null, 13.73, 0, null],
+      [2, "Enduit joint (0.2 kg/m²)", "m2", 1, 1, null, 1, 0, null],
+      [2, "Enduit de lissage (0.3 L/m²)", "m2", 1, 1, null, 2, 0, null],
+      [2, "Bande joint", "m2", 1, 1, null, 1, 0, null],
+      [2, "Vis (26 pces/m²)", "m2", 1, 1, null, 1, 0, null],
+      [5, "Visseuse", "h", 1.5, 0, null, 45, 0, null]]},
+    {"group": "Plâtrerie", "name": "Fermacell 12.5 extérieur", "dimension": 21, "dimension_unit": "m2", "note": "Matériaux env. 78.-/m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1.5 J)", "J", 3, 0, null, 750, 0, null],
+      [2, "Plaques Fermacell extérieur", "m2", 1, 1, null, 55, 0, null],
+      [2, "Montants / rails", "m2", 1, 1, null, 15, 0, null],
+      [2, "Suspentes (3 pces/m²)", "m2", 1, 1, null, 3, 0, null],
+      [2, "Enduit joint (0.2 kg/m²)", "m2", 1, 1, null, 1, 0, null],
+      [2, "Enduit de lissage (0.3 L/m²)", "m2", 1, 1, null, 2, 0, null],
+      [2, "Bande joint", "m2", 1, 1, null, 1, 0, null],
+      [2, "Vis (26 pces/m²)", "m2", 1, 1, null, 1, 0, null],
+      [5, "Visseuse", "forfait", 1, 0, null, 90, 0, null],
+      [5, "Perceuse", "forfait", 1, 0, null, 90, 0, null]]},
+
+    {"group": "Carrelage", "name": "Habillage Combi-Fix (WC)", "dimension": 1, "dimension_unit": "WC", "note": "Variante : selon Granit 250.-/pce + 30 % = 325.-.", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 0.5 J)", "J", 0.5, 0, null, 750, 0, null],
+      [2, "Wedi 20 mm (3 m²/habillage)", "m2", 3, 1, null, 41.13, 0, null],
+      [2, "Colle de montage", "tube", 2, 1, null, 7.5, 0, null]]},
+    {"group": "Carrelage", "name": "Habillage baignoire", "dimension": 1, "dimension_unit": "baignoire", "note": "Vendu 495.- ; total calculé 455.-.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 2 h)", "h", 4, 0, null, 90, 0, null],
+      [2, "Wedi 30 mm", "pce", 2, 1, null, 41.13, 0, null],
+      [2, "Colle de montage", "tube", 2, 1, null, 7.5, 0, null]]},
+    {"group": "Carrelage", "name": "Baguettes carrelage", "dimension": 4, "dimension_unit": "ml", "price_per_dimension": true, "note": "Vendu 45.-/ml.", "lines": [
+      [1, "Pose baguettes (8.-/ml + 30 %)", "ml", 1, 1, null, 8, 30, null],
+      [2, "Baguette structurée crème (2.5 ml/pce)", "ml", 1, 1, 2.5, 65, 0, null],
+      [2, "Angles", "pce", 1, 1, null, 15, 0, null]]},
+    {"group": "Carrelage", "name": "Kit d'étanchéité douche", "dimension": 1, "dimension_unit": "douche", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 2.5 h)", "h", 2.5, 1, null, 90, 0, null],
+      [2, "Kit d'étanchéité", "pce", 1, 1, null, 295, 0, null]]},
+    {"group": "Carrelage", "name": "Étanchéité Weber Superflex D1", "dimension": 9, "dimension_unit": "m2", "note": "1.5 kg/mm/m², 3 mm.", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 0.5 J)", "J", 0.5, 0, null, 750, 0, null],
+      [2, "Weber Superflex D1 (4.5 kg/m² pour 3 mm, sac de 15 kg)", "kg", 4.5, 1, 15, 130, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 45, 0, null]]},
+    {"group": "Carrelage", "name": "Primaire carrelage", "dimension": 56.5, "dimension_unit": "m2", "price_per_dimension": true, "note": "MO sans ponçage 6.-/m² + 30 % ; avec ponçage 10.-/m² + 30 %.", "lines": [
+      [1, "Application primaire (sans ponçage)", "m2", 1, 1, null, 6, 30, null],
+      [2, "Weber Haft Rapid (0.25 kg/m²)", "kg", 0.25, 1, null, 21, 0, null],
+      [5, "Manchon", "pce", 1, 0, null, 10, 0, null]]},
+    {"group": "Carrelage", "name": "Pose carrelage + fourniture", "dimension": 112, "dimension_unit": "m2", "price_per_dimension": true, "note": "MO 40.-/m² + 30 % = 52.-/m² ; matériaux env. 55.-/m².", "lines": [
+      [1, "Pose carrelage", "m2", 1, 1, null, 40, 30, null],
+      [2, "Weber 800 Pro S1 (4.2 kg/m²)", "kg", 4.2, 1, null, 1, 0, null],
+      [2, "Carrelage", "m2", 1, 1, null, 45, 0, null],
+      [2, "Joint 3 mm (0.22 kg/m²)", "kg", 0.22, 1, null, 3, 0, null],
+      [5, "Carrelette", "forfait", 1, 0, null, 45, 0, null],
+      [5, "Meuleuse", "forfait", 1, 0, null, 45, 0, null]]},
+    {"group": "Carrelage", "name": "Pose plinthes 7 cm + fourniture", "dimension": 79, "dimension_unit": "ml", "price_per_dimension": true, "note": "MO 8.-/ml + 30 % ; avec coupes à 45° : 15.-/ml + 30 %.", "lines": [
+      [1, "Pose plinthes", "ml", 1, 1, null, 8, 30, null],
+      [2, "Weber 800 Pro S1 (4.2 kg/m², plinthe 7 cm)", "kg", 0.294, 1, null, 1.8, 0, null],
+      [2, "Carrelage plinthe", "ml", 1, 1, null, 5, 0, null],
+      [2, "Joint 3 mm", "kg", 0.0154, 1, null, 3, 0, null],
+      [5, "Meuleuse", "forfait", 1, 0, null, 45, 0, null]]},
+    {"group": "Carrelage", "name": "Pose carrelage escalier", "dimension": 9, "dimension_unit": "marche", "price_per_dimension": true, "note": "Marche 0.95 × 0.30 × 2 faces = 0.57 m² ; vendu 225.-/marche, total calculé 1'395.-.", "lines": [
+      [1, "Pose carrelage marche (55.- + 30 %)", "marche", 1, 1, null, 55, 30, null],
+      [1, "Pose baguette (8.-/ml + 30 %)", "ml", 1, 1, null, 8, 30, null],
+      [2, "Weber 800 Pro S1 (4.2 kg/m² × 0.57 m²)", "kg", 2.4, 1, null, 1.8, 0, null],
+      [2, "Carrelage (0.57 m²/marche + 10 %)", "m2", 0.627, 1, null, 45, 0, null],
+      [2, "Joint 3 mm", "kg", 0.125, 1, null, 3, 0, null],
+      [2, "Baguettes inox", "pce", 5, 0, null, 50, 0, null],
+      [5, "Carrelette", "forfait", 1, 0, null, 45, 0, null],
+      [5, "Meuleuse", "forfait", 1, 0, null, 45, 0, null]]},
+    {"group": "Carrelage", "name": "Ragréage", "dimension": 90, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Couche de fond Grund (0.15 kg/m², bidon de 10 kg)", "kg", 0.15, 1, 10, 130, 0, null],
+      [2, "Cermix fibré (1.5 kg/m²/mm, 5 mm, sac de 25 kg)", "kg", 7.5, 1, 25, 38, 0, null],
+      [2, "Bande de rive (rouleau)", "pce", 1, 0, null, 65, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 45, 0, null]]},
+    {"group": "Carrelage", "name": "Natte de désolidarisation", "dimension": 60, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Weber 800 Pro S1 (4.5 kg/m²)", "kg", 4.5, 1, null, 1.8, 0, null],
+      [2, "Natte Schlüter Ditra 25", "m2", 1, 1, null, 26, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 45, 0, null]]},
+
+    {"group": "Peinture", "name": "Lessivage murs et plafonds", "dimension": 160, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 1.5 J)", "J", 1.5, 0, null, 750, 0, null],
+      [2, "Geiger lessive N°1 (100 g/10 m², boîte de 0.5 kg)", "kg", 0.01, 1, 0.5, 25, 0, null]]},
+    {"group": "Peinture", "name": "Enduisage et lissage plafond", "dimension": 20, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 0.5 J)", "J", 0.5, 0, null, 750, 0, null],
+      [2, "Isofinish (1 L/m²/mm, seau de 16 L)", "L", 1, 1, 16, 37, 0, null],
+      [2, "Enduit 167 PRO (1 kg/m², sac de 25 kg)", "kg", 1, 1, 25, 27.5, 0, null],
+      [5, "Malaxeur", "h", 0.5, 0, null, 45, 0, null]]},
+    {"group": "Peinture", "name": "Lissage mur béton", "dimension": 30, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 1 J)", "J", 1, 0, null, 750, 0, null],
+      [2, "Granol 81 (3.3 kg/m² pour 3 mm, sac de 25 kg)", "kg", 3.3, 1, 25, 65.75, 0, null],
+      [5, "Ponceuse béton", "forfait", 1, 0, null, 200, 0, null]]},
+    {"group": "Peinture", "name": "Peinture sur bois", "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 0.5 J)", "J", 0.5, 0, null, 750, 0, null],
+      [2, "Duracryl peinture bois (2 kg pour 6 m², 2 couches)", "kg", 0.333, 1, null, 25, 0, null],
+      [2, "Blenda-xol KW 87 couche de fond (0.12 kg/m², bidon de 5 kg)", "kg", 0.12, 1, 5, 115, 0, null]]},
+    {"group": "Peinture", "name": "Sablage, ponçage et peinture portes", "dimension": 20, "dimension_unit": "m2", "note": "4 m²/porte avec embrasures ; vendu 450.-/porte.", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 2 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Couche de fond Blenda-lit (8 m²/kg, pce de 750 ml)", "kg", 0.125, 1, 0.75, 26, 0, null],
+      [2, "Duracryl (0.4 kg/m² pour 2 couches)", "kg", 0.4, 1, null, 23.5, 0, null],
+      [2, "Disques", "pce", 10, 0, null, 1, 0, null],
+      [3, "Sablage", "h", 5, 0, null, 90, 0, null],
+      [5, "Ponceuse", "forfait", 1, 0, null, 250, 0, null],
+      [5, "Rouleaux", "forfait", 1, 0, null, 15, 0, null]]},
+    {"group": "Peinture", "name": "Peinture airless", "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Aquamat peinture mate (7 m²/kg/couche, 2 couches)", "kg", 0.29, 1, null, 7.15, 0, null],
+      [2, "Rouleaux", "pce", 5, 0, null, 1, 0, null],
+      [5, "Airless", "h", 2, 0, null, 45, 0, null]]},
+    {"group": "Peinture", "name": "Joints acryl / silicone", "dimension_unit": "ml", "price_per_dimension": true, "note": "MO 12.-/ml.", "lines": [
+      [1, "Pose joints", "ml", 1, 1, null, 12, 0, null],
+      [2, "Silicone / acryl (cartouche)", "pce", 1, 0, null, 11.5, 0, "nombre de cartouches à saisir"]]},
+    {"group": "Peinture", "name": "Protections et calfeutrages", "dimension_unit": "forfait", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 0.5 J)", "J", 0.5, 0, null, 750, 0, null],
+      [2, "Protection blanche", "forfait", 1, 0, null, 65, 0, null],
+      [2, "Film", "forfait", 1, 0, null, 15, 0, null],
+      [2, "Scotch", "forfait", 1, 0, null, 15, 0, null]]},
+    {"group": "Peinture", "name": "Enlèvement tapisserie", "dimension": 74, "dimension_unit": "m2", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 1 J)", "J", 2, 0, null, 750, 0, null],
+      [2, "Gyger produit à détapisser (100 ml pour 20 m²)", "L", 0.005, 1, null, 35, 0, null]]},
+
+    {"group": "Isolation", "name": "Isolation périphérique", "dimension": 300, "dimension_unit": "m2", "note": "Prix Weber ; total matériaux 22'390.- = 75.-/m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 2 J)", "J", 4, 0, null, 750, 0, null],
+      [2, "Isolant 180 mm", "m2", 1, 1, null, 28, 0, null],
+      [2, "Isolant dur (65 ml × 0.5)", "m2", 33, 0, null, 51, 0, null],
+      [2, "Treillis", "m2", 1, 1, null, 2, 0, null],
+      [2, "Bitume", "pce", 5, 0, null, 85, 0, null],
+      [2, "KK71 enrobage + collage (8 kg/m²)", "kg", 8, 1, null, 1.2, 0, null],
+      [2, "Couche de fond silicone G210 Marmoran (0.25 kg/m²)", "kg", 0.25, 1, null, 6, 0, null],
+      [2, "Chevilles (10 pces/m²)", "pce", 10, 1, null, 1.4, 0, null],
+      [2, "Rondelles EPS blanc (carton de 100)", "pce", 10, 1, 100, 20, 0, null],
+      [2, "Baguettes", "ml", 200, 0, null, 1.5, 0, null],
+      [2, "Marmoran 2 mm silicone (7 m²/bidon de 20 kg)", "kg", 2.857, 1, 20, 60, 0, null],
+      [5, "Perceuse", "h", 10, 0, null, 45, 0, null],
+      [5, "Visseuse", "h", 5, 0, null, 45, 0, null],
+      [5, "Scie", "h", 5, 0, null, 45, 0, null]]},
+    {"group": "Isolation", "name": "Isolation plafond Knauf", "dimension": 141, "dimension_unit": "m2", "price_per_dimension": true, "note": "Compter 65.-/m².", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 2 J)", "J", 4, 0, null, 750, 0, null],
+      [2, "Isolation plafond", "m2", 1, 1, null, 25, 0, null],
+      [2, "Vis Isol 110 mm (paquets)", "pce", 10, 0, null, 71.5, 0, null],
+      [5, "Perceuse", "forfait", 1, 0, null, 400, 0, null],
+      [5, "Visseuse", "forfait", 1, 0, null, 200, 0, null]]},
+
+    {"group": "Menuiseries", "name": "Pose de porte intérieure", "dimension": 1, "dimension_unit": "porte", "note": "Total calculé 1'600.-.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 2 h)", "h", 4, 1, null, 90, 0, null],
+      [2, "Porte (prix fournisseur + 30 %)", "pce", 1, 1, null, 900, 30, null],
+      [2, "Mousse", "forfait", 1, 1, null, 15, 0, null],
+      [2, "Vis", "forfait", 1, 1, null, 15, 0, null],
+      [5, "Visseuse", "forfait", 1, 0, null, 20, 0, null],
+      [5, "Perforateur", "forfait", 1, 0, null, 20, 0, null]]},
+    {"group": "Menuiseries", "name": "Pose de fenêtre extérieure", "dimension": 1, "dimension_unit": "fenêtre", "note": "Prix de la fenêtre à saisir.", "lines": [
+      [1, "Main-d'œuvre (2 pers. × 2 h)", "h", 4, 1, null, 90, 0, null],
+      [2, "Fenêtre (prix fournisseur + 30 %)", "pce", 1, 1, null, 0, 30, "prix à saisir"],
+      [2, "Compribande", "ml", 10, 1, null, 2.5, 0, null],
+      [2, "Vis d'ancrage", "forfait", 1, 1, null, 5, 0, null],
+      [5, "Visseuse", "forfait", 1, 0, null, 15, 0, null],
+      [5, "Perceuse", "forfait", 1, 0, null, 15, 0, null]]},
+    {"group": "Menuiseries", "name": "Seuils de portes", "dimension": 10, "dimension_unit": "ml", "price_per_dimension": true, "note": "Vendu 295.-/ml.", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 0.5 J)", "J", 0.5, 0, null, 750, 0, null],
+      [2, "Seuil", "ml", 1, 1, null, 198, 0, null],
+      [2, "Fixations", "forfait", 1, 0, null, 500, 0, null],
+      [2, "Silicone structuré", "pce", 5, 0, null, 20, 0, null],
+      [2, "Mortier", "sac", 2, 0, null, 10, 0, null]]},
+    {"group": "Menuiseries", "name": "Tablettes de fenêtres", "dimension_unit": "ml", "price_per_dimension": true, "note": "Vendu 150.-/ml.", "lines": [
+      [1, "Main-d'œuvre (1 pers. × 0.5 J)", "J", 0.5, 0, null, 750, 0, null],
+      [2, "Tablette aluminium", "ml", 1, 1, null, 100, 0, null],
+      [2, "Colle de montage", "pce", 1, 0, null, 10, 0, null],
+      [2, "Silicone structuré", "pce", 1, 0, null, 7, 0, null],
+      [2, "Mortier", "sac", 2, 0, null, 10, 0, null],
+      [5, "Malaxeur", "forfait", 1, 0, null, 15, 0, null]]},
+
+    {"group": "Divers", "name": "Sablage et thermolaquage radiateurs", "dimension": 8, "dimension_unit": "radiateur", "price_per_dimension": true, "note": "Offre Messerli pour 13 radiateurs, arrondie à 2'000.- + 30 % = 2'600.- ; 325.-/radiateur.", "lines": [
+      [6, "Peinture radiateurs (offre Messerli)", "forfait", 1, 0, null, 1215, 30, null],
+      [6, "Sablage radiateurs (offre Messerli)", "forfait", 1, 0, null, 700, 30, null]]},
+    {"group": "Divers", "name": "Prana 160 ERP Pro Mini", "dimension": 1, "dimension_unit": "pce", "note": "Prix fournisseur ; main-d'œuvre à compléter.", "lines": [
+      [2, "Prana 160 ERP Pro Mini", "pce", 1, 1, null, 1151.8, 0, null],
+      [2, "Anneau intérieur PVC blanc", "pce", 1, 1, null, 17.19, 0, null],
+      [2, "Anneau de façade inox", "pce", 1, 1, null, 32.36, 0, null],
+      [2, "Couverture coupe-vent inox (rallongée de 5 cm)", "pce", 1, 1, null, 47.84, 0, null],
+      [2, "Rallonge 1 ml Ø160", "pce", 1, 1, null, 70.32, 0, null]]}
+  ]
+}
