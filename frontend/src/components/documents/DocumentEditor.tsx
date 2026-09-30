@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
 import ArticlePicker from '@/components/documents/ArticlePicker'
 import CostBreakdownDialog from '@/components/documents/CostBreakdownDialog'
@@ -6,7 +6,8 @@ import PositionRow from '@/components/documents/PositionRow'
 import type { DropPlace } from '@/components/documents/PositionRow'
 import { useCreateArticleOnTheFly } from '@/hooks/useDocuments'
 import type { DocumentActions, PositionPayload } from '@/hooks/useDocuments'
-import { fmtAmount } from '@/lib/format'
+import { printNumbers } from '@/lib/documentNumbering'
+import { fmtAmount, fmtDate } from '@/lib/format'
 import { toast } from '@/lib/toast'
 import type { DocumentDetail, DocumentPosition, DocumentStep } from '@/types'
 import { Icon } from '@/components/icons'
@@ -32,7 +33,14 @@ interface DropTarget {
 /** Ligne chiffrable restée sans quantité. */
 const isEmptyItem = (position: DocumentPosition) => position.kind === 'item' && position.quantity === null
 
-/** Détail du devis : une section par étape, positions éditables en place, champ d'ajout rapide. */
+/** Intitulé imprimé par type de document (cf. DocumentPrint::TITLES côté API). */
+const PRINT_TITLES: Record<DocumentDetail['type'], string> = { devis: 'Devis estimatif', acompte: "Demande d'acompte", facture: 'Facture' }
+
+/**
+ * Détail du devis, présenté comme la feuille que le client recevra : même largeur de colonnes, même
+ * numérotation (5, 5.1, sous-titre 6.1 → 6.1.1), même hiérarchie, total brut en bas. Une section par
+ * étape, positions éditables en place, champ d'ajout rapide. Les outils restent dans les marges.
+ */
 export default function DocumentEditor({ document: doc, actions, onSaving }: DocumentEditorProps) {
   const createArticle = useCreateArticleOnTheFly()
   const [busyStep, setBusyStep] = useState<number | null>(null)
@@ -44,7 +52,8 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
     setDragState(value)
   }
   const [target, setTarget] = useState<DropTarget | null>(null)
-  const steps = doc.steps ?? []
+  const steps = useMemo(() => doc.steps ?? [], [doc.steps])
+  const numbers = useMemo(() => printNumbers(steps), [steps])
   // Sous-détail de prix ouvert, et nombre de reports de prix par position : la ligne du devis est
   // remontée (clé) après un report, pour reprendre le prix venu du serveur sans toucher à la saisie en cours.
   const [breakdownId, setBreakdownId] = useState<number | null>(null)
@@ -186,95 +195,138 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto">
-      <table className="w-full min-w-[980px] border-collapse text-[13px]">
-        <thead className="sticky top-0 z-10 bg-bb-ribbon text-[12px] font-semibold text-gray-500">
-          <tr>
-            <th className="border-b border-gray-200" />
-            <th className="border-b border-gray-200 py-2 text-left">N° pos.</th>
-            <th className="border-b border-gray-200 px-1.5 py-2 text-left">Description</th>
-            <th className="border-b border-gray-200 px-1.5 py-2 text-left">Un.</th>
-            <th className="border-b border-gray-200 px-1.5 py-2 text-right">Quantité</th>
-            <th className="border-b border-gray-200 px-1.5 py-2 text-right">Prix CHF</th>
-            <th className="border-b border-gray-200 px-3 py-2 text-right">Montant CHF</th>
-            <th className="border-b border-gray-200 py-2 text-center" title="Option : hors total">Opt.</th>
-            <th className="border-b border-gray-200" />
-          </tr>
-        </thead>
-        {steps.map((step) => {
-          const endTargeted = drag !== null && target?.stepId === step.id && target.positionId === null
-          return (
-            <tbody key={step.id} id={`step-${step.id}`} className="scroll-mt-10">
-              <tr className="bg-gray-100">
-                <td className="border-b border-gray-200" />
-                <td className="border-b border-gray-200 py-2 font-semibold text-gray-500">{step.code}</td>
-                <td colSpan={4} className="border-b border-gray-200 px-1.5 py-2 font-semibold uppercase tracking-wide text-gray-800">
-                  {step.label}
-                </td>
-                <td className="border-b border-gray-200 px-3 py-2 text-right font-semibold tabular-nums text-gray-800">
-                  {fmtAmount(step.total)}
-                </td>
-                <td colSpan={2} className="border-b border-gray-200 pr-2 text-right">
-                  {step.positions.some(isEmptyItem) && (
-                    <button
-                      type="button"
-                      onClick={() => void prune(step)}
-                      title="Retirer de cette étape les lignes restées sans quantité"
-                      className="rounded px-1.5 py-0.5 text-[11px] font-normal text-gray-500 hover:bg-white hover:text-accent-600"
-                    >
-                      − {step.positions.filter(isEmptyItem).length} sans quantité
-                    </button>
-                  )}
-                </td>
-              </tr>
-              {step.positions.map((position, index) => (
-                <PositionRow
-                  key={`${position.id}-${applied[position.id] ?? 0}`}
-                  position={position}
-                  actions={actions}
-                  onSaving={onSaving}
-                  onMove={(direction) => move(step, index, direction)}
-                  dragging={drag?.positionId === position.id}
-                  dropPlace={drag && target?.positionId === position.id ? target.place : null}
-                  onDragStart={() => setDrag({ stepId: step.id, positionId: position.id })}
-                  onDragEnd={() => {
-                    setDrag(null)
-                    setTarget(null)
-                  }}
-                  onDragOver={(place) => hover(step.id, position.id, place)}
-                  onDrop={(place) => void drop({ stepId: step.id, positionId: position.id, place })}
-                  onOpenBreakdown={() => setBreakdownId(position.id)}
-                />
-              ))}
-              <tr
-                onDragOver={(event) => {
-                  if (dragRef.current) {
-                    event.preventDefault()
-                    hover(step.id, null, 'above')
-                  }
-                }}
-                onDrop={(event) => {
-                  event.preventDefault()
-                  void drop({ stepId: step.id, positionId: null, place: 'above' })
-                }}
-                className={endTargeted ? 'shadow-[inset_0_3px_0_0_#1d3f9c]' : ''}
-              >
-                <td colSpan={2} className="border-b border-gray-200" />
-                <td colSpan={7} className="border-b border-gray-200 px-1.5 py-2">
-                  <ArticlePicker
-                    stepId={step.id}
-                    canCreateArticle={Boolean(step.catalog_chapter_id)}
-                    busy={busyStep === step.id}
-                    onPickArticle={(article) => void add(step, { catalog_article_id: article.id }, true)}
-                    onFreeLine={(description, kind) => void add(step, { description, kind }, kind === 'item')}
-                    onCreateArticle={(description) => void createAndAdd(step, description)}
+    <div className="min-h-0 flex-1 overflow-auto bg-gray-100 px-4 py-5">
+      {/* La feuille : 717 px de zone imprimée (172 mm du PDF), une marge d'outils de chaque côté. */}
+      <div className="mx-auto w-[869px] rounded-sm border border-gray-200 bg-white pb-12 pl-9 pr-3 pt-8 text-[14px] text-gray-900 shadow-sm" style={{ fontFamily: 'Helvetica, Arial, sans-serif' }}>
+        <div className="ml-7 mr-[76px] flex items-start justify-between border-b border-gray-300 pb-2">
+          <div className="min-w-0">
+            <div className="font-bold">
+              {PRINT_TITLES[doc.type]} N° {doc.number}
+            </div>
+            <div className="truncate text-[12px] text-gray-500">
+              Projet : {doc.project?.number} {doc.project?.designation1}
+            </div>
+          </div>
+          <div className="shrink-0 text-[12px] text-gray-500">{fmtDate(doc.date)}</div>
+        </div>
+
+        <table className="mt-3 w-[821px] table-fixed border-collapse">
+          <colgroup>
+            <col className="w-[28px]" />
+            <col className="w-[54px]" />
+            <col className="w-[338px]" />
+            <col className="w-[54px]" />
+            <col className="w-[75px]" />
+            <col className="w-[92px]" />
+            <col className="w-[104px]" />
+            <col className="w-[76px]" />
+          </colgroup>
+          <thead className="sticky top-0 z-10 bg-white text-[12px] text-gray-500">
+            <tr>
+              <th />
+              <th className="border-b border-gray-900 px-1 py-1.5 text-left font-normal">Pos.</th>
+              <th className="border-b border-gray-900 px-1 py-1.5 text-left font-normal">Description</th>
+              <th className="border-b border-gray-900 px-1 py-1.5 text-left font-normal">Un.</th>
+              <th className="border-b border-gray-900 px-1 py-1.5 text-right font-normal">Quantité</th>
+              <th className="border-b border-gray-900 px-1 py-1.5 text-right font-normal">Prix</th>
+              <th className="border-b border-gray-900 px-1 py-1.5 text-right font-normal">Montant</th>
+              <th />
+            </tr>
+          </thead>
+          {steps.map((step, stepIndex) => {
+            const endTargeted = drag !== null && target?.stepId === step.id && target.positionId === null
+            const empty = step.positions.filter(isEmptyItem).length
+            return (
+              <tbody key={step.id} id={`step-${step.id}`} className="scroll-mt-10">
+                <tr className="font-bold">
+                  <td />
+                  <td className="border-b border-gray-400 px-1 pb-1 pt-5">{stepIndex + 1}</td>
+                  <td colSpan={4} className="border-b border-gray-400 px-1 pb-1 pt-5">
+                    {step.label}
+                  </td>
+                  <td
+                    className="border-b border-gray-400 px-1 pb-1 pt-5 text-right text-[12px] font-normal tabular-nums text-gray-400"
+                    title="Total de l'étape : imprimé dans la récapitulation, pas dans le détail"
+                  >
+                    {fmtAmount(step.total)}
+                  </td>
+                  <td className="pb-0.5 pl-2 pt-5 text-right align-bottom">
+                    {empty > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => void prune(step)}
+                        title={`Retirer de cette étape les ${empty} lignes restées sans quantité`}
+                        className="whitespace-nowrap rounded px-1 py-0.5 text-[11px] font-normal text-gray-400 hover:bg-gray-100 hover:text-accent-600"
+                      >
+                        <span className="text-[11px] font-normal">
+                          − {empty} vide{empty > 1 ? 's' : ''}
+                        </span>
+                      </button>
+                    )}
+                  </td>
+                </tr>
+                {step.positions.map((position, index) => (
+                  <PositionRow
+                    key={`${position.id}-${applied[position.id] ?? 0}`}
+                    position={position}
+                    printNumber={numbers.get(position.id) ?? ''}
+                    actions={actions}
+                    onSaving={onSaving}
+                    onMove={(direction) => move(step, index, direction)}
+                    dragging={drag?.positionId === position.id}
+                    dropPlace={drag && target?.positionId === position.id ? target.place : null}
+                    onDragStart={() => setDrag({ stepId: step.id, positionId: position.id })}
+                    onDragEnd={() => {
+                      setDrag(null)
+                      setTarget(null)
+                    }}
+                    onDragOver={(place) => hover(step.id, position.id, place)}
+                    onDrop={(place) => void drop({ stepId: step.id, positionId: position.id, place })}
+                    onOpenBreakdown={() => setBreakdownId(position.id)}
                   />
-                </td>
-              </tr>
-            </tbody>
-          )
-        })}
-      </table>
+                ))}
+                <tr
+                  onDragOver={(event) => {
+                    if (dragRef.current) {
+                      event.preventDefault()
+                      hover(step.id, null, 'above')
+                    }
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault()
+                    void drop({ stepId: step.id, positionId: null, place: 'above' })
+                  }}
+                  className={endTargeted ? 'shadow-[inset_0_3px_0_0_#1d3f9c]' : ''}
+                >
+                  <td />
+                  <td colSpan={6} className="py-1.5" style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
+                    <ArticlePicker
+                      stepId={step.id}
+                      canCreateArticle={Boolean(step.catalog_chapter_id)}
+                      busy={busyStep === step.id}
+                      onPickArticle={(article) => void add(step, { catalog_article_id: article.id }, true)}
+                      onFreeLine={(description, kind) => void add(step, { description, kind }, kind === 'item')}
+                      onCreateArticle={(description) => void createAndAdd(step, description)}
+                    />
+                  </td>
+                  <td />
+                </tr>
+              </tbody>
+            )
+          })}
+          <tfoot>
+            <tr className="font-bold">
+              <td />
+              <td className="border-t border-gray-900 px-1 py-2" />
+              <td colSpan={4} className="border-t border-gray-900 px-1 py-2">
+                Total brut
+              </td>
+              <td className="border-t border-gray-900 px-1 py-2 text-right tabular-nums">{fmtAmount(doc.total_net)}</td>
+              <td />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
       {breakdownPosition && (
         <CostBreakdownDialog
           key={breakdownPosition.id}

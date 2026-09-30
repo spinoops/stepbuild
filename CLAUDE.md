@@ -135,6 +135,13 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `TemplatePicker` charge un modèle (lignes remplacées, DIM saisie conservée, `POST …/used` compte l'usage) ;
   « Enregistrer comme sous-détail type » crée un modèle depuis une position. `catalog_article_id` est prévu pour
   rattacher un modèle à un article à la reprise du catalogue BauBit (chargement automatique à l'insertion).
+- **Le détail se présente comme la feuille imprimée** (`DocumentEditor`) : feuille blanche de 869 px sur fond gris, zone
+  imprimée de 717 px aux proportions des colonnes du PDF (police Helvetica 14 px, descriptions qui passent à la ligne
+  comme sur le papier), **numéro imprimé en direct** (`lib/documentNumbering.ts`, même règle que `DocumentPrint::steps`),
+  titres d'étape et sous-titres en gras, textes en italique, total brut en bas. Le code du catalogue n'est plus saisi dans
+  la ligne (info-bulle sur le numéro). Outils hors zone imprimée : poignée à gauche ; option, sous-détail, corbeille à
+  droite. Attention : `.bb input/textarea/button { font: inherit }` (index.css, hors couche) l'emporte sur les
+  utilitaires Tailwind de police → graisse, italique et taille se posent sur la cellule ou un `<span>`, pas sur le champ.
 - **Sous-titres et textes** : le champ d'ajout d'une étape propose « Ajouter comme sous-titre » / « comme texte » (`kind`
   `title` | `text`). **Lignes sans quantité** : `POST /documents/{id}/positions/prune` (option `step_id`) retire les
   positions `item` sans quantité ; bouton « − n sans quantité » sur chaque étape et bouton global dans la barre d'outils.

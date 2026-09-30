@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { toNumber } from '@/lib/crud'
 import { fmtAmount } from '@/lib/format'
 import { toast } from '@/lib/toast'
@@ -15,7 +15,8 @@ interface Draft {
   is_optional: boolean
 }
 
-const text = (value: number | null) => (value === null ? '' : String(value))
+/** Nombre affiché comme sur le document (3.00, 95.00) ; les décimales supplémentaires sont conservées (0.125). */
+const text = (value: number | null) => (value === null ? '' : Number.isInteger(Math.round(value * 1e6) / 1e4) ? value.toFixed(2) : String(value))
 
 function toDraft(position: DocumentPosition): Draft {
   return {
@@ -29,12 +30,14 @@ function toDraft(position: DocumentPosition): Draft {
 }
 
 const CELL =
-  'w-full rounded border border-transparent bg-transparent px-1.5 py-1 text-[13px] outline-none transition hover:border-gray-200 focus:border-primary-400 focus:bg-white focus:ring-2 focus:ring-primary-100'
+  'w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-[14px] outline-none transition hover:border-gray-200 focus:border-primary-400 focus:bg-white focus:ring-2 focus:ring-primary-100'
 
 export type DropPlace = 'above' | 'below'
 
 interface PositionRowProps {
   position: DocumentPosition
+  /** Numéro tel qu'il sera imprimé (5.1, 6.1.1…) ; vide pour un texte. */
+  printNumber: string
   actions: DocumentActions
   onSaving: (saving: boolean) => void
   /** Déplacement au clavier depuis la poignée (flèches haut / bas). */
@@ -51,12 +54,14 @@ interface PositionRowProps {
 }
 
 /**
- * Ligne de devis éditable en place. Le brouillon local fait foi pendant la saisie ; il est envoyé
- * à la sortie de la ligne ou 1,5 s après la dernière frappe. Entrée : quantité → prix → champ d'ajout.
- * La poignée (à gauche) se saisit à la souris pour déplacer la ligne ; au clavier, flèches haut et bas.
+ * Ligne de devis éditable en place, présentée comme sur le document imprimé (numéro, description,
+ * unité, quantité, prix, montant). Le brouillon local fait foi pendant la saisie ; il est envoyé à la
+ * sortie de la ligne ou 1,5 s après la dernière frappe. Entrée : quantité → prix → champ d'ajout.
+ * Les outils qui n'existent pas sur le papier sont dans les marges : poignée à gauche (souris, ou
+ * flèches haut et bas au clavier), option, sous-détail et suppression à droite.
  */
 export default function PositionRow({
-  position, actions, onSaving, onMove, dragging, dropPlace, onDragStart, onDragEnd, onDragOver, onDrop, onOpenBreakdown,
+  position, printNumber, actions, onSaving, onMove, dragging, dropPlace, onDragStart, onDragEnd, onDragOver, onDrop, onOpenBreakdown,
 }: PositionRowProps) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(position))
   const saved = useRef(JSON.stringify(draft))
@@ -64,7 +69,17 @@ export default function PositionRow({
   const timer = useRef<number | undefined>(undefined)
   const removed = useRef(false) // ligne supprimée : plus aucun enregistrement
   const rowRef = useRef<HTMLTableRowElement>(null)
+  const areaRef = useRef<HTMLTextAreaElement>(null)
   const isItem = position.kind === 'item'
+
+  // La description prend la hauteur de son texte, comme sur la feuille : on voit tout de suite un libellé trop long.
+  useLayoutEffect(() => {
+    const area = areaRef.current
+    if (area) {
+      area.style.height = 'auto'
+      area.style.height = `${area.scrollHeight}px`
+    }
+  }, [draft.description])
 
   async function save() {
     window.clearTimeout(timer.current)
@@ -156,11 +171,11 @@ export default function PositionRow({
         event.preventDefault()
         onDrop(placeFromEvent(event))
       }}
-      className={`group border-b border-gray-100 align-top transition-opacity ${draft.is_optional ? 'text-gray-400' : ''} ${
+      className={`group align-top transition-opacity ${isItem ? 'border-b border-gray-200' : ''} ${draft.is_optional ? 'text-gray-400' : ''} ${
         dragging ? 'opacity-40' : ''
       } ${dropClass}`}
     >
-      <td className="w-7 py-1.5 pl-2 align-middle">
+      <td className="py-1 align-top">
         <button
           type="button"
           draggable
@@ -187,26 +202,31 @@ export default function PositionRow({
           <Icon name="grip" className="h-4 w-4" />
         </button>
       </td>
-      <td className="w-24 py-0.5">
-        <input value={draft.code} onChange={(e) => change({ code: e.target.value })} className={`${CELL} text-gray-500`} aria-label="Code" />
+      <td
+        className={`px-1 py-1 tabular-nums ${position.kind === 'title' ? 'pt-2.5 font-bold text-gray-800' : 'text-gray-500'}`}
+        title={position.code ? `Code du catalogue : ${position.code}` : undefined}
+      >
+        {printNumber}
       </td>
-      <td className="py-0.5">
+      {/* Graisse et italique sur la cellule : les champs de l'espace de travail héritent leur police (.bb textarea). */}
+      <td colSpan={isItem ? 1 : 5} className={position.kind === 'title' ? 'pt-2 font-bold' : position.kind === 'text' ? 'py-0.5 italic' : 'py-0.5'}>
         <textarea
+          ref={areaRef}
           value={draft.description}
           onChange={(e) => change({ description: e.target.value })}
-          rows={Math.min(6, Math.max(1, Math.ceil(draft.description.length / 95)))}
-          className={`${CELL} resize-none leading-snug ${position.kind === 'title' ? 'font-semibold text-gray-800' : ''} ${
-            position.kind === 'text' ? 'italic text-gray-600' : ''
-          }`}
-          aria-label="Description"
+          rows={1}
+          className={`${CELL} block resize-none overflow-hidden leading-snug ${position.kind === 'text' ? 'text-gray-600' : ''}`}
+          aria-label={position.kind === 'title' ? 'Sous-titre' : position.kind === 'text' ? 'Texte' : 'Description'}
+          title={position.kind === 'title' ? 'Sous-titre : ouvre un sous-groupe numéroté' : position.kind === 'text' ? 'Texte sans prix ni numéro' : undefined}
         />
+        {isItem && draft.is_optional && <div className="px-1 pb-0.5 text-[12px] text-gray-400">(option, hors total)</div>}
       </td>
-      {isItem ? (
+      {isItem && (
         <>
-          <td className="w-16 py-0.5">
+          <td className="py-0.5">
             <input value={draft.unit} onChange={(e) => change({ unit: e.target.value })} className={CELL} aria-label="Unité" />
           </td>
-          <td className="w-24 py-0.5">
+          <td className="py-0.5">
             <input
               data-qty={position.id}
               value={draft.quantity}
@@ -217,7 +237,7 @@ export default function PositionRow({
               aria-label="Quantité"
             />
           </td>
-          <td className="w-28 py-0.5">
+          <td className="py-0.5">
             <input
               data-price={position.id}
               value={draft.unit_price}
@@ -232,32 +252,27 @@ export default function PositionRow({
                 type="button"
                 onClick={onOpenBreakdown}
                 title={priceDiffers ? 'Prix calculé par le sous-détail : le prix saisi en diffère' : 'Prix calculé par le sous-détail'}
-                className={`block w-full px-1.5 text-right text-[11px] tabular-nums hover:underline ${priceDiffers ? 'text-accent-600' : 'text-gray-400'}`}
+                className={`block w-full px-1 text-right text-[11px] tabular-nums hover:underline ${priceDiffers ? 'text-accent-600' : 'text-gray-400'}`}
               >
-                calc. {fmtAmount(position.calculated_price)}
+                <span className="text-[11px]">calc. {fmtAmount(position.calculated_price)}</span>
               </button>
             )}
           </td>
-          <td className="w-28 px-3 py-1.5 text-right tabular-nums">
-            {amount !== null ? fmtAmount(amount) : <span className="text-gray-300">—</span>}
-          </td>
-          <td className="w-14 py-1.5 text-center">
+          <td className="px-1 py-1 text-right tabular-nums">{amount !== null ? fmtAmount(amount) : ''}</td>
+        </>
+      )}
+      <td className="py-1 pl-2">
+        <span className="flex items-center justify-end gap-0.5">
+          {isItem && (
             <input
               type="checkbox"
               checked={draft.is_optional}
               onChange={(e) => change({ is_optional: e.target.checked }, true)}
-              title="Option : affichée mais hors total"
-              className="h-4 w-4 accent-primary-600"
+              title="Option : imprimée, mais hors total"
+              aria-label="Option"
+              className={`mr-0.5 h-3.5 w-3.5 accent-primary-600 transition ${draft.is_optional ? '' : 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'}`}
             />
-          </td>
-        </>
-      ) : (
-        <td colSpan={5} className="px-3 py-1.5 text-right text-[11px] uppercase tracking-wider text-gray-300">
-          {position.kind === 'title' ? 'Sous-titre' : 'Texte'}
-        </td>
-      )}
-      <td className="w-16 py-1 pr-2">
-        <span className="flex justify-end">
+          )}
           {isItem && (
             <button
               type="button"
