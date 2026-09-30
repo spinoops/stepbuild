@@ -104,6 +104,25 @@ class DocumentPositionController extends Controller
     }
 
     /**
+     * Retire les positions chiffrables restées sans quantité (articles importés d'un modèle et non retenus).
+     * { "step_id": 4 } limite à une étape. Sous-titres et textes sont conservés.
+     */
+    public function prune(Request $request, Document $document): JsonResponse
+    {
+        $data = $request->validate(['step_id' => ['nullable', 'integer']]);
+
+        $removed = $document->positions()
+            ->where('kind', 'item')
+            ->whereNull('quantity')
+            ->when($data['step_id'] ?? null, fn ($q, $stepId) => $q->where('document_step_id', $stepId))
+            ->delete();
+
+        return DocumentResource::make($document->recalculate()->load(DocumentController::FULL))
+            ->additional(['removed' => $removed])
+            ->response();
+    }
+
+    /**
      * Réordonne les positions d'une étape : { "step_id": 4, "ids": [9, 7, 8] }.
      */
     public function reorder(Request $request, Document $document): DocumentResource

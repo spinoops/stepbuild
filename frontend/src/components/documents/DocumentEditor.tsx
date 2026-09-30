@@ -29,6 +29,9 @@ interface DropTarget {
   place: DropPlace
 }
 
+/** Ligne chiffrable restée sans quantité. */
+const isEmptyItem = (position: DocumentPosition) => position.kind === 'item' && position.quantity === null
+
 /** Détail du devis : une section par étape, positions éditables en place, champ d'ajout rapide. */
 export default function DocumentEditor({ document: doc, actions, onSaving }: DocumentEditorProps) {
   const createArticle = useCreateArticleOnTheFly()
@@ -74,6 +77,20 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
       await add(step, { catalog_article_id: article.id }, true)
     } catch {
       toast("L'article n'a pas pu être créé.", 'error')
+    }
+  }
+
+  /** Retire les lignes de l'étape restées sans quantité (articles du modèle non retenus). */
+  async function prune(step: DocumentStep) {
+    const count = step.positions.filter(isEmptyItem).length
+    if (!window.confirm(`Retirer les ${count} ligne${count > 1 ? 's' : ''} sans quantité de l'étape « ${step.label} » ?`)) {
+      return
+    }
+    try {
+      const removed = await actions.prunePositions(step.id)
+      toast(`${removed} ligne${removed > 1 ? 's' : ''} retirée${removed > 1 ? 's' : ''}.`, 'success')
+    } catch {
+      toast('Les lignes n\'ont pas pu être retirées.', 'error')
     }
   }
 
@@ -197,7 +214,18 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
                 <td className="border-b border-gray-200 px-3 py-2 text-right font-semibold tabular-nums text-gray-800">
                   {fmtAmount(step.total)}
                 </td>
-                <td colSpan={2} className="border-b border-gray-200" />
+                <td colSpan={2} className="border-b border-gray-200 pr-2 text-right">
+                  {step.positions.some(isEmptyItem) && (
+                    <button
+                      type="button"
+                      onClick={() => void prune(step)}
+                      title="Retirer de cette étape les lignes restées sans quantité"
+                      className="rounded px-1.5 py-0.5 text-[11px] font-normal text-gray-500 hover:bg-white hover:text-accent-600"
+                    >
+                      − {step.positions.filter(isEmptyItem).length} sans quantité
+                    </button>
+                  )}
+                </td>
               </tr>
               {step.positions.map((position, index) => (
                 <PositionRow
@@ -238,7 +266,7 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
                     canCreateArticle={Boolean(step.catalog_chapter_id)}
                     busy={busyStep === step.id}
                     onPickArticle={(article) => void add(step, { catalog_article_id: article.id }, true)}
-                    onFreeLine={(description) => void add(step, { description, kind: 'item' }, true)}
+                    onFreeLine={(description, kind) => void add(step, { description, kind }, kind === 'item')}
                     onCreateArticle={(description) => void createAndAdd(step, description)}
                   />
                 </td>

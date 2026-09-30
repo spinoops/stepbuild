@@ -22,7 +22,7 @@ pour l'affichage : `frontend/src/lib/phases.ts`.
 | 0 | Socle, rôles, interface (logique BauBit, habillage moderne, charte Lachat) | **fait** |
 | 1 | Adresses, catalogue (chapitres = modèles d'étapes), éléments de coûts, recherche instantanée | **fait** (API + front) ; reste : import de listes de prix |
 | 2 | Projets : fiche, numérotation par NPA, statuts, adresses nommées, photos ; projet courant de la barre de contexte | **fait** (API + front) |
-| 3 | Devis : création depuis le projet, étapes depuis les modèles, saisie rapide des positions, chiffrage, récapitulation, nouvelle version ; création d'article à la volée | **fait** (API + front) ; reste : export PDF (phase 6) |
+| 3 | Devis : création depuis le projet, étapes depuis les modèles, saisie rapide des positions, chiffrage, récapitulation, nouvelle version ; création d'article à la volée ; aperçu et PDF | **fait** (API + front) |
 | 4 | Rapports journaliers sur les étapes du devis, workflow en cours → en contrôle → facturé ; collaborateurs | **fait** (API + front) |
 | 5 | Régie (brut → majoré → client), contrôle des heures | à faire — **prochaine étape** |
 | 6 | Acomptes, factures, facture finale, export PDF ; statistiques | à faire |
@@ -135,6 +135,18 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `TemplatePicker` charge un modèle (lignes remplacées, DIM saisie conservée, `POST …/used` compte l'usage) ;
   « Enregistrer comme sous-détail type » crée un modèle depuis une position. `catalog_article_id` est prévu pour
   rattacher un modèle à un article à la reprise du catalogue BauBit (chargement automatique à l'insertion).
+- **Sous-titres et textes** : le champ d'ajout d'une étape propose « Ajouter comme sous-titre » / « comme texte » (`kind`
+  `title` | `text`). **Lignes sans quantité** : `POST /documents/{id}/positions/prune` (option `step_id`) retire les
+  positions `item` sans quantité ; bouton « − n sans quantité » sur chaque étape et bouton global dans la barre d'outils.
+  Une ligne sans quantité mais avec prix (« Ouvrier qualifié H. 90.- ») est légitime sur un devis Lachat : elle s'imprime.
+- **Aperçu et PDF** (onglet « Aperçu », `GET /documents/{id}/pdf`, `?download=1`) : `App\Support\DocumentPrint` +
+  vue `resources/views/pdf/document.blade.php`, rendus par **dompdf** (`barryvdh/laravel-dompdf`). Calqué sur le devis
+  type Lachat : page de garde (logo, destinataire, « Bassecourt, le … /initiales », projet, récapitulation par étape, TVA,
+  conditions de paiement, signature du donneur d'ordre), puis détail des positions ; en-têtes et pieds dessinés par
+  `page_script` (n° TVA en page 1, rappel du document ensuite, « Page x de n »). **Numérotation continue à l'impression**
+  (`DocumentPrint::steps`) : étape 5, positions 5.1, 5.2 ; un sous-titre 6.1 ouvre 6.1.1. Coordonnées et textes par défaut
+  de l'entreprise dans `config/company.php` (surchargeables par `COMPANY_*`), logo dans `resources/images/`.
+  Remarques internes et sous-détails ne sont jamais imprimés. Pas encore d'options d'impression (sans prix, etc.).
 - Marge affichée dans la récapitulation (usage interne, seuil 30 %), calculée sur les positions ayant un prix de revient
   (sous-détail ou prix d'achat).
 - Tout le module est réservé à `roles:admin,responsable` (prix). `POST /documents/{id}/duplicate` crée la version suivante.

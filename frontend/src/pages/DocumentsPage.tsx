@@ -8,6 +8,7 @@ import type { GridColumn } from '@/components/baubit/DataGrid'
 import GridPager from '@/components/baubit/GridPager'
 import DocumentEditor from '@/components/documents/DocumentEditor'
 import DocumentHeaderForm, { DOCUMENT_FORM_ID } from '@/components/documents/DocumentHeaderForm'
+import DocumentPreview from '@/components/documents/DocumentPreview'
 import DocumentRecap from '@/components/documents/DocumentRecap'
 import StepsPanel from '@/components/documents/StepsPanel'
 import TemplateChooser from '@/components/documents/TemplateChooser'
@@ -27,7 +28,7 @@ import { toast } from '@/lib/toast'
 import { setDocument, setProject, useWorkspace } from '@/lib/workspaceStore'
 import type { DocumentDetail } from '@/types'
 
-const TABS = ['Détail', 'En-tête', 'Récapitulation', 'Explorateur']
+const TABS = ['Détail', 'En-tête', 'Récapitulation', 'Aperçu', 'Explorateur']
 
 const EXPLORER_COLUMNS: GridColumn<DocumentDetail>[] = [
   { key: 'number', header: 'N° de document', value: (d) => d.number, width: 160 },
@@ -178,7 +179,8 @@ export default function DocumentsPage() {
           <ToolSep />
           {doc ? <DuplicateButton documentId={doc.id} onDone={open} /> : <ToolButton icon="fileplus" title="Nouvelle version" disabled />}
           <ToolButton icon="tree" title="Enregistrer les étapes de ce devis comme modèle" onClick={saveTemplate} disabled={!doc || !doc.steps?.length} />
-          <ToolButton icon="print" title="Imprimer / PDF (phase 6)" />
+          {doc ? <PruneButton document={doc} /> : <ToolButton icon="filter" title="Retirer les lignes sans quantité" disabled />}
+          <ToolButton icon="print" title="Aperçu avant impression et PDF" onClick={() => setTab('Aperçu')} disabled={!doc} />
           {doc && (
             <>
               <ToolSep />
@@ -298,7 +300,28 @@ function DocumentBody({ document, tab, onStateChange, onSaving }: DocumentBodyPr
   if (tab === 'Récapitulation') {
     return <DocumentRecap document={document} />
   }
+  if (tab === 'Aperçu') {
+    return <DocumentPreview document={document} />
+  }
   return <DocumentEditor document={document} actions={actions} onSaving={onSaving} />
+}
+
+/** Retire d'un coup toutes les lignes du devis restées sans quantité (articles du modèle non retenus). */
+function PruneButton({ document }: { document: DocumentDetail }) {
+  const actions = useDocumentActions(document.id)
+  const count = (document.steps ?? []).flatMap((step) => step.positions).filter((position) => position.kind === 'item' && position.quantity === null).length
+
+  function prune() {
+    if (!window.confirm(`Retirer les ${count} ligne${count > 1 ? 's' : ''} sans quantité de tout le devis ?\n\nLes lignes à garder sans quantité (prix horaire indicatif, par exemple) seront retirées aussi : utilisez plutôt le bouton de chaque étape pour les conserver.`)) {
+      return
+    }
+    actions
+      .prunePositions()
+      .then((removed) => toast(`${removed} ligne${removed > 1 ? 's' : ''} retirée${removed > 1 ? 's' : ''}.`, 'success'))
+      .catch(() => toast("Les lignes n'ont pas pu être retirées.", 'error'))
+  }
+
+  return <ToolButton icon="filter" title={count ? `Retirer les ${count} lignes sans quantité du devis` : 'Aucune ligne sans quantité'} onClick={prune} disabled={count === 0} />
 }
 
 function DuplicateButton({ documentId, onDone }: { documentId: number; onDone: (id: number) => void }) {

@@ -90,7 +90,7 @@ export interface BreakdownPayload {
   apply_price?: boolean
 }
 
-type DocResponse = { data: DocumentDetail; created_position_id?: number }
+type DocResponse = { data: DocumentDetail; created_position_id?: number; removed?: number }
 
 /**
  * Actions sur un devis. Chaque appel renvoie le document complet (totaux recalculés côté serveur),
@@ -127,6 +127,11 @@ export function useDocumentActions(documentId: number) {
         const document = apply((await api.put<DocResponse>(`${base}/positions/${id}/breakdown`, payload)).data).data
         void queryClient.invalidateQueries({ queryKey: ['price-elements'] }) // compteur d'utilisation
         return document
+      },
+      /** Retire les positions restées sans quantité (toute l'étape, ou tout le devis). Renvoie le nombre retiré. */
+      prunePositions: async (stepId?: number) => {
+        const response = apply((await api.post<DocResponse>(`${base}/positions/prune`, stepId ? { step_id: stepId } : {})).data)
+        return response.removed ?? 0
       },
       reorderPositions: async (stepId: number, ids: number[]) =>
         apply((await api.post<DocResponse>(`${base}/positions/reorder`, { step_id: stepId, ids })).data).data,

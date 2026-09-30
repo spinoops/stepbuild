@@ -113,6 +113,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/documents/{document}', [DocumentController::class, 'update']);
         Route::delete('/documents/{document}', [DocumentController::class, 'destroy']);
         Route::post('/documents/{document}/duplicate', [DocumentController::class, 'duplicate']);
+        Route::get('/documents/{document}/pdf', [DocumentController::class, 'pdf']);
+        Route::post('/documents/{document}/positions/prune', [DocumentPositionController::class, 'prune']);
         Route::post('/documents/{document}/steps/reorder', [DocumentStepController::class, 'reorder']);
         Route::apiResource('documents.steps', DocumentStepController::class)->only(['store', 'update', 'destroy']);
         Route::post('/documents/{document}/positions/reorder', [DocumentPositionController::class, 'reorder']);

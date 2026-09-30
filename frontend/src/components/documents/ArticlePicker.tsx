@@ -9,7 +9,8 @@ interface ArticlePickerProps {
   /** L'étape vient d'un chapitre du catalogue : on peut y créer un article à la volée. */
   canCreateArticle: boolean
   onPickArticle: (article: PickerArticle) => void
-  onFreeLine: (description: string) => void
+  /** Ligne libre chiffrée, sous-titre (ouvre un sous-groupe 6.1) ou texte d'explication. */
+  onFreeLine: (description: string, kind: 'item' | 'title' | 'text') => void
   onCreateArticle: (description: string) => void
   busy?: boolean
 }
@@ -17,6 +18,8 @@ interface ArticlePickerProps {
 type Choice =
   | { type: 'article'; article: PickerArticle; sublabel: string }
   | { type: 'free' }
+  | { type: 'title' }
+  | { type: 'text' }
   | { type: 'create' }
 
 /**
@@ -40,7 +43,7 @@ export default function ArticlePicker({ stepId, canCreateArticle, onPickArticle,
           return article ? [{ type: 'article' as const, article, sublabel: item.sublabel }] : []
         })
       : []
-    return [...found, { type: 'free' }, ...(canCreateArticle ? [{ type: 'create' as const }] : [])]
+    return [...found, { type: 'free' }, ...(canCreateArticle ? [{ type: 'create' as const }] : []), { type: 'title' }, { type: 'text' }]
   }, [picker.data, text, canCreateArticle])
 
   function choose(choice: Choice | undefined) {
@@ -50,7 +53,9 @@ export default function ArticlePicker({ stepId, canCreateArticle, onPickArticle,
     if (choice.type === 'article') {
       onPickArticle(choice.article)
     } else if (choice.type === 'free') {
-      onFreeLine(text)
+      onFreeLine(text, 'item')
+    } else if (choice.type === 'title' || choice.type === 'text') {
+      onFreeLine(text, choice.type)
     } else {
       onCreateArticle(text)
     }
@@ -89,7 +94,7 @@ export default function ArticlePicker({ stepId, canCreateArticle, onPickArticle,
         onBlur={() => window.setTimeout(() => setOpen(false), 150)}
         onKeyDown={onKeyDown}
         disabled={busy}
-        placeholder="Ajouter une position : tapez un article, un code ou un texte libre…"
+        placeholder="Ajouter une position, un sous-titre ou un texte : tapez un article, un code ou un libellé…"
         className="h-8 w-full rounded-md border border-dashed border-gray-300 bg-white pl-8 pr-3 text-[13px] outline-none transition placeholder:text-gray-400 focus:border-solid focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
       />
 
@@ -115,6 +120,16 @@ export default function ArticlePicker({ stepId, canCreateArticle, onPickArticle,
               {choice.type === 'free' && (
                 <span>
                   Ajouter en ligne libre : <span className="font-medium text-gray-800">« {text} »</span>
+                </span>
+              )}
+              {choice.type === 'title' && (
+                <span>
+                  Ajouter comme sous-titre : <span className="font-semibold text-gray-800">« {text} »</span>
+                </span>
+              )}
+              {choice.type === 'text' && (
+                <span>
+                  Ajouter comme texte (sans prix) : <span className="italic text-gray-800">« {text} »</span>
                 </span>
               )}
               {choice.type === 'create' && (

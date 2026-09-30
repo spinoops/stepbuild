@@ -8,9 +8,11 @@ use App\Http\Resources\DocumentResource;
 use App\Models\Document;
 use App\Models\Project;
 use App\Models\QuoteTemplate;
+use App\Support\DocumentPrint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
 
 class DocumentController extends Controller
@@ -84,6 +86,18 @@ class DocumentController extends Controller
         $document->delete();
 
         return response()->json(['message' => 'Document supprimé.']);
+    }
+
+    /**
+     * PDF du document (page de garde + détail). ?download=1 force le téléchargement.
+     */
+    public function pdf(Request $request, Document $document): Response
+    {
+        $name = DocumentPrint::title($document).'.pdf';
+
+        return $request->boolean('download')
+            ? DocumentPrint::pdf($document)->download($name)
+            : DocumentPrint::pdf($document)->stream($name);
     }
 
     /**
