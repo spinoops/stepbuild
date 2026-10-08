@@ -204,7 +204,7 @@ export default function HoursControlPage() {
               <table className="w-max border-collapse text-[13px]">
                 <thead className="sticky top-0 z-10 bg-bb-ribbon">
                   <tr>
-                    <th className={`${dayHeader} w-[400px] text-left`}>Projet / Désignation</th>
+                    <th className={`${dayHeader} sticky left-0 z-20 w-[400px] bg-bb-ribbon text-left`}>Projet / Désignation</th>
                     {days.map((day) => (
                       <th key={day} className={`${dayHeader} w-11 ${isWeekend(year, monthIndex, day) ? 'bg-gray-100 text-gray-400' : ''}`}>
                         {day}
@@ -218,7 +218,7 @@ export default function HoursControlPage() {
                 <tbody>
                   {data.projects.map((project) => (
                     <tr key={project.id} className="bg-white">
-                      <td className="h-8 whitespace-nowrap border-b border-gray-100 px-3">
+                      <td className="sticky left-0 z-10 h-8 whitespace-nowrap border-b border-gray-100 bg-white px-3">
                         <span className="font-medium text-gray-800">{project.number}</span> · {project.designation1}
                       </td>
                       {days.map((day) => {
@@ -251,7 +251,7 @@ export default function HoursControlPage() {
                     </tr>
                   )}
                   <tr className="bg-gray-100 font-medium">
-                    <td className="h-8 border-b border-gray-200 px-3">Total heures de travail</td>
+                    <td className="sticky left-0 z-10 h-8 border-b border-gray-200 bg-gray-100 px-3">Total heures de travail</td>
                     {days.map((day) => (
                       <td key={day} className={rowCell}>
                         {workDay(day) ? fmtAmount(workDay(day)) : ''}
@@ -260,7 +260,7 @@ export default function HoursControlPage() {
                     <td className={rowCell}>{fmtAmount(workTotal)}</td>
                   </tr>
                   <tr className="bg-white">
-                    <td className="h-8 border-b border-gray-100 px-3 text-gray-600">
+                    <td className="sticky left-0 z-10 h-8 border-b border-gray-100 bg-white px-3 text-gray-600">
                       Vacances / absences en h
                       <span className="ml-2 text-[11px] text-gray-400">clic sur un jour pour saisir</span>
                     </td>
@@ -291,7 +291,7 @@ export default function HoursControlPage() {
                     <td className={rowCell}>{absenceTotal ? fmtAmount(absenceTotal) : ''}</td>
                   </tr>
                   <tr className="bg-gray-100 font-medium">
-                    <td className="h-8 border-b border-gray-200 px-3">Total heures</td>
+                    <td className="sticky left-0 z-10 h-8 border-b border-gray-200 bg-gray-100 px-3">Total heures</td>
                     {days.map((day) => {
                       const total = workDay(day) + absenceDay(day)
                       return (
@@ -303,7 +303,7 @@ export default function HoursControlPage() {
                     <td className={rowCell}>{fmtAmount(workTotal + absenceTotal)}</td>
                   </tr>
                   <tr className="bg-gray-50 text-gray-600">
-                    <td className="h-8 border-b border-gray-100 px-3">Total semaine</td>
+                    <td className="sticky left-0 z-10 h-8 border-b border-gray-100 bg-gray-50 px-3">Total semaine</td>
                     {days.map((day) => {
                       const sunday = dayAbbr(year, monthIndex, day) === 'Di' || day === days.length
                       return (

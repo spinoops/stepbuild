@@ -289,6 +289,12 @@ Le `php` du PATH Windows est en **8.1** (trop vieux pour Laravel 13, qui exige *
 ## Ne jamais committer
 `.env`, `vendor/`, `node_modules/`, `frontend/dist/`, `storage/*`, `_construction/` (données client).
 
+## Mode d'emploi client
+`docs/Mode d'emploi - Logiciel de chantier.pdf`, généré par `docs/manuel/` : `npm run captures` (puppeteer sur
+Chrome, données d'exemple ; `FRONT_URL` / `API_URL` pour d'autres ports) puis `npm run pdf` (reportlab,
+`build_manual.py`, police Helvetica → caractères WinAnsi seulement). **À compléter à chaque phase livrée**
+(chapitre par module, version et date en tête du script).
+
 ## Déploiement
 Voir `DEPLOY.md` (Infomaniak mutualisé du client : doc root → `backend/public`, build front en
 local, `migrate --force` en prod). Signature des documents client : « Stéphane Offreda — Step One ».

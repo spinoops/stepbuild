@@ -121,7 +121,8 @@ export default function ReportHeaderForm({ report, actions, collaborators, docum
         </Field>
         {showPrices && (
           <Field label="Devis" labelWidth={50}>
-            <BbSelect {...register('document_id')} disabled={readOnly} className={`w-64 ${inputClass}`} title="Devis dont les étapes servent à la saisie des heures">
+            {/* Remonté quand les devis arrivent : le select reprend alors la valeur du formulaire. */}
+            <BbSelect key={documents.length ? 'loaded' : 'loading'} {...register('document_id')} disabled={readOnly} className={`w-64 ${inputClass}`} title="Devis dont les étapes servent à la saisie des heures">
               <option value="">— aucun devis —</option>
               {documents.map((document) => (
                 <option key={document.id} value={document.id}>
@@ -152,7 +153,7 @@ export default function ReportHeaderForm({ report, actions, collaborators, docum
             <Icon name="sun" className="h-4 w-4 text-amber-500" />
           </Field>
           <Field label="Responsable" labelWidth={90}>
-            <BbSelect {...register('responsible_id')} disabled={readOnly} className={`w-48 ${inputClass}`}>
+            <BbSelect key={collaborators.length ? 'loaded' : 'loading'} {...register('responsible_id')} disabled={readOnly} className={`w-48 ${inputClass}`}>
               <option value="">—</option>
               {collaborators.map((item) => (
                 <option key={item.id} value={item.id}>

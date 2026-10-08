@@ -26,8 +26,8 @@ SHOTS = os.path.join(HERE, 'shots')
 LOGO = os.path.join(HERE, '..', '..', 'frontend', 'public', 'logo-lachat.png')
 OUTPUT = os.path.join(HERE, '..', "Mode d'emploi - Logiciel de chantier.pdf")
 
-VERSION = '0.2'
-DATE = '21 septembre 2026'
+VERSION = '0.3'
+DATE = '8 octobre 2026'
 
 BLUE = colors.HexColor('#1d3f9c')
 RED = colors.HexColor('#d32f2f')
@@ -194,8 +194,8 @@ def cover(canvas, doc):
     canvas.setFont('Helvetica', 10.5)
     canvas.setFillColor(GREY)
     lines = [
-        'Ce guide couvre les modules disponibles à ce jour : adresses, catalogue,',
-        "éléments de coûts, projets et devis. Il sera complété à chaque nouvelle livraison.",
+        'Ce guide couvre les modules disponibles à ce jour : adresses, catalogue, éléments de coûts,',
+        "projets, devis, rapports journaliers, régie et contrôle des heures. Il sera complété à chaque livraison.",
         '',
         "Les captures d'écran montrent des données d'exemple fictives.",
     ]
@@ -256,20 +256,23 @@ def build_story():
         grid([
             ['Rôle', 'Accès'],
             ['Administrateur', "Tout le logiciel, y compris la gestion des utilisateurs et la configuration."],
-            ['Responsable', "Projets, devis, adresses, catalogue, éléments de coûts : tout ce qui touche aux prix et aux marges."],
-            ['Ouvrier', "Consultation des projets et, prochainement, saisie de ses rapports journaliers. "
-                        "Il ne voit jamais les prix, les marges ni les devis."],
+            ['Responsable', "Projets, devis, rapports, régie, contrôle des heures, adresses, catalogue, éléments de coûts : "
+                            "tout ce qui touche aux prix et aux marges."],
+            ['Ouvrier', "Consultation des projets et saisie de ses rapports journaliers (heures, matériel, photos). "
+                        "Il ne voit jamais les prix, les marges, les devis ni la régie."],
         ], [3.5 * cm, CONTENT_W - 3.5 * cm]),
         Paragraph("L'ordre de travail", H2),
         p("Le logiciel suit le déroulement d'un chantier :"),
         steps([
             "<b>Le projet</b> : vous créez le chantier, avec son client et son adresse.",
             "<b>Le devis</b> : juste après, vous choisissez les étapes du chantier à partir de modèles, puis vous chiffrez.",
-            "<b>Les rapports journaliers</b> : les heures et le matériel se saisiront sur les étapes du devis.",
-            "<b>La régie, puis la facture</b> : elles s'appuieront sur le devis et les rapports validés.",
+            "<b>Les rapports journaliers</b> : les heures et le matériel se saisissent sur les étapes du devis.",
+            "<b>La régie et le contrôle des heures</b> : chaque ligne de rapport reçoit son prix brut, son prix régie "
+            "et son prix client ; les heures de chaque collaborateur se vérifient mois par mois.",
+            "<b>La facture</b> : elle s'appuiera sur le devis et les rapports validés.",
         ]),
-        note("Les étapes 1 et 2 sont disponibles aujourd'hui. Les rapports journaliers, la régie, le contrôle des "
-             "heures, les factures et l'export PDF arrivent dans les prochaines livraisons (voir le chapitre 11)."),
+        note("Les étapes 1 à 4 sont disponibles aujourd'hui. Les acomptes, les factures et les statistiques arrivent "
+             "dans la prochaine livraison (voir le chapitre 15)."),
     ]
 
     # ------------------------------------------------------------------ 2
@@ -306,7 +309,7 @@ def build_story():
             ['6', "Barre d'outils", 'Nouveau, enregistrer, annuler, supprimer, et les outils propres à la page.'],
             ['7', 'Panneau latéral', "Résumé, étapes ou arborescence selon la page. La punaise le masque pour gagner de la place."],
             ['8', 'Zone de travail', 'La fiche en cours et la liste.'],
-            ['9', "Barre d'état", "Nombre d'entrées, totaux, et l'état de l'enregistrement."],
+            ['9', "Barre d'état", "Nombre d'entrées, totaux (brut, régie, client, heures…), et l'état de l'enregistrement."],
         ], [1 * cm, 4.2 * cm, CONTENT_W - 5.2 * cm]),
         Paragraph("La page d'accueil", H2),
         p("Elle affiche le nombre de projets actifs par statut, le parcours d'un chantier, un accès direct à chaque "
@@ -542,6 +545,31 @@ def build_story():
         ]),
         note("Les positions s'enregistrent toutes seules quand vous quittez la ligne. La barre d'état, en bas, "
              "affiche en permanence le net et le TTC du devis."),
+        Paragraph('Sous-titres, textes et lignes sans quantité', H2),
+        bullets([
+            "Le champ d'ajout propose aussi <b>Ajouter comme sous-titre</b> et <b>comme texte</b>. Un sous-titre ouvre "
+            "un sous-groupe numéroté (6.1, puis 6.1.1, 6.1.2…) ; un texte s'imprime en italique, sans prix ni numéro.",
+            "Le détail se présente <b>comme la feuille imprimée</b> : numéros, colonnes et retours à la ligne sont ceux "
+            "du PDF. Le code du catalogue n'est plus affiché dans la ligne ; il apparaît au survol du numéro.",
+            "Une étape créée depuis un modèle contient tous ses articles. Le bouton <b>– n sans quantité</b>, sur "
+            "l'étape ou dans la barre d'outils, retire d'un coup les lignes que vous n'avez pas chiffrées. Une ligne "
+            "sans quantité mais avec un prix (« Ouvrier qualifié H. 90.- ») est conservée et s'imprime.",
+        ]),
+        Paragraph('Le sous-détail de prix', H2),
+        p("Il remplace les formules notées en remarque dans BauBit. Sur une ligne, cliquez sur l'icône "
+          "<b>calculatrice</b>, à droite : une fenêtre détaille le prix par famille de coûts, main-d'œuvre, matériaux, "
+          "machines, matériel d'exploitation, outillage et sous-traitants."),
+        shot('21-devis-sous-detail.png', "Le sous-détail d'une position : un sous-détail type a été chargé, les lignes restent modifiables.", max_height=9 * cm),
+        bullets([
+            "Chaque ligne : quantité, coût unitaire, majoration en pour cent ; le logiciel calcule le coût et le prix de "
+            "vente. La quantité peut être <b>par unité de dimension</b> (m², ml…) et arrondie au <b>conditionnement</b>.",
+            "<b>Charger un sous-détail type</b> reprend un ouvrage de votre bibliothèque (menu <b>Données de base</b>, "
+            "bouton <b>Sous-détails types</b> : les 110 ouvrages du métreur y sont déjà). <b>Enregistrer comme "
+            "sous-détail type</b> ajoute le vôtre à la bibliothèque.",
+            "<b>Reporter le prix calculé</b> inscrit le prix de vente dans la position. Sinon le prix saisi à la main "
+            "reste, et l'écart est signalé. Le coût alimente la marge de la récapitulation.",
+            "Conventions du métreur : main-d'œuvre vendue 750.- la personne-jour, 90.- l'heure ; fournitures +30 %.",
+        ]),
         Paragraph("L'en-tête du devis", H2),
         p("Onglet <b>En-tête</b> : objet, date, initiales, <b>statut</b> (en cours, envoyé, accepté, refusé), "
           "taux de <b>TVA</b>, <b>rabais</b> en pour cent, destinataire, texte d'introduction et conditions."),
@@ -553,6 +581,18 @@ def build_story():
           "L'encadré <b>Marge</b>, à usage interne, compare vos prix de vente à vos prix d'achat. Il passe en rouge "
           "sous 30 %. Les options sont listées à part."),
         shot('16-devis-recap.png', 'La récapitulation et la marge interne.', width=12.5 * cm),
+        Paragraph("L'aperçu et le PDF", H2),
+        p("Onglet <b>Aperçu</b>, ou l'imprimante de la barre d'outils. Le devis est mis en page comme vos devis "
+          "actuels : page de garde avec le logo, le destinataire, « Bassecourt, le … », la récapitulation par étape, "
+          "la TVA, les conditions de paiement et la signature du donneur d'ordre ; puis le détail des positions, "
+          "numéroté en continu."),
+        shot('20-devis-apercu.png', "L'aperçu du devis, tel qu'il sera imprimé.", max_height=9 * cm),
+        bullets([
+            "Le bouton <b>Télécharger</b> enregistre le PDF pour l'envoyer par email.",
+            "Les remarques internes et les sous-détails de prix ne sont jamais imprimés.",
+            "Un devis <b>accepté</b> passe automatiquement le projet au statut <b>Adjugé</b>, et devient le devis "
+            "de référence des rapports journaliers.",
+        ]),
         Paragraph('Nouvelle version, explorateur', H2),
         bullets([
             "<b>Nouvelle version</b> copie le devis avec toutes ses étapes et positions : DE.1 devient DE.2. "
@@ -564,7 +604,178 @@ def build_story():
     ]
 
     # ------------------------------------------------------------------ 10
-    s += chapter('10. Utilisateurs et rôles')
+    s += chapter('10. Les rapports journaliers')
+    s += [
+        p("Menu <b>Exécution</b>, bouton <b>Rapports journaliers</b>. Un rapport par jour et par chantier : qui a "
+          "travaillé, combien d'heures, sur quelle étape du devis, avec quel matériel. C'est la source de la régie, du "
+          "contrôle des heures et, bientôt, de la facture finale.", LEAD),
+        box('Important', "Les heures se saisissent <b>sur les étapes du devis</b> du projet, et non sur une liste "
+            "générale de types de travail comme dans BauBit. Créez le devis et ses étapes avant le premier rapport.",
+            LIGHT_BLUE, BLUE),
+        shot('22-rapports.png', "Les rapports du projet à gauche, colorés par statut ; l'en-tête et la grille des heures à droite."),
+        Paragraph('Créer le rapport du jour', H2),
+        steps([
+            "Choisissez le <b>projet</b> dans la barre du haut.",
+            "Cliquez sur <b>Nouveau rapport</b>. Il reçoit le numéro suivant (001, 002…), la date du jour et le "
+            "devis accepté du projet (sinon le dernier devis). Vous êtes proposé comme responsable.",
+            "Complétez l'en-tête : <b>date</b> (les chevrons changent de jour), <b>remarque</b> (travaux effectués), "
+            "<b>météo</b> et températures, <b>responsable</b>. Tout s'enregistre automatiquement.",
+            "Cochez <b>Régie</b> si le rapport est facturable en régie ; c'est le cas par défaut.",
+        ]),
+        Paragraph('La grille des heures', H2),
+        p("Onglet <b>Salaire</b>. Une ligne par collaborateur présent, une colonne par étape du devis, puis les "
+          "colonnes des types de travail : travail du samedi, repas, kilomètres, formation."),
+        shot('23-rapport-heures.png', 'La grille des heures : 9 h de maçonnerie pour deux collaborateurs.', max_height=8 * cm),
+        steps([
+            "En bas de la grille, choisissez un collaborateur et cliquez sur <b>Ajouter</b>, ou reprenez d'un clic "
+            "<b>l'équipe du rapport précédent</b>.",
+            "Cliquez dans la cellule de l'étape et tapez les heures. <b>Entrée</b> descend à la ligne suivante, les "
+            "<b>flèches</b> déplacent le curseur : un rapport se saisit sans souris.",
+            "Chaque cellule s'enregistre quand vous la quittez. Une valeur à 0 l'efface ; le collaborateur reste dans le rapport.",
+        ]),
+        bullets([
+            "Le <b>total des heures</b> d'un collaborateur ne compte que les étapes du devis et les types de travail "
+            "en heures ; un repas ou des kilomètres ne sont pas des heures.",
+            "Pour la gestion, la colonne <b>Base</b> rappelle le tarif horaire du collaborateur et <b>Montant</b> le "
+            "coût de sa journée. L'ouvrier ne voit aucun de ces chiffres.",
+            "La corbeille, au survol de la ligne, retire le collaborateur et ses heures.",
+        ]),
+        Paragraph('Matériaux, machines, outillage, tiers', H2),
+        p("Les onglets <b>Matériaux</b>, <b>Machines</b>, <b>Mat. exploitation</b>, <b>Outillage</b> et <b>Tiers</b> "
+          "reprennent les familles des éléments de coûts. Chaque ligne est rattachée à une étape du devis."),
+        shot('24-rapport-materiaux.png', "Les matériaux d'un rapport : libellé, quantité, unité, coût ; prix repris des éléments de coûts.", max_height=7 * cm),
+        bullets([
+            "Tapez quelques lettres dans le champ d'ajout : les éléments de coûts de la famille apparaissent. "
+            "<b>Entrée</b> reprend le libellé, l'unité et le prix net, et place le curseur sur la quantité.",
+            "Sans résultat, Entrée crée une <b>ligne libre</b> avec votre texte, à compléter.",
+            "Les lignes se modifient en place et s'enregistrent quand vous les quittez.",
+        ]),
+        Paragraph('Événements, fichiers et photos', H2),
+        bullets([
+            "<b>Evénements</b> : incidents, visites, livraisons, décisions prises sur le chantier.",
+            "<b>Fichiers</b> et <b>Photos</b> : glissez les documents (plans, bons de livraison) et les photos du jour. "
+            "Une légende peut être saisie sous chaque photo.",
+        ]),
+        Paragraph('Le cycle de validation', H2),
+        grid([
+            ['Statut', 'Signification', 'Couleur'],
+            ['1-EC  En cours', "Le rapport se remplit. L'ouvrier peut encore le modifier.", 'Rouge'],
+            ['2-CTRL  En contrôle', "Transmis à la gestion, qui le vérifie et fixe les prix de régie. Seule la gestion le modifie.", 'Vert'],
+            ['3-FAC  Facturé en régie', 'Repris dans une facture : verrouillé.', 'Bleu'],
+        ], [4 * cm, CONTENT_W - 6.4 * cm, 2.4 * cm]),
+        bullets([
+            "Le bouton <b>coche verte</b> de la barre d'outils passe le rapport <b>en contrôle</b>. La gestion peut "
+            "revenir en arrière avec le champ Statut de l'en-tête.",
+            "Les filtres du panneau de gauche limitent la liste à un <b>mois</b> ou à un <b>statut</b>. Les flèches "
+            "de la barre d'outils passent d'un rapport à l'autre.",
+        ]),
+        Paragraph("Ce que voit l'ouvrier", H2),
+        p("Un ouvrier connecté ne voit que <b>ses</b> rapports : ceux qu'il a créés, dont il est responsable ou dans "
+          "lesquels il a des heures. Il saisit les heures de toute l'équipe, le matériel et les photos, puis transmet "
+          "le rapport au contrôle. Il ne voit jamais un tarif ni un montant."),
+        shot('30-ouvrier-rapport.png', "Le rapport vu par un ouvrier : ni colonne Base, ni Montant, ni total en francs.", max_height=7.6 * cm),
+        tip("Pour qu'un ouvrier retrouve ses rapports, reliez son compte de connexion à sa fiche de collaborateur "
+            "(chapitre 11). Il devient alors responsable par défaut des rapports qu'il crée."),
+    ]
+
+    # ------------------------------------------------------------------ 11
+    s += chapter('11. Les collaborateurs et les types de travail')
+    s += [
+        p("Menu <b>Données de base</b>, bouton <b>Collaborateurs</b>. Chaque employé y a sa fiche : numéro, nom, "
+          "tarif horaire et tarif régie. Seuls les collaborateurs <b>actifs</b> sont proposés dans les rapports.", LEAD),
+        shot('25-collaborateurs.png', 'La fiche d’un collaborateur et, à droite, les types de travail de la grille des heures.'),
+        Paragraph('Les deux tarifs', H2),
+        bullets([
+            "<b>Tarif horaire (coût)</b> : ce que l'heure coûte à l'entreprise. Il est copié dans chaque rapport au "
+            "moment de la saisie : un changement de tarif ne modifie pas les rapports passés.",
+            "<b>Position régie</b> : la fonction facturée au client, choisie parmi les éléments de coûts de la famille "
+            "Salaire, par exemple « 010.010 Chef d'équipe 98.- ». Son prix régie devient le tarif régie du collaborateur.",
+            "<b>Tarif régie propre</b> : à remplir seulement si ce collaborateur se facture à un autre prix que sa position.",
+        ]),
+        Paragraph('Le compte de connexion', H2),
+        p("Un administrateur relie la fiche au compte de l'ouvrier (chapitre 14). Un compte ne peut être relié qu'à un "
+          "seul collaborateur."),
+        Paragraph('Les types de travail', H2),
+        p("À droite de la fiche : les colonnes supplémentaires de la grille des heures. Modifiez un libellé ou une "
+          "unité en place, décochez <b>Actif</b> pour retirer une colonne, ou ajoutez-en une en bas de la liste. "
+          "Seules les unités en <b>heures</b> comptent dans les totaux, le coût et la régie ; un type déjà utilisé "
+          "dans des rapports est désactivé plutôt que supprimé."),
+    ]
+
+    # ------------------------------------------------------------------ 12
+    s += chapter('12. La régie : brut, régie, client')
+    s += [
+        p("Menu <b>Exécution</b>, bouton <b>Rapports régie</b>. La régie reprend chaque ligne des rapports journaliers "
+          "du projet courant, heures et matériel, et lui donne <b>trois prix</b>, comme le rapport régie de BauBit.", LEAD),
+        grid([
+            ['Niveau', "D'où il vient", 'À quoi il sert'],
+            ['Brut', "Le coût pour l'entreprise : tarif horaire du collaborateur, prix net de l'élément de coûts.", 'Le coût réel du chantier, la marge.'],
+            ['Régie', "Le tarif majoré : position régie du collaborateur, prix régie de l'élément de coûts, ou coût brut "
+                      "majoré de 30 % (réglable) quand l'élément n'a pas de prix régie.", 'Le prix de référence de votre tarif.'],
+            ['Client', 'Égal au prix régie, tant que vous ne le changez pas.', 'Le prix qui sera facturé.'],
+        ], [2 * cm, 9.8 * cm, CONTENT_W - 11.8 * cm]),
+        shot('26-regie.png', "Les lignes de régie du projet, rapport par rapport, avec les trois prix et leurs montants."),
+        Paragraph('Contrôler et corriger les prix', H2),
+        steps([
+            "Choisissez le <b>projet</b> dans la barre du haut. Les rapports marqués « Régie » apparaissent à gauche ; "
+            "cliquez sur l'un d'eux pour ne voir que ses lignes, ou filtrez par statut, période ou collaborateur.",
+            "Cliquez dans une cellule <b>Brut</b>, <b>Régie</b> ou <b>Client</b>, tapez le nouveau prix, puis "
+            "<b>Entrée</b> ou quittez la cellule. Les montants et les totaux se recalculent aussitôt.",
+            "Un prix client différent du prix régie s'affiche en <b>rouge</b>, pour le repérer d'un coup d'œil.",
+        ]),
+        bullets([
+            "Tant que le prix client n'a pas été fixé à part, il <b>suit</b> le prix régie que vous modifiez.",
+            "Les rapports <b>facturés</b> sont verrouillés : leurs prix ne se modifient plus.",
+            "Le titre de chaque groupe ouvre le rapport journalier correspondant.",
+            "Le bouton <b>flèches circulaires</b> de la barre d'outils réapplique les tarifs actuels à tous les rapports "
+            "non facturés du projet, après une mise à jour des listes de prix par exemple. Les prix saisis à la main "
+            "sont alors remplacés.",
+        ]),
+        Paragraph('La récapitulation', H2),
+        shot('27-regie-recap.png', 'Les totaux par famille et par rapport, avec la marge sur le prix client.', max_height=7 * cm),
+        p("L'onglet <b>Récapitulation</b> totalise les trois niveaux par famille (main-d'œuvre, matériaux, machines, "
+          "outillage, sous-traitants) et par rapport. La <b>marge</b> compare le prix client au coût brut ; elle passe "
+          "en rouge sous 30 %. La barre d'état affiche en permanence le brut, la régie, le client et les heures."),
+        note("La majoration par défaut (30 %) et la durée d'une journée (9 h) se règlent dans <b>Administration, "
+             "Configuration</b>. Un ouvrier n'accède ni à la régie ni à ces réglages."),
+    ]
+
+    # ------------------------------------------------------------------ 13
+    s += chapter('13. Le contrôle des heures')
+    s += [
+        p("Menu <b>Exécution</b>, bouton <b>Contrôle des heures</b>. Pour chaque collaborateur, un tableau mensuel "
+          "croise ses <b>chantiers</b> et les <b>jours</b> : les heures viennent des rapports journaliers, rien n'est "
+          "à ressaisir.", LEAD),
+        shot('28-controle-heures.png', "Le mois d'un collaborateur : en vert les jours contrôlés, en rouge ceux dont le rapport est encore en cours."),
+        Paragraph('Lire le tableau', H2),
+        bullets([
+            "À gauche, les collaborateurs du mois avec leurs <b>heures</b>, leurs <b>absences</b> et le nombre de "
+            "rapports <b>à valider</b>. Une ligne <b>ambre</b> signale des rapports encore en cours. Les chevrons et le "
+            "champ <b>Mois</b> changent de mois ; le filtre <b>Heures à valider</b> ne garde que les cas à traiter.",
+            "À droite, une ligne par chantier. La couleur d'une cellule est le <b>statut du rapport</b> du jour : rouge "
+            "en cours, vert en contrôle, bleu facturé. Un clic sur une cellule <b>ouvre le rapport</b>.",
+            "Les lignes du bas totalisent les heures de travail, les absences, le total du jour et le <b>total de la "
+            "semaine</b>, affiché le dimanche. Un total journalier supérieur à la journée normale est signalé en rouge.",
+        ]),
+        Paragraph('Vacances et absences', H2),
+        steps([
+            "Cliquez sur un jour de la ligne <b>Vacances / absences</b>, ou sur le <b>calendrier</b> de la barre d'outils.",
+            "Indiquez la période (<b>du … au …</b>), le <b>type</b> (vacances, maladie, accident, jour férié, école, "
+            "service militaire, autre), les heures par jour, et une remarque si besoin.",
+            "<b>Enregistrer</b>. Sur une période, seuls les jours ouvrés sont pris. Pour retirer une absence, "
+            "rouvrez le jour et cliquez sur <b>Effacer l'absence</b>.",
+        ]),
+        shot('29-absence.png', "Saisie d'une absence : un jour ou une période.", width=11 * cm),
+        Paragraph('Valider le mois', H2),
+        p("La <b>coche verte</b> de la barre d'outils passe <b>en contrôle</b> tous les rapports du mois encore en "
+          "cours où le collaborateur a des heures. Les cellules rouges deviennent vertes ; la gestion peut alors fixer "
+          "les prix de régie. Un rapport validé ne peut plus être modifié par l'ouvrier."),
+        note("Ces heures et absences alimenteront les synthèses annuelles par employé (heures par chantier et par mois, "
+             "congés, maladie) de la prochaine livraison."),
+    ]
+
+    # ------------------------------------------------------------------ 14
+    s += chapter('14. Utilisateurs et rôles')
     s += [
         p("Menu <b>Administration</b>, réservé aux administrateurs.", LEAD),
         shot('18-utilisateurs.png', 'La gestion des utilisateurs.', width=14 * cm),
@@ -572,27 +783,26 @@ def build_story():
             "<b>Nouvel utilisateur</b> : nom, email, mot de passe d'au moins 8 caractères, et rôle.",
             "<b>Modifier</b> change le nom, l'email ou le rôle. Laissez le mot de passe vide pour le conserver.",
             "<b>Supprimer</b> retire l'accès. Vous ne pouvez pas supprimer votre propre compte.",
-            "<b>Configuration</b> permet de changer le nom affiché et le logo de l'application.",
+            "<b>Configuration</b> permet de changer le nom affiché et le logo de l'application, la majoration de "
+            "régie par défaut et la durée d'une journée de travail.",
         ]),
         Paragraph("Ce que voit un ouvrier", H2),
-        p("Un ouvrier consulte les projets pour retrouver son chantier, en lecture seule. Il n'a ni recherche, ni devis, "
-          "ni adresses, ni prix."),
+        p("Un ouvrier consulte les projets pour retrouver son chantier, en lecture seule, et saisit ses rapports "
+          "journaliers (chapitre 10). Il n'a ni recherche, ni devis, ni régie, ni adresses, ni prix."),
         shot('19-ouvrier.png', "La page Projets vue par un ouvrier : pas de bouton de création, fiche verrouillée.", max_height=7.6 * cm),
         note("Chaque création, modification et suppression est enregistrée dans un journal d'activité : qui a modifié "
              "quoi, et quand. Il est particulièrement utile pour les prix."),
     ]
 
-    # ------------------------------------------------------------------ 11
-    s += chapter('11. Les modules à venir')
+    # ------------------------------------------------------------------ 15
+    s += chapter('15. Les modules à venir')
     s += [
-        p("Certaines pages et certains boutons sont déjà visibles mais pas encore actifs. Les pages <b>Rapports "
-          "journaliers</b> et <b>Contrôle des heures</b> affichent pour l'instant des données d'exemple, signalées "
-          "par une pastille orange dans la barre d'état."),
+        p("Certaines pages et certains boutons sont déjà visibles mais pas encore actifs : ils sont grisés, ou "
+          "signalent « disponible dans une phase ultérieure »."),
         grid([
             ['Module', 'Contenu prévu'],
-            ['Rapports journaliers', 'Heures, matériaux, machines et sous-traitants saisis sur les étapes du devis ; validation en cours, en contrôle, facturé.'],
-            ['Régie et contrôle des heures', 'Prix brut, majoré et client ; vue mensuelle par collaborateur.'],
-            ['Factures, PDF, statistiques', 'Acomptes, factures, facture finale, impression PDF ; suivi de facturation et synthèses par employé.'],
+            ['Factures et statistiques', "Acomptes, factures, facture finale depuis les rapports validés (le statut « Facturé en régie » "
+                                         "sera alors posé automatiquement), impression PDF ; suivi de facturation et synthèses par employé."],
             ['Reprise des données BauBit', 'Vos projets, clients, catalogue et prix existants.'],
             ['Saisie mobile', 'Rapport journalier saisi sur le chantier, depuis un téléphone ou une tablette.'],
             ['Temps au bureau et stocks', 'Compteur de temps et gestion des stocks de produits.'],
@@ -600,8 +810,8 @@ def build_story():
         p("Ce mode d'emploi sera complété à chaque livraison."),
     ]
 
-    # ------------------------------------------------------------------ 12
-    s += chapter('12. Aide-mémoire')
+    # ------------------------------------------------------------------ 16
+    s += chapter('16. Aide-mémoire')
     s += [
         Paragraph('Raccourcis clavier', H2),
         grid([
@@ -609,6 +819,8 @@ def build_story():
             ['Ctrl + K', 'Place le curseur dans la recherche instantanée.'],
             ['Ctrl + S', 'Enregistre immédiatement la fiche en cours.'],
             ['Entrée (dans un devis)', "Insère l'article choisi, puis passe de la quantité au prix, puis au champ d'ajout."],
+            ['Entrée (grille des heures)', 'Enregistre la cellule et descend à la ligne suivante ; les flèches déplacent le curseur.'],
+            ['Entrée (régie)', 'Enregistre le prix modifié ; Échap annule la saisie.'],
             ['Flèches haut et bas', "Parcourent les résultats d'une recherche."],
             ['Échap', 'Referme la liste de résultats.'],
             ['Tab', 'Passe au champ suivant.'],
@@ -622,6 +834,10 @@ def build_story():
             ["Le numéro de projet proposé ne convient pas.", 'Modifiez-le à la main. Deux projets ne peuvent pas porter le même numéro.'],
             ["L'écran affiche « Cette page a rencontré une erreur ».", 'Cliquez sur Réessayer ou changez de page. Si cela se répète, notez ce que vous faisiez et contactez le support.'],
             ['Un article manque dans le devis.', "Créez-le à la volée depuis le champ d'ajout, puis complétez-le dans le catalogue."],
+            ['La grille des heures est vide, sans colonnes.', "Le rapport n'est rattaché à aucun devis avec des étapes : créez le devis, ou choisissez-le dans le champ Devis de l'en-tête."],
+            ['Un ouvrier ne voit pas ses rapports.', 'Reliez son compte de connexion à sa fiche de collaborateur (page Collaborateurs, administrateur).'],
+            ['Le prix régie d’une ligne est vide.', "Le collaborateur n'a pas de position régie, ou l'élément de coûts n'a ni prix régie ni coût brut. Complétez la fiche, puis réappliquez les tarifs."],
+            ['Je ne peux plus modifier un prix de régie.', 'Le rapport est facturé. Repassez-le « en contrôle » depuis son en-tête si la facture n’est pas encore partie.'],
         ], [6 * cm, CONTENT_W - 6 * cm]),
         Paragraph('Support', H2),
         p("Pour toute question ou anomalie, contactez votre interlocuteur Step One. Précisez la page concernée, "

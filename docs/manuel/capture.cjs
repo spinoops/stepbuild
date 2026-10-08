@@ -3,8 +3,9 @@ const puppeteer = require('puppeteer-core')
 const path = require('path')
 const fs = require('fs')
 
-const FRONT = 'http://localhost:5174'
-const API = 'http://localhost:8001/api'
+// Ports du dev.bat par défaut ; surchargeables : FRONT_URL=http://localhost:5177 API_URL=http://localhost:8007 node capture.cjs
+const FRONT = process.env.FRONT_URL || 'http://localhost:5174'
+const API = (process.env.API_URL || 'http://localhost:8001') + '/api'
 const OUT = path.join(__dirname, 'shots')
 fs.mkdirSync(OUT, { recursive: true })
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -26,6 +27,8 @@ async function token(email) {
     args: ['--lang=fr-CH', '--hide-scrollbars'],
   })
   const page = await browser.newPage()
+  // Les confirmations (« Remplacer les lignes actuelles… ») bloqueraient le navigateur sans interface.
+  page.on('dialog', (dialog) => void dialog.accept())
   const shot = async (name, clip) => {
     await page.screenshot({ path: path.join(OUT, `${name}.png`), ...(clip ? { clip } : {}) })
     console.log('ok', name)
@@ -45,6 +48,20 @@ async function token(email) {
   const loginAs = async (email) => {
     const value = await token(email)
     await page.evaluate((t) => localStorage.setItem('baseapp_token', t), value)
+  }
+  // Projet courant de la barre de contexte (perdu à chaque rechargement de page : à refaire après chaque go()).
+  const selectProject = async (number) => {
+    await page.evaluate((n) => {
+      const select = [...document.querySelectorAll('header select, select')].find((s) => [...s.options].some((o) => o.text.startsWith(n)))
+      const value = [...select.options].find((o) => o.text.startsWith(n)).value
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, value)
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    }, number)
+    await wait(1800)
+  }
+  const clickTitle = async (prefix, index = 0) => {
+    await page.evaluate((t, i) => [...document.querySelectorAll(`button[title^="${t}"]`)][i]?.click(), prefix, index)
+    await wait(900)
   }
 
   // 01 — connexion
@@ -175,6 +192,80 @@ async function token(email) {
   await loginAs('ouvrier@chantier.test')
   await go('/projets?id=1')
   await shot('19-ouvrier')
+  await loginAs('admin@chantier.test')
+
+  // 20 — devis : aperçu avant impression (PDF)
+  await go('/documents?id=1', 2500)
+  await clickText('Aperçu', 'main button')
+  await wait(4000)
+  await shot('20-devis-apercu')
+
+  // 21 — devis : sous-détail de prix d'une position (fenêtre), avec un sous-détail type chargé
+  await go('/documents?id=1', 2500)
+  await page.evaluate(() => {
+    const row = [...document.querySelectorAll('main tr')].find((tr) => tr.innerText.includes('Carrelage') || tr.innerText.includes('carrelage'))
+    row?.scrollIntoView({ block: 'center' })
+    const button = row?.querySelector('button[title*="sous-détail"]') || document.querySelector('button[title*="sous-détail"]')
+    button?.click()
+  })
+  await wait(1200)
+  const picker = await page.$('input[placeholder^="Charger un sous-détail type"]')
+  if (picker) {
+    try {
+      await picker.click()
+      await page.keyboard.type('carrelage', { delay: 40 })
+      await wait(800)
+      await page.keyboard.press('Enter')
+      await wait(2000)
+    } catch (error) {
+      console.warn('sous-détail type non chargé :', error.message)
+    }
+  }
+  await shot('21-devis-sous-detail')
+  await page.keyboard.press('Escape')
+  await wait(500)
+
+  // 22 / 23 — rapports journaliers : liste du projet, en-tête et grille des heures
+  await go('/rapports?id=10', 2200)
+  await selectProject('2822-001')
+  await shot('22-rapports')
+  await shot('23-rapport-heures', { x: 430, y: 400, width: 1010, height: 400 })
+
+  // 24 — rapport : ressources (matériaux) rattachées aux étapes
+  await go('/rapports?id=7', 2200)
+  await selectProject('2822-001')
+  await clickText('Matériaux', 'main button')
+  await shot('24-rapport-materiaux', { x: 430, y: 150, width: 1010, height: 480 })
+
+  // 25 — collaborateurs : fiche avec position régie, types de travail
+  await go('/collaborateurs?id=1', 2200)
+  await shot('25-collaborateurs')
+
+  // 26 / 27 — régie : lignes du projet aux trois niveaux de prix, récapitulation
+  await go('/regie', 1500)
+  await selectProject('2822-001')
+  await wait(1500)
+  await shot('26-regie')
+  await clickText('Récapitulation', 'main button')
+  await shot('27-regie-recap', { x: 400, y: 150, width: 1040, height: 420 })
+
+  // 28 / 29 — contrôle des heures : matrice d'un collaborateur, saisie d'une absence
+  await go('/controle-heures?mois=2026-08&collaborateur=1', 2500)
+  // Défilement vers la fin du mois : vacances et totaux de semaine visibles.
+  await page.evaluate(() => {
+    const box = [...document.querySelectorAll('div.overflow-auto')].find((d) => d.innerText.includes('Projet / Désignation'))
+    if (box) box.scrollLeft = box.scrollWidth
+  })
+  await wait(400)
+  await shot('28-controle-heures')
+  await clickTitle('Saisir une absence', 5)
+  await shot('29-absence', { x: 380, y: 150, width: 680, height: 420 })
+  await page.keyboard.press('Escape')
+
+  // 30 — vue ouvrier d'un rapport journalier : ses heures, aucun montant
+  await loginAs('ouvrier@chantier.test')
+  await go('/rapports?id=3', 2200)
+  await shot('30-ouvrier-rapport')
 
   await browser.close()
 })().catch((error) => {
