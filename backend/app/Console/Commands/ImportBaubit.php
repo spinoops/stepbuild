@@ -20,14 +20,15 @@ class ImportBaubit extends Command
                             {dir : Dossier des fichiers JSON exportés (elements, regie_positions, catalog_chapters, catalog_positions)}
                             {--catalog : Seulement le catalogue d\'articles}
                             {--elements : Seulement les éléments de coûts}
+                            {--collaborators : Seulement les employés (collaborateurs)}
                             {--root-catalog=1 : Code du catalogue BauBit dont les groupes deviennent des chapitres racine (modèles d\'étapes)}
                             {--dry-run : Simuler : tout est annulé à la fin, seuls les comptages s\'affichent}';
 
-    protected $description = 'Reprend le catalogue d\'articles et les éléments de coûts d\'une sauvegarde BauBit (fichiers JSON exportés).';
+    protected $description = 'Reprend le catalogue d\'articles, les éléments de coûts et les employés d\'une sauvegarde BauBit (fichiers JSON exportés).';
 
     public function handle(): int
     {
-        $both = ! $this->option('catalog') && ! $this->option('elements');
+        $all = ! $this->option('catalog') && ! $this->option('elements') && ! $this->option('collaborators');
 
         try {
             $import = new BaubitImport((string) $this->argument('dir'));
@@ -51,11 +52,15 @@ class ImportBaubit extends Command
         activity()->disableLogging();
         DB::beginTransaction();
         try {
-            if ($both || $this->option('elements')) {
+            if ($all || $this->option('elements')) {
                 $this->line('Éléments de coûts…');
                 $import->importElements();
             }
-            if ($both || $this->option('catalog')) {
+            if ($all || $this->option('collaborators')) {
+                $this->line('Employés…');
+                $import->importCollaborators();
+            }
+            if ($all || $this->option('catalog')) {
                 $this->line('Catalogue d\'articles…');
                 $import->importCatalog((string) $this->option('root-catalog'));
             }
@@ -76,7 +81,7 @@ class ImportBaubit extends Command
         activity()->enableLogging();
 
         $rows = [];
-        foreach (['elements' => 'Éléments de coûts', 'regie_positions' => 'Tarifs régie sans élément (salaires…)', 'chapters' => 'Chapitres', 'articles' => 'Articles'] as $key => $label) {
+        foreach (['elements' => 'Éléments de coûts', 'regie_positions' => 'Tarifs régie sans élément (salaires…)', 'collaborators' => 'Collaborateurs', 'chapters' => 'Chapitres', 'articles' => 'Articles'] as $key => $label) {
             $created = $import->stats[$key.'_created'] ?? 0;
             $updated = $import->stats[$key.'_updated'] ?? 0;
             if ($created + $updated > 0) {

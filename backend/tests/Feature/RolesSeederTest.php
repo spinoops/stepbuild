@@ -29,6 +29,16 @@ it('est idempotent : relancer le seeder ne duplique rien', function () {
     ])->count())->toBe(3);
 });
 
+it('réactive un compte de démo mis à la corbeille au lieu de le dupliquer', function () {
+    $this->seed(DatabaseSeeder::class);
+    User::where('email', 'admin@chantier.test')->first()->delete();
+
+    $this->seed(DatabaseSeeder::class);
+
+    expect(User::withTrashed()->where('email', 'admin@chantier.test')->count())->toBe(1)
+        ->and(User::where('email', 'admin@chantier.test')->first()?->hasRole('admin'))->toBeTrue();
+});
+
 it('le seeder des rôles seul ne crée aucun compte', function () {
     $this->seed(RolesSeeder::class);
     $this->seed(RolesSeeder::class);

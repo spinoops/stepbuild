@@ -47,7 +47,8 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($accounts as $role => $account) {
-            $user = User::updateOrCreate(
+            // withTrashed : un compte de démo mis à la corbeille (stepbuild:import-data) est réactivé, pas dupliqué.
+            $user = User::withTrashed()->updateOrCreate(
                 ['email' => $account['email']],
                 [
                     'name' => $account['name'],
@@ -55,6 +56,9 @@ class DatabaseSeeder extends Seeder
                     'email_verified_at' => now(),
                 ]
             );
+            if ($user->trashed()) {
+                $user->restore();
+            }
             $user->syncRoles([Role::findByName($role, 'web')]);
         }
     }

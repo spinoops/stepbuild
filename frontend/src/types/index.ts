@@ -107,6 +107,8 @@ export interface PriceElement {
   unit_factor: number
   discount_amount: number | null
   discount_percent: number | null
+  /** Date du dernier changement de prix (AAAA-MM-JJ). */
+  price_updated_at: string | null
   usage_count: number
   updated_at: string
 }

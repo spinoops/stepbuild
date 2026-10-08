@@ -26,7 +26,7 @@ import {
   useSaveResource,
 } from '@/lib/crud'
 import type { GridQuery } from '@/lib/crud'
-import { fmtAmount } from '@/lib/format'
+import { fmtAmount, fmtDate } from '@/lib/format'
 import { PRICE_FAMILIES } from '@/lib/prices'
 import { toast } from '@/lib/toast'
 import type { PriceElement } from '@/types'
@@ -45,6 +45,14 @@ const COLUMNS: GridColumn<PriceElement>[] = [
   { key: 'net_price', header: 'Net', value: (e) => e.net_price, type: 'number', width: 100 },
   { key: 'regie_price', header: 'Prix régie', value: (e) => e.regie_price, type: 'number', width: 100 },
   { key: 'regie_code', header: 'Tarif régie', value: (e) => e.regie_code, width: 110 },
+  {
+    key: 'price_updated_at',
+    header: 'Prix du',
+    value: (e) => e.price_updated_at,
+    width: 90,
+    noFilter: true,
+    render: (e) => (e.price_updated_at ? <span className="text-gray-500">{fmtDate(e.price_updated_at)}</span> : ''),
+  },
   {
     key: 'margin',
     header: 'Majoration',
@@ -323,6 +331,7 @@ function ElementForm({ element, isNew, defaultFamily, defaultGroup, disabled, on
         </Field>
         <Field label="Prix régie (majoré)" labelWidth={110}>
           <BbInput className="w-28 text-right" invalid={Boolean(errors.regie_price)} {...register('regie_price')} />
+          {element?.price_updated_at && <span className="ml-3 text-[12px] text-gray-500">Prix du {fmtDate(element.price_updated_at)}</span>}
         </Field>
       </fieldset>
       {firstError && <p className="mt-2 text-[12px] text-red-600">{firstError}</p>}

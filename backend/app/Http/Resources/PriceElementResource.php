@@ -27,6 +27,7 @@ class PriceElementResource extends JsonResource
             'unit_factor' => $this->unit_factor,
             'discount_amount' => $this->discount_amount,
             'discount_percent' => $this->discount_percent,
+            'price_updated_at' => $this->price_updated_at?->toDateString(),
             'usage_count' => $this->usage_count,
             'updated_at' => $this->updated_at,
         ];

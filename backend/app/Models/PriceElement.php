@@ -28,8 +28,18 @@ class PriceElement extends Model
     protected $fillable = [
         'family', 'group_code', 'number', 'description', 'unit', 'unit_regie',
         'supplier_price', 'net_price', 'regie_price', 'regie_code', 'unit_factor',
-        'discount_amount', 'discount_percent',
+        'discount_amount', 'discount_percent', 'price_updated_at',
     ];
+
+    /** Un prix qui change date l'élément (« Mutation de » dans BauBit), sauf date fournie explicitement. */
+    protected static function booted(): void
+    {
+        static::saving(function (self $element) {
+            if ($element->isDirty(['supplier_price', 'net_price', 'regie_price']) && ! $element->isDirty('price_updated_at')) {
+                $element->price_updated_at = now();
+            }
+        });
+    }
 
     protected function casts(): array
     {
@@ -41,6 +51,7 @@ class PriceElement extends Model
             'unit_factor' => 'float',
             'discount_amount' => 'float',
             'discount_percent' => 'float',
+            'price_updated_at' => 'datetime',
             'usage_count' => 'integer',
         ];
     }

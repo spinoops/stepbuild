@@ -260,8 +260,13 @@ page Configuration.
   `catalog_chapters`, `catalog_positions`, `units`), puis **`php artisan stepbuild:import-baubit <dossier> [--dry-run]
   [--catalog|--elements] [--root-catalog=1]`** (`App\Support\BaubitImport`) : chapitres, articles et éléments reçoivent
   leur clé d'origine dans `baubit_id` (migration du 08.10.2026), l'import est relançable (chapitres retrouvés par code,
-  articles par chapitre + code + sous-code). Validé sur la base de test : 12 519 éléments + 21 tarifs régie,
-  1 221 positions → chapitres et articles.
+  articles par chapitre + code + sous-code). **Employés** (`users.json`, `--collaborators`) → collaborateurs : nom,
+  prénom, coût horaire `USE_SalaryPerHour`, actif, position régie = fonction la plus utilisée dans ses rapports
+  (`UserFunction.UFU_PositionNumber` → élément famille 1 de même code régie) ; comptes techniques ignorés, partis repris
+  inactifs. Validé sur la base de test : 12 519 éléments + 21 tarifs régie, 64 collaborateurs, 1 221 positions.
+- Adaptations faites pour ces données : unités BauBit ajoutées à `Unit::DEFAULTS` (Litre, Pqt, Bidon, Bte, Fr., Mois,
+  Km, Up, Approx…) ; `price_elements.price_updated_at` = date du dernier changement de prix (« Mutation de » BauBit,
+  mise à jour automatiquement dans `PriceElement::booted()` quand un prix change, colonne « Prix du » de la liste).
 
 ## Modules et routes front
 Navigation dans `frontend/src/lib/navigation.ts` (groupes calqués sur les rubans BauBit),

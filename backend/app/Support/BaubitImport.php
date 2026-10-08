@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\CatalogArticle;
 use App\Models\CatalogChapter;
+use App\Models\Collaborator;
 use App\Models\PriceElement;
 use App\Models\Unit;
 use RuntimeException;
@@ -13,8 +14,8 @@ use RuntimeException;
  *
  * Source : fichiers JSON exportés de la base SQL Server restaurée (voir CLAUDE.md, « Reprise
  * BauBit ») : elements.json (CostElement + CostElementPrices + tarif régie), regie_positions.json
- * (RegiePosition, dont les salaires 1.010.xxx absents des éléments), catalog_chapters.json
- * (FreeChapter) et catalog_positions.json (FreePosition + prix vente/achat).
+ * (RegiePosition, dont les salaires 1.010.xxx absents des éléments), users.json (Users + fonction
+ * dominante), catalog_chapters.json (FreeChapter) et catalog_positions.json (FreePosition + prix).
  *
  * Correspondances :
  *  - élément de coût → price_elements : famille = CEL_SubTypeCode (1 salaire … 6 tiers), groupe =
@@ -38,7 +39,7 @@ class BaubitImport
     private const FAMILY_GROUP = [1 => '10', 2 => '92', 3 => '93', 4 => '94', 5 => '95', 6 => '96'];
 
     /** @var array<string, string> Unités du catalogue libre écrites autrement que dans la table des unités. */
-    private const UNIT_ALIASES = ['h' => 'H.', 'ml' => 'M1', 'm' => 'M1', 't' => 'To', 'j' => 'Jour', 'forf.' => 'Forfait', 'gl' => 'Gl', 'l' => 'L'];
+    private const UNIT_ALIASES = ['h' => 'H.', 'ml' => 'M1', 'm' => 'M1', 't' => 'To', 'j' => 'Jour', 'forf.' => 'Forfait', 'gl' => 'Gl', 'l' => 'L', 'bid.' => 'Bidon', 'fr' => 'Fr.', 'boîte' => 'Bte', 'boite' => 'Bte', 'pal' => 'Pal.', 'forf' => 'Forfait'];
 
     /** @var array<string, int> */
     public array $stats = [];
@@ -111,8 +112,8 @@ class BaubitImport
                 'group_code' => (self::FAMILY_LETTER[$family] ?? '').trim((string) ($row['group'] ?? self::FAMILY_GROUP[$family])),
                 'number' => $this->number($row['number'] ?? null, $row['regie_code'] ?? null),
                 'description' => mb_substr(trim((string) ($row['name'] ?: ($row['name_d'] ?? ''))), 0, 500),
-                'unit' => $this->unit($row['unit'] ?? null, false),
-                'unit_regie' => $this->unit($row['unit_regie'] ?? ($row['unit'] ?? null), false),
+                'unit' => $this->unit($row['unit'] ?? null, true),
+                'unit_regie' => $this->unit($row['unit_regie'] ?? ($row['unit'] ?? null), true),
                 'supplier_price' => $this->price($row['supplier_price'] ?? null),
                 'net_price' => $this->price($row['net_price'] ?? null) ?? $this->price($row['supplier_price'] ?? null),
                 'regie_price' => $this->price($row['regie_price'] ?? null),
@@ -120,6 +121,7 @@ class BaubitImport
                 'unit_factor' => $this->price($row['unit_factor'] ?? null) ?: 1,
                 'discount_amount' => $this->price($row['discount_amount'] ?? null),
                 'discount_percent' => $this->price($row['discount_percent'] ?? null),
+                'price_updated_at' => ! empty($row['price_date']) ? $row['price_date'] : null,
             ]);
             $created = ! $element->exists;
             $element->deleted_at = null;
@@ -146,8 +148,8 @@ class BaubitImport
                 'group_code' => self::FAMILY_LETTER[$family].self::FAMILY_GROUP[$family],
                 'number' => substr($code, strpos($code, '.') + 1),
                 'description' => mb_substr(trim((string) $row['name']), 0, 500),
-                'unit' => $this->unit($row['unit'] ?? null, false),
-                'unit_regie' => $this->unit($row['unit'] ?? null, false),
+                'unit' => $this->unit($row['unit'] ?? null, true),
+                'unit_regie' => $this->unit($row['unit'] ?? null, true),
                 'supplier_price' => $this->price($row['price_purchase'] ?? null),
                 'net_price' => $this->price($row['price_purchase'] ?? null),
                 'regie_price' => $this->price($row['price'] ?? null),
@@ -168,6 +170,45 @@ class BaubitImport
         $element->baubit_id = $baubitId;
 
         return $element;
+    }
+
+    // ------------------------------------------------------------------ employés
+
+    /**
+     * Comptes BauBit (table Users) → collaborateurs : nom, prénom, coût horaire (USE_SalaryPerHour),
+     * actif, et position régie déduite de la fonction la plus utilisée dans ses rapports
+     * (UserFunction → RegiePosition « 1.010.010 »). Les comptes techniques et invisibles sont ignorés ;
+     * les employés partis sont repris inactifs (l'historique des rapports en aura besoin).
+     */
+    public function importCollaborators(): void
+    {
+        $rows = $this->read('users');
+        $total = count($rows);
+        foreach ($rows as $i => $row) {
+            $this->progress('users', $i + 1, $total);
+            $last = trim((string) ($row['last_name'] ?? ''));
+            if ($last === '' || empty($row['visible']) || in_array(mb_strtolower($last), ['admin', 'bbxsuperadmin'], true)) {
+                continue;
+            }
+            $regieCode = trim((string) ($row['regie_code'] ?? ''));
+            // L'élément repris de BauBit d'abord (baubit_id), avant un éventuel élément de même code saisi à la main.
+            $regieElement = $regieCode === '' ? null : PriceElement::where('family', 1)->where('regie_code', $regieCode)
+                ->orderByRaw('baubit_id is null')->orderBy('id')->first();
+
+            $collaborator = Collaborator::withTrashed()->where('baubit_id', 'USE-'.$row['id'])->first() ?? new Collaborator;
+            $created = ! $collaborator->exists;
+            $collaborator->fill([
+                'last_name' => mb_substr($last, 0, 255),
+                'first_name' => mb_substr(trim((string) ($row['first_name'] ?? '')), 0, 255) ?: null,
+                'hourly_cost' => $this->price($row['hourly_cost'] ?? null),
+                'regie_element_id' => $regieElement?->id ?? ($created ? null : $collaborator->regie_element_id),
+                'is_active' => ! empty($row['active']),
+            ]);
+            $collaborator->baubit_id = 'USE-'.$row['id'];
+            $collaborator->deleted_at = null;
+            $collaborator->save();
+            $this->count('collaborators', $created);
+        }
     }
 
     // ------------------------------------------------------------------ catalogue

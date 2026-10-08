@@ -28,6 +28,25 @@ class Unit extends Model
         ['Rlx', 'Rouleau'],
         ['Forfait', 'Forfait'],
         ['Gl', 'Global'],
+        // Unités rencontrées dans les listes de prix et le catalogue BauBit de Lachat (reprise des données).
+        ['Litre', 'Litre'],
+        ['Pqt', 'Paquet (abrégé)'],
+        ['Bidon', 'Bidon'],
+        ['Bte', 'Boîte'],
+        ['Carton', 'Carton'],
+        ['Pal.', 'Palette'],
+        ['Fût', 'Fût'],
+        ['Sachet', 'Sachet'],
+        ['Paire', 'Paire'],
+        ['Set', 'Set'],
+        ['Kit', 'Kit'],
+        ['Fr.', 'Franc'],
+        ['Mois', 'Mois'],
+        ['Km', 'Kilomètre'],
+        ['CM', 'Centimètre'],
+        ['%', 'Pour-cent'],
+        ['Up', 'Unité de prestation'],
+        ['Approx', 'Approximatif'],
     ];
 
     protected $fillable = ['code', 'label', 'position', 'is_active'];

@@ -80,3 +80,19 @@ it('journalise un changement de prix', function () {
         'subject_type' => PriceElement::class, 'subject_id' => $element->id, 'event' => 'updated',
     ]);
 });
+
+it('date l\'élément à chaque changement de prix (« Prix du »)', function () {
+    $this->travelTo('2026-10-08 10:00:00');
+    $element = makeElement();
+    expect($element->price_updated_at?->toDateString())->toBe('2026-10-08');
+
+    $this->travelTo('2026-11-02 10:00:00');
+    $element->update(['description' => 'Autre libellé']);
+    expect($element->fresh()->price_updated_at->toDateString())->toBe('2026-10-08');
+
+    $element->update(['regie_price' => 12.9]);
+    expect($element->fresh()->price_updated_at->toDateString())->toBe('2026-11-02');
+
+    actingAsRole('responsable');
+    $this->getJson('/api/price-elements?family=2')->assertOk()->assertJsonPath('data.0.price_updated_at', '2026-11-02');
+});

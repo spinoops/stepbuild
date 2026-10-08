@@ -2,6 +2,7 @@
 
 use App\Models\CatalogArticle;
 use App\Models\CatalogChapter;
+use App\Models\Collaborator;
 use App\Models\PriceElement;
 use App\Models\Unit;
 use Illuminate\Support\Facades\File;
@@ -20,6 +21,12 @@ beforeEach(function () {
     $write('regie_positions', [
         ['id' => 501, 'code' => '1.010.010', 'name' => "Chef d'équipe", 'unit' => 'H.', 'price' => 95.00, 'price_purchase' => null, 'has_element' => 0],
         ['id' => 502, 'code' => '2.020.000', 'name' => '3M 2012 chiffon', 'unit' => 'Paquet', 'price' => 24.44, 'price_purchase' => null, 'has_element' => 1],
+    ]);
+    $write('users', [
+        ['id' => 3, 'first_name' => 'David', 'last_name' => 'Lachat', 'initials' => 'DL', 'department' => 'Directeur', 'profession' => null, 'hourly_cost' => 52.78, 'active' => true, 'visible' => true, 'has_login' => true, 'external' => false, 'subcontractor' => false, 'email' => 'dl@lachat-bat.ch', 'function_code' => 'CE', 'function_label' => "Chef d'équipe", 'regie_code' => '1.010.010', 'function_lines' => 99, 'hours_lines' => 99, 'last_hours' => '2026-07-15'],
+        ['id' => 21, 'first_name' => 'Léo', 'last_name' => 'Bätscher', 'initials' => null, 'department' => 'Gros-oeuvre', 'profession' => null, 'hourly_cost' => 50, 'active' => false, 'visible' => true, 'has_login' => false, 'external' => false, 'subcontractor' => false, 'email' => null, 'function_code' => 'MAC', 'function_label' => 'Maçon', 'regie_code' => '1.010.020', 'function_lines' => 93, 'hours_lines' => 93, 'last_hours' => '2023-08-18'],
+        ['id' => 1, 'first_name' => null, 'last_name' => 'Admin', 'initials' => null, 'department' => null, 'profession' => null, 'hourly_cost' => null, 'active' => true, 'visible' => true, 'has_login' => true, 'external' => false, 'subcontractor' => false, 'email' => null, 'function_code' => null, 'function_label' => null, 'regie_code' => null, 'function_lines' => null, 'hours_lines' => 0, 'last_hours' => null],
+        ['id' => 2, 'first_name' => null, 'last_name' => 'BBXSuperAdmin', 'initials' => null, 'department' => null, 'profession' => null, 'hourly_cost' => null, 'active' => true, 'visible' => false, 'has_login' => true, 'external' => false, 'subcontractor' => false, 'email' => null, 'function_code' => null, 'function_label' => null, 'regie_code' => null, 'function_lines' => null, 'hours_lines' => 0, 'last_hours' => null],
     ]);
     $write('catalog_chapters', [
         ['id' => 14, 'code' => '1', 'name' => 'Devis - prix H., M1, M2, M3'],
@@ -53,7 +60,8 @@ it('reprend les éléments de coûts avec prix fournisseur, net et régie, et le
         ->and($chiffon->supplier_price)->toBe(18.8)
         ->and($chiffon->net_price)->toBe(18.8)
         ->and($chiffon->regie_price)->toBe(24.44)
-        ->and($chiffon->regie_code)->toBe('2.020.000');
+        ->and($chiffon->regie_code)->toBe('2.020.000')
+        ->and($chiffon->price_updated_at?->toDateString())->toBe('2024-10-07');
 
     $accu = PriceElement::where('baubit_id', 'CEL-20001')->firstOrFail();
     expect($accu->description)->toBe('Accu 36 volts Bosch')
@@ -70,6 +78,19 @@ it('reprend les éléments de coûts avec prix fournisseur, net et régie, et le
 
     expect(PriceElement::count())->toBe(3) // l'élément inactif et la position régie déjà couverte sont ignorés
         ->and(CatalogArticle::count())->toBe(0);
+});
+
+it('reprend les employés avec leur coût horaire et leur position régie, sans les comptes techniques', function () {
+    $this->artisan('stepbuild:import-baubit', ['dir' => $this->dir, '--elements' => true, '--collaborators' => true])->assertSuccessful();
+
+    expect(Collaborator::count())->toBe(2);
+    $david = Collaborator::where('baubit_id', 'USE-3')->firstOrFail();
+    expect($david->last_name)->toBe('Lachat')->and($david->first_name)->toBe('David')
+        ->and($david->hourly_cost)->toBe(52.78)->and($david->is_active)->toBeTrue()
+        ->and($david->regieElement?->regie_code)->toBe('1.010.010')
+        ->and($david->regiePrice())->toBe(95.0);
+    $leo = Collaborator::where('baubit_id', 'USE-21')->firstOrFail();
+    expect($leo->is_active)->toBeFalse()->and($leo->regie_element_id)->toBeNull(); // 1.010.020 absent du jeu de test
 });
 
 it('reprend le catalogue : groupes du catalogue racine en chapitres racine, autres catalogues en arbre', function () {
@@ -112,7 +133,8 @@ it('est idempotent et retrouve les chapitres de démo par leur code', function (
         ->and($demo->fresh()->description)->toBe('Fourniture et pose carrelage sol')
         ->and(CatalogChapter::count())->toBe(6)
         ->and(CatalogArticle::count())->toBe(6)
-        ->and(PriceElement::count())->toBe(3);
+        ->and(PriceElement::count())->toBe(3)
+        ->and(Collaborator::count())->toBe(2);
 });
 
 it('ne modifie rien en simulation (--dry-run)', function () {
@@ -120,7 +142,7 @@ it('ne modifie rien en simulation (--dry-run)', function () {
         ->expectsOutputToContain('Simulation')
         ->assertSuccessful();
 
-    expect(CatalogChapter::count())->toBe(0)->and(CatalogArticle::count())->toBe(0)->and(PriceElement::count())->toBe(0);
+    expect(CatalogChapter::count())->toBe(0)->and(CatalogArticle::count())->toBe(0)->and(PriceElement::count())->toBe(0)->and(Collaborator::count())->toBe(0);
 });
 
 it('signale un dossier ou un fichier manquant', function () {
