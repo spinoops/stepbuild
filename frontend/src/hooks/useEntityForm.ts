@@ -49,15 +49,15 @@ export function useEntityForm<V extends FieldValues>(form: UseFormReturn<V>, opt
       options.onStateChange?.('saving')
       const active = document.activeElement
       const focused = options.isNew && active instanceof HTMLElement && active.getAttribute('name') ? active.getAttribute('name') : null
+      // Posé avant l'appel : la page remonte le formulaire pendant save() (onCreated → sélection de l'id).
+      pendingFocus = focused ? { name: focused, at: Date.now() } : null
       try {
         await options.save(values)
         dirtyRef.current = false
         form.reset(values)
         options.onStateChange?.('saved')
-        if (focused) {
-          pendingFocus = { name: focused, at: Date.now() }
-        }
       } catch (error) {
+        pendingFocus = null
         options.onStateChange?.('error')
         if (isAxiosError(error) && error.response?.status === 422) {
           const errors = (error.response.data?.errors ?? {}) as Record<string, string[]>
