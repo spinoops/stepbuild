@@ -329,6 +329,10 @@ secrets GitHub, le `.env` et le DNS changent).
 - **Sauvegardes** : `App\Services\BackupService` (`backup:run`, mysqldump sinon dump PDO, rotation
   `BACKUP_KEEP`) dans `storage/app/private/backups`. Tâche planifiée Infomaniak par URL
   `GET /api/cron/run/{CRON_TOKEN}` → `stepbuild:cron` (sauvegarde si la dernière a plus de 20 h).
+- **Reprise local → prod** : `stepbuild:export-data` (fichier SQL `storage/app/transfer/donnees-<date>.sql`, tables
+  listées dans `App\Support\DataTransfer`, en-tête avec les migrations appliquées) puis, sur le serveur,
+  `stepbuild:import-data <fichier>` (sauvegarde, refus si les migrations diffèrent, tables vidées puis remplies,
+  connexions effacées, comptes `@chantier.test` mis à la corbeille). Les fichiers de `storage/app/private` se copient à part.
 - `backend/.env.production.example` = modèle du `.env` de prod ; `backend/public/.user.ini` = limites
   d'envoi (photos) et mémoire (PDF). `release.ps1` = archive de secours sans GitHub.
 Signature des documents client : « Stéphane Offreda — Step One ».

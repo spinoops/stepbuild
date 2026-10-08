@@ -298,6 +298,38 @@ php backend/artisan stepbuild:admin login@step-one.ch --name="Step One"
 5. Tâche planifiée (§4), puis vérifier qu'une sauvegarde apparaît dans
    `backend/storage/app/private/backups/`.
 
+### F bis. Reprendre les données du PC (une fois, au démarrage)
+
+Comptes (avec leurs mots de passe chiffrés), réglages, unités, types de travail, adresses, catalogue,
+éléments de coûts, sous-détails types, modèles de devis, projets, collaborateurs, absences, devis et
+rapports de la base locale peuvent être repris en production. Ne sont jamais repris : connexions,
+liens de mot de passe, caches, Telescope, migrations ; le journal d'activité seulement avec
+`--with-journal`. **Les comptes de démonstration `@chantier.test` sont mis à la corbeille** à
+l'import (`--keep-demo-accounts` pour les garder).
+
+1. **En local**, sur la **même version** du code que la production (l'import refuse un fichier
+   exporté avec d'autres migrations) :
+
+```powershell
+backendrtisan.bat stepbuild:export-data
+```
+
+   → `backend\storagepp	ransfer\donnees-<date>.sql`.
+2. **FTP / SFTP** : déposer ce fichier dans `apps/planning-chantier-lachat/backend/storage/app/transfer/`
+   (créer le dossier `transfer` s'il n'existe pas). S'il y a des photos de projets ou des fichiers
+   de rapports, copier aussi `backend/storage/app/private/projects/` et
+   `backend/storage/app/private/daily-reports/` au même endroit sur le serveur.
+3. **SSH** : sauvegarde automatique, puis **remplacement** des données de la production :
+
+```bash
+cd ~/apps/planning-chantier-lachat
+php backend/artisan stepbuild:import-data donnees-<date>.sql
+rm backend/storage/app/transfer/donnees-*.sql     # il contient les comptes
+```
+
+4. Chacun se reconnecte (les anciennes connexions sont effacées). Si aucun compte réel n'existait
+   encore dans la base locale, créer l'admin avec `stepbuild:admin` (§ F).
+
 ### G. Ensuite
 
 Le §1 à chaque mise à jour (`git push`). Le PC reste l'environnement de développement :
