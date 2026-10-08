@@ -20,6 +20,8 @@ class UpdateSettingsRequest extends FormRequest
             'app_name' => ['required', 'string', 'max:255'],
             'app_logo_url' => ['nullable', 'string', 'max:2048'],
             'app_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'regie_markup_percent' => ['sometimes', 'numeric', 'min:0', 'max:500'],
+            'work_day_hours' => ['sometimes', 'numeric', 'min:1', 'max:24'],
         ];
     }
 }

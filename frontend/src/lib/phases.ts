@@ -50,16 +50,16 @@ export const PHASES: Phase[] = [
   {
     number: 5,
     title: 'Régie et contrôle des heures',
-    summary: 'Prix brut → majoré → client ; matrice collaborateur × jours.',
+    summary: 'Prix brut → régie → client sur chaque ligne de rapport ; contrôle des heures (projets × jours), absences, validation.',
     period: 'Octobre 2026',
-    status: 'current',
+    status: 'done',
   },
   {
     number: 6,
     title: 'Factures, PDF et statistiques',
     summary: 'Acomptes, factures, facture finale depuis les rapports validés, export PDF ; suivi de facturation et synthèses.',
     period: 'Novembre 2026',
-    status: 'planned',
+    status: 'current',
   },
   {
     number: 7,

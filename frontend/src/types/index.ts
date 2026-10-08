@@ -22,6 +22,9 @@ export interface AppSettings {
   app_name: string
   app_logo_url: string
   app_color: string
+  /** Réglages de régie (gestion seulement) : majoration des fournitures (%), heures d'une journée. */
+  regie_markup_percent?: string
+  work_day_hours?: string
 }
 
 /** Enveloppe des listes paginées renvoyées par l'API (Laravel Resource). */
@@ -328,6 +331,11 @@ export interface Collaborator {
   first_name: string | null
   name: string
   hourly_cost?: number | null
+  /** Position régie : élément de coûts « Salaire » (tarif vendu), avec tarif propre éventuel. */
+  regie_element_id?: number | null
+  regie_element?: { id: number; number: string; description: string; regie_price: number | null } | null
+  regie_price?: number | null
+  effective_regie_price?: number | null
   user_id?: number | null
   user_email?: string | null
   is_active: boolean
@@ -340,6 +348,8 @@ export interface WorkType {
   code: string
   label: string
   unit: string
+  is_active?: boolean
+  position?: number
 }
 
 export interface ReportStep {
@@ -357,6 +367,10 @@ export interface DailyReportHour {
   quantity: number
   hourly_cost?: number | null
   amount?: number
+  regie_price?: number | null
+  regie_amount?: number
+  client_price?: number | null
+  client_amount?: number
 }
 
 /** Ressource consommée (famille 2 à 6 des éléments de coûts). */
@@ -370,6 +384,10 @@ export interface DailyReportItem {
   quantity: number
   unit_cost?: number | null
   amount?: number
+  regie_price?: number | null
+  regie_amount?: number
+  client_price?: number | null
+  client_amount?: number
   note: string | null
   position: number
 }
@@ -408,9 +426,105 @@ export interface DailyReport {
   temp_max: number | null
   total_hours: number
   total_amount?: number
+  total_regie?: number
+  total_client?: number
   can_edit: boolean
   hours?: DailyReportHour[]
   items?: DailyReportItem[]
   files?: DailyReportFile[]
   updated_at: string
+}
+
+/** Ligne de régie (GET /api/regie/lines) : heure d'un collaborateur ou ressource, avec ses trois niveaux de prix. */
+export interface RegieLine {
+  kind: 'hour' | 'item'
+  id: number
+  report_id: number
+  report_number: string
+  report_sequence: number
+  date: string
+  status: ReportStatus
+  locked: boolean
+  project_id: number
+  family: number
+  collaborator_id: number | null
+  step_id: number | null
+  step: string | null
+  label: string
+  regie_label: string | null
+  regie_number: string | null
+  unit: string | null
+  quantity: number
+  cost_price: number | null
+  regie_price: number | null
+  client_price: number | null
+  cost_amount: number
+  regie_amount: number
+  client_amount: number
+}
+
+export interface RegieReport {
+  id: number
+  number: string
+  date: string
+  status: ReportStatus
+  is_regie: boolean
+  project: { id: number; number: string; designation1: string } | null
+  total_hours: number
+  total_amount: number
+  total_regie: number
+  total_client: number
+}
+
+export interface RegieTotals {
+  hours: number
+  cost: number
+  regie: number
+  client: number
+}
+
+/** Contrôle des heures : ligne de collaborateur du mois (GET /api/hours-control). */
+export interface HoursControlCollaborator {
+  id: number
+  number: string | null
+  name: string
+  last_name: string
+  first_name: string | null
+  is_active: boolean
+  hours: number
+  pending: number
+  absence_hours: number
+}
+
+export interface HoursControlCell {
+  hours: number
+  status: ReportStatus
+  report_ids: number[]
+}
+
+export type AbsenceType = 'vacances' | 'maladie' | 'accident' | 'ferie' | 'ecole' | 'militaire' | 'autre'
+
+export interface CollaboratorAbsence {
+  id: number
+  type: AbsenceType
+  hours: number
+  note: string | null
+}
+
+/** Matrice projets × jours d'un collaborateur (GET /api/hours-control/{id}). */
+export interface HoursControlMatrix {
+  collaborator: { id: number; number: string | null; name: string }
+  month: string
+  days: number
+  projects: {
+    id: number
+    number: string
+    designation1: string
+    status: ProjectStatus
+    total: number
+    cells: Record<string, HoursControlCell>
+  }[]
+  absences: Record<string, CollaboratorAbsence>
+  day_hours: number
+  absence_types: Record<AbsenceType, string>
 }

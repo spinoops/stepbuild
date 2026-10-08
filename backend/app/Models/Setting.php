@@ -18,7 +18,13 @@ class Setting extends Model
         'app_name' => 'Lachat Construction',
         'app_logo_url' => '',
         'app_color' => '#1d3f9c',
+        // Régie : majoration des fournitures sans prix régie (%), heures d'une journée (vacances, absences).
+        'regie_markup_percent' => '30',
+        'work_day_hours' => '9',
     ];
+
+    /** Réglages réservés à la gestion (jamais exposés avant connexion ni aux ouvriers). */
+    public const MANAGEMENT_KEYS = ['regie_markup_percent', 'work_day_hours'];
 
     /**
      * Tous les réglages sous forme clé => valeur, complétés par les défauts.

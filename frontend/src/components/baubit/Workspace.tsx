@@ -18,8 +18,6 @@ interface WorkspaceProps {
   statusLeft?: string
   statusRight?: string
   totals?: string
-  /** Signale des données d'exemple dans la barre d'état. */
-  demo?: boolean
   children: ReactNode
 }
 
@@ -36,15 +34,14 @@ export default function Workspace({
   statusLeft,
   statusRight,
   totals,
-  demo = false,
   children,
 }: WorkspaceProps) {
   const { asideOpen } = useWorkspace()
   const { pathname } = useLocation()
 
   useEffect(() => {
-    setStatus({ entries, left: statusLeft, right: statusRight, totals, demo })
-  }, [entries, statusLeft, statusRight, totals, demo])
+    setStatus({ entries, left: statusLeft, right: statusRight, totals })
+  }, [entries, statusLeft, statusRight, totals])
 
   useEffect(() => () => setStatus({}), [])
 

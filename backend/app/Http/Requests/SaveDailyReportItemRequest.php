@@ -33,6 +33,8 @@ class SaveDailyReportItemRequest extends FormRequest
             'unit' => ['nullable', 'string', 'max:20'],
             'quantity' => ['sometimes', 'numeric', 'min:-99999999', 'max:99999999'],
             'unit_cost' => $manager ? ['nullable', 'numeric', 'min:0', 'max:9999999999'] : ['prohibited'],
+            'regie_price' => $manager ? ['nullable', 'numeric', 'min:0', 'max:9999999999'] : ['prohibited'],
+            'client_price' => $manager ? ['nullable', 'numeric', 'min:0', 'max:9999999999'] : ['prohibited'],
             'note' => ['nullable', 'string', 'max:255'],
         ];
     }

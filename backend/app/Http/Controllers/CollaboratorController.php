@@ -24,7 +24,7 @@ class CollaboratorController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $query = Collaborator::query()
-            ->with('user')
+            ->with('user', 'regieElement')
             ->when($request->boolean('active'), fn ($q) => $q->where('is_active', true));
 
         return CollaboratorResource::collection(
@@ -32,32 +32,33 @@ class CollaboratorController extends Controller
         );
     }
 
-    /** Types de travail actifs (colonnes supplémentaires de la grille des heures). */
-    public function workTypes(): JsonResponse
+    /** Types de travail actifs (colonnes supplémentaires de la grille des heures) ; ?all=1 pour la gestion. */
+    public function workTypes(Request $request): JsonResponse
     {
-        $types = WorkType::where('is_active', true)->orderBy('position')->orderBy('code')->get()
-            ->map(fn (WorkType $type) => ['id' => $type->id, 'code' => $type->code, 'label' => $type->label, 'unit' => $type->unit]);
+        $all = $request->boolean('all') && ($request->user()?->canSeePrices() ?? false);
+        $types = WorkType::query()->when(! $all, fn ($q) => $q->where('is_active', true))->orderBy('position')->orderBy('code')->get()
+            ->map(fn (WorkType $type) => ['id' => $type->id, 'code' => $type->code, 'label' => $type->label, 'unit' => $type->unit, 'is_active' => $type->is_active, 'position' => $type->position]);
 
         return response()->json(['data' => $types]);
     }
 
     public function show(Collaborator $collaborator): CollaboratorResource
     {
-        return CollaboratorResource::make($collaborator->load('user'));
+        return CollaboratorResource::make($collaborator->load('user', 'regieElement'));
     }
 
     public function store(SaveCollaboratorRequest $request): JsonResponse
     {
         $collaborator = Collaborator::create($request->validated());
 
-        return CollaboratorResource::make($collaborator->refresh()->load('user'))->response()->setStatusCode(201);
+        return CollaboratorResource::make($collaborator->refresh()->load('user', 'regieElement'))->response()->setStatusCode(201);
     }
 
     public function update(SaveCollaboratorRequest $request, Collaborator $collaborator): CollaboratorResource
     {
         $collaborator->update($request->validated());
 
-        return CollaboratorResource::make($collaborator->load('user'));
+        return CollaboratorResource::make($collaborator->load('user', 'regieElement'));
     }
 
     public function destroy(Collaborator $collaborator): JsonResponse

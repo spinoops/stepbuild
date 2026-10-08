@@ -51,6 +51,8 @@ class DailyReportResource extends JsonResource
             'temp_max' => $this->temp_max,
             'total_hours' => $this->total_hours,
             'total_amount' => $this->when($prices, $this->total_amount),
+            'total_regie' => $this->when($prices, $this->total_regie),
+            'total_client' => $this->when($prices, $this->total_client),
             'can_edit' => $user ? $this->resource->isEditableBy($user) : false,
             'hours' => $this->whenLoaded('hours', fn () => $this->hours->map(fn ($line) => [
                 'id' => $line->id,
@@ -58,7 +60,11 @@ class DailyReportResource extends JsonResource
                 'document_step_id' => $line->document_step_id,
                 'work_type_id' => $line->work_type_id,
                 'quantity' => $line->quantity,
-                ...($prices ? ['hourly_cost' => $line->hourly_cost, 'amount' => $line->amount] : []),
+                ...($prices ? [
+                    'hourly_cost' => $line->hourly_cost, 'amount' => $line->amount,
+                    'regie_price' => $line->regie_price, 'regie_amount' => $line->regie_amount,
+                    'client_price' => $line->client_price, 'client_amount' => $line->client_amount,
+                ] : []),
             ])->values()),
             'items' => $this->whenLoaded('items', fn () => $this->items->map(fn ($item) => [
                 'id' => $item->id,
@@ -68,7 +74,11 @@ class DailyReportResource extends JsonResource
                 'label' => $item->label,
                 'unit' => $item->unit,
                 'quantity' => $item->quantity,
-                ...($prices ? ['unit_cost' => $item->unit_cost, 'amount' => $item->amount] : []),
+                ...($prices ? [
+                    'unit_cost' => $item->unit_cost, 'amount' => $item->amount,
+                    'regie_price' => $item->regie_price, 'regie_amount' => $item->regie_amount,
+                    'client_price' => $item->client_price, 'client_amount' => $item->client_amount,
+                ] : []),
                 'note' => $item->note,
                 'position' => $item->position,
             ])->values()),

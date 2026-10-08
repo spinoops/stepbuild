@@ -126,7 +126,7 @@ export default function DailyReportsPage() {
     : `Heures : ${fmtAmount(listHours)}`
   const statusRight = current
     ? [
-        showPrices ? `Rapport : ${fmtAmount(current.total_amount ?? 0)} CHF` : null,
+        showPrices ? `Rapport brut : ${fmtAmount(current.total_amount ?? 0)} CHF · régie : ${fmtAmount(current.total_regie ?? 0)} · client : ${fmtAmount(current.total_client ?? 0)}` : null,
         `Heures du rapport : ${fmtAmount(current.total_hours)}`,
         saving ? 'Enregistrement…' : SAVE_LABELS[saveState],
       ]

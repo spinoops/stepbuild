@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BreakdownTemplateController;
 use App\Http\Controllers\CatalogArticleController;
 use App\Http\Controllers\CatalogChapterController;
+use App\Http\Controllers\CollaboratorAbsenceController;
 use App\Http\Controllers\CollaboratorController;
 use App\Http\Controllers\DailyReportController;
 use App\Http\Controllers\DailyReportFileController;
@@ -13,15 +14,18 @@ use App\Http\Controllers\DailyReportItemController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentPositionController;
 use App\Http\Controllers\DocumentStepController;
+use App\Http\Controllers\HoursControlController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PriceElementController;
 use App\Http\Controllers\ProjectAddressController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectPhotoController;
 use App\Http\Controllers\QuoteTemplateController;
+use App\Http\Controllers\RegieController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\WorkTypeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -134,6 +138,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/breakdown-templates/{template}/used', [BreakdownTemplateController::class, 'used']);
 
         Route::apiResource('collaborators', CollaboratorController::class)->except(['index']);
+        Route::post('/collaborators/{collaborator}/absences', [CollaboratorAbsenceController::class, 'store']);
+        Route::delete('/collaborators/{collaborator}/absences/{absence}', [CollaboratorAbsenceController::class, 'destroy']);
+        Route::apiResource('work-types', WorkTypeController::class)->only(['store', 'update', 'destroy'])->parameters(['work-types' => 'workType']);
+
+        // Régie : trois niveaux de prix (brut, régie, client) sur les lignes des rapports.
+        Route::get('/regie/lines', [RegieController::class, 'index']);
+        Route::put('/regie/lines/{kind}/{id}', [RegieController::class, 'update'])->whereIn('kind', ['hour', 'item'])->whereNumber('id');
+        Route::post('/regie/apply-tariffs', [RegieController::class, 'applyTariffs']);
+
+        // Contrôle des heures : matrice mensuelle par collaborateur (projets × jours), validation.
+        Route::get('/hours-control', [HoursControlController::class, 'index']);
+        Route::get('/hours-control/{collaborator}', [HoursControlController::class, 'show']);
+        Route::post('/hours-control/{collaborator}/validate', [HoursControlController::class, 'validateMonth']);
 
         Route::get('/price-elements/groups', [PriceElementController::class, 'groups']);
         Route::apiResource('price-elements', PriceElementController::class)

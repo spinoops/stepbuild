@@ -57,7 +57,8 @@ function something()
  */
 function actingAsRole(string $role): User
 {
-    Role::findOrCreate($role);
+    // Guard explicite : après un premier Sanctum::actingAs, le guard par défaut devient « sanctum ».
+    Role::findOrCreate($role, 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
     Sanctum::actingAs($user);

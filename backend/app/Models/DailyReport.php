@@ -37,6 +37,8 @@ class DailyReport extends Model
             'temp_max' => 'integer',
             'total_hours' => 'float',
             'total_amount' => 'float',
+            'total_regie' => 'float',
+            'total_client' => 'float',
         ];
     }
 
@@ -108,20 +110,32 @@ class DailyReport extends Model
     }
 
     /**
-     * Totaux : heures productives (sur les étapes du devis + types de travail en heures) et coût brut
-     * (heures × tarif + ressources).
+     * Totaux : heures productives (sur les étapes du devis + types de travail en heures) et les trois
+     * niveaux de montant (brut = heures × tarif + ressources au coût ; régie ; client).
      */
     public function recalculate(): self
     {
         $hours = $this->hours()->with('workType')->get();
         $productive = $hours->filter(fn (DailyReportHour $line) => $line->document_step_id !== null || ($line->workType?->isHours() ?? false));
+        $items = $this->items()->get();
 
         $this->forceFill([
             'total_hours' => round((float) $productive->sum('quantity'), 2),
-            'total_amount' => round((float) $hours->sum('amount') + (float) $this->items()->sum('amount'), 2),
+            'total_amount' => round((float) $hours->sum('amount') + (float) $items->sum('amount'), 2),
+            'total_regie' => round((float) $hours->sum('regie_amount') + (float) $items->sum('regie_amount'), 2),
+            'total_client' => round((float) $hours->sum('client_amount') + (float) $items->sum('client_amount'), 2),
         ])->saveQuietly();
 
         return $this;
+    }
+
+    /** Réapplique les tarifs actuels (brut et régie) à toutes les lignes ; le prix client repart du prix régie. */
+    public function applyTariffs(): self
+    {
+        $this->hours()->with('collaborator.regieElement', 'workType')->get()->each->applyTariffs();
+        $this->items()->with('priceElement')->get()->each->applyTariffs();
+
+        return $this->recalculate();
     }
 
     /** Rapports visibles par un utilisateur : tout pour la gestion, les siens pour un ouvrier. */

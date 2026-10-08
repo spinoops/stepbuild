@@ -16,11 +16,6 @@ export default function StatusBar() {
       {status.totals && <span className="border-l border-white/15 pl-4">{status.totals}</span>}
       <span className="ml-auto flex items-center gap-4">
         {status.right && <span>{status.right}</span>}
-        {status.demo && (
-          <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[11px] font-medium text-amber-300">
-            Données d'exemple
-          </span>
-        )}
         <span className="text-gray-500">v0.2 · phase {CURRENT_PHASE}</span>
       </span>
     </div>

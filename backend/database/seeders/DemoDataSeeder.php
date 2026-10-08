@@ -6,6 +6,7 @@ use App\Models\Address;
 use App\Models\CatalogArticle;
 use App\Models\CatalogChapter;
 use App\Models\Collaborator;
+use App\Models\CollaboratorAbsence;
 use App\Models\DailyReport;
 use App\Models\Document;
 use App\Models\PriceElement;
@@ -31,6 +32,7 @@ class DemoDataSeeder extends Seeder
         $this->seedQuote();
         $this->seedCollaborators();
         $this->seedDailyReports();
+        $this->seedRegie();
     }
 
     private function seedCollaborators(): void
@@ -39,21 +41,108 @@ class DemoDataSeeder extends Seeder
             WorkType::updateOrCreate(['code' => $code], ['label' => $label, 'unit' => $unit, 'position' => $position]);
         }
 
-        // [numéro, nom, prénom, tarif horaire, compte de connexion]
+        // Positions régie = éléments de coûts « Salaire » (tarif vendu au client).
+        $regie = PriceElement::where('family', 1)->pluck('id', 'number');
+
+        // [numéro, nom, prénom, tarif horaire (coût), position régie, compte de connexion]
         $rows = [
-            ['101', 'Martin', 'Pierre', 52.78, 'responsable@chantier.test'],
-            ['102', 'Rossi', 'Luca', 50.00, 'ouvrier@chantier.test'],
-            ['103', 'Keller', 'Anna', 52.78, null],
-            ['104', 'Nguyen', 'Thi', 50.00, null],
-            ['105', 'Favre', 'Jean', 55.00, null],
-            ['106', 'Bernard', 'Léa', 48.50, null],
+            ['101', 'Martin', 'Pierre', 52.78, '010.010', 'responsable@chantier.test'],
+            ['102', 'Rossi', 'Luca', 50.00, '010.000', 'ouvrier@chantier.test'],
+            ['103', 'Keller', 'Anna', 52.78, '010.000', null],
+            ['104', 'Nguyen', 'Thi', 50.00, '010.005', null],
+            ['105', 'Favre', 'Jean', 55.00, '010.010', null],
+            ['106', 'Bernard', 'Léa', 48.50, '010.005', null],
         ];
-        foreach ($rows as [$number, $last, $first, $cost, $email]) {
+        foreach ($rows as [$number, $last, $first, $cost, $position, $email]) {
             Collaborator::updateOrCreate(
                 ['number' => $number],
-                ['last_name' => $last, 'first_name' => $first, 'hourly_cost' => $cost, 'user_id' => $email ? User::where('email', $email)->value('id') : null, 'is_active' => true],
+                [
+                    'last_name' => $last, 'first_name' => $first, 'hourly_cost' => $cost,
+                    'regie_element_id' => $regie[$position] ?? null,
+                    'user_id' => $email ? User::where('email', $email)->value('id') : null, 'is_active' => true,
+                ],
             );
         }
+    }
+
+    /**
+     * Régie et contrôle des heures : un second chantier avec devis et rapports sur tout le mois d'août,
+     * des ressources sur un rapport, des absences ; les tarifs régie sont appliqués aux lignes qui n'en ont pas.
+     */
+    private function seedRegie(): void
+    {
+        $project = Project::where('number', '2822-001')->first();
+        $who = Collaborator::all()->keyBy('number');
+        $user = User::where('email', 'responsable@chantier.test')->first();
+
+        if ($project && ! Document::where('project_id', $project->id)->exists()) {
+            $quote = Document::createForProject($project, 'devis', null, ['title' => 'Aménagements extérieurs', 'status' => 'accepte']);
+            foreach (['04', '07', '18'] as $index => $code) {
+                $chapter = CatalogChapter::where('code', $code)->whereNull('parent_id')->first();
+                $quote->steps()->create(['catalog_chapter_id' => $chapter?->id, 'code' => $code, 'label' => $chapter?->label ?? "Étape $code", 'position' => $index + 1]);
+            }
+            $quote->recalculate();
+            $steps = $quote->steps()->get()->keyBy('code');
+
+            // [date, statut, lignes [collaborateur, étape, heures]]
+            $reports = [
+                ['2026-08-03', 'facture', [['102', '04', 9], ['104', '04', 9]]],
+                ['2026-08-04', 'facture', [['102', '04', 9], ['104', '04', 9]]],
+                ['2026-08-05', 'en_controle', [['102', '04', 9], ['104', '04', 9], ['105', '04', 4]]],
+                ['2026-08-10', 'en_controle', [['101', '07', 9], ['102', '07', 9]]],
+                ['2026-08-11', 'en_controle', [['101', '07', 9], ['102', '07', 9]]],
+                ['2026-08-12', 'en_controle', [['101', '07', 9], ['102', '07', 9]]],
+                ['2026-08-13', 'en_cours', [['101', '07', 9], ['102', '07', 9]]],
+                ['2026-08-17', 'en_cours', [['101', '18', 9], ['103', '18', 9]]],
+                ['2026-08-18', 'en_cours', [['101', '18', 9], ['103', '18', 2.5]]],
+                ['2026-08-19', 'en_cours', [['101', '18', 6.5], ['103', '18', 6.5]]],
+            ];
+            $materials = PriceElement::where('family', 2)->orderBy('number')->take(2)->get();
+            $machine = PriceElement::where('family', 3)->orderBy('number')->first();
+
+            foreach ($reports as $index => [$date, $status, $lines]) {
+                $report = DailyReport::createForProject($project, $user, [
+                    'document_id' => $quote->id, 'date' => $date, 'status' => $status, 'weather' => 'Ensoleillé',
+                    'remark' => 'Aménagements extérieurs : terrassement, maçonnerie et finitions.', 'responsible_id' => $who['101']->id,
+                ]);
+                foreach ($lines as [$number, $code, $hours]) {
+                    $report->hours()->create([
+                        'collaborator_id' => $who[$number]->id, 'document_step_id' => $steps[$code]->id,
+                        'quantity' => $hours, 'hourly_cost' => $who[$number]->hourly_cost,
+                    ]);
+                }
+                if ($index === 3) {
+                    foreach ($materials as $position => $element) {
+                        $report->items()->create([
+                            'family' => 2, 'document_step_id' => $steps['07']->id, 'price_element_id' => $element->id,
+                            'label' => $element->description, 'unit' => $element->unit, 'quantity' => 10 * ($position + 1),
+                            'unit_cost' => $element->net_price ?? $element->supplier_price, 'position' => $position + 1,
+                        ]);
+                    }
+                    if ($machine) {
+                        $report->items()->create([
+                            'family' => 3, 'document_step_id' => $steps['07']->id, 'price_element_id' => $machine->id,
+                            'label' => $machine->description, 'unit' => $machine->unit, 'quantity' => 4,
+                            'unit_cost' => $machine->net_price ?? $machine->supplier_price, 'position' => 1,
+                        ]);
+                    }
+                    $report->items()->create(['family' => 6, 'document_step_id' => $steps['07']->id, 'label' => 'Sanitaire Exemple Sàrl - raccordement', 'unit' => 'Fr.', 'quantity' => 850, 'unit_cost' => 1, 'position' => 1]);
+                }
+                $report->recalculate();
+            }
+        }
+
+        // Absences : une semaine de vacances pour Pierre Martin, un jour férié pour tous (1er août).
+        if (isset($who['101']) && ! CollaboratorAbsence::exists()) {
+            foreach (['2026-08-24', '2026-08-25', '2026-08-26', '2026-08-27', '2026-08-28'] as $date) {
+                $who['101']->absences()->create(['date' => $date, 'type' => 'vacances', 'hours' => 9]);
+            }
+            $who['104']->absences()->create(['date' => '2026-08-20', 'type' => 'maladie', 'hours' => 9]);
+        }
+
+        // Lignes créées avant la phase 5 : tarifs régie appliqués une fois.
+        DailyReport::whereHas('hours', fn ($q) => $q->whereNull('regie_price'))->orWhereHas('items', fn ($q) => $q->whereNull('regie_price'))
+            ->get()->each->applyTariffs();
     }
 
     /** Trois rapports sur le devis d'exemple : séance sur place, démontage, carrelage. */

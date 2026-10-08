@@ -133,11 +133,44 @@ export function useCollaborators(activeOnly = true) {
   })
 }
 
-/** Types de travail hors étapes (colonnes supplémentaires de la grille). */
-export function useWorkTypes() {
+/** Types de travail hors étapes (colonnes supplémentaires de la grille) ; all = inactifs compris (gestion). */
+export function useWorkTypes(all = false) {
   return useQuery({
-    queryKey: ['work-types'],
-    queryFn: async () => (await api.get<{ data: WorkType[] }>('/work-types')).data.data,
+    queryKey: ['work-types', all],
+    queryFn: async () => (await api.get<{ data: WorkType[] }>('/work-types', { params: all ? { all: 1 } : undefined })).data.data,
     staleTime: 5 * 60_000,
   })
+}
+
+export interface WorkTypePayload {
+  code?: string
+  label?: string
+  unit?: string
+  is_active?: boolean
+  position?: number
+}
+
+/** Gestion des types de travail (création, modification, suppression ou désactivation). */
+export function useWorkTypeActions() {
+  const queryClient = useQueryClient()
+  return useMemo(() => {
+    const invalidate = () => queryClient.invalidateQueries({ queryKey: ['work-types'] })
+    return {
+      create: async (payload: WorkTypePayload) => {
+        const type = (await api.post<{ data: WorkType }>('/work-types', payload)).data.data
+        await invalidate()
+        return type
+      },
+      update: async (id: number, payload: WorkTypePayload) => {
+        const type = (await api.put<{ data: WorkType }>(`/work-types/${id}`, payload)).data.data
+        await invalidate()
+        return type
+      },
+      remove: async (id: number) => {
+        const result = (await api.delete<{ deactivated?: boolean }>(`/work-types/${id}`)).data
+        await invalidate()
+        return Boolean(result.deactivated)
+      },
+    }
+  }, [queryClient])
 }

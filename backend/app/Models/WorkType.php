@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Type de travail hors étapes du devis : colonne supplémentaire de la grille des heures
@@ -10,6 +11,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class WorkType extends Model
 {
+    public const UNITS = ['h', 'nb', 'km'];
+
     /** Types livrés par défaut (code, libellé, unité). */
     public const DEFAULTS = [
         ['1011', 'Travail du samedi', 'h'],
@@ -23,6 +26,11 @@ class WorkType extends Model
     protected function casts(): array
     {
         return ['is_active' => 'boolean', 'position' => 'integer'];
+    }
+
+    public function hours(): HasMany
+    {
+        return $this->hasMany(DailyReportHour::class);
     }
 
     public function isHours(): bool

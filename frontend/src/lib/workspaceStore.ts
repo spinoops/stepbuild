@@ -19,8 +19,6 @@ export interface WorkspaceStatus {
   entries?: number | null
   /** Totaux affichés sur la 2ème ligne (ex. « Brut: … Net: … »). */
   totals?: string
-  /** La page affiche des données d'exemple. */
-  demo?: boolean
 }
 
 interface WorkspaceState {

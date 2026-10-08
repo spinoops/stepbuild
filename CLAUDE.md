@@ -24,8 +24,8 @@ pour l'affichage : `frontend/src/lib/phases.ts`.
 | 2 | Projets : fiche, numérotation par NPA, statuts, adresses nommées, photos ; projet courant de la barre de contexte | **fait** (API + front) |
 | 3 | Devis : création depuis le projet, étapes depuis les modèles, saisie rapide des positions, chiffrage, récapitulation, nouvelle version ; création d'article à la volée ; aperçu et PDF | **fait** (API + front) |
 | 4 | Rapports journaliers sur les étapes du devis, workflow en cours → en contrôle → facturé ; collaborateurs | **fait** (API + front) |
-| 5 | Régie (brut → majoré → client), contrôle des heures | à faire — **prochaine étape** |
-| 6 | Acomptes, factures, facture finale, export PDF ; statistiques | à faire |
+| 5 | Régie (brut → régie → client sur chaque ligne de rapport), contrôle des heures, absences | **fait** (API + front) |
+| 6 | Acomptes, factures, facture finale, export PDF ; statistiques | à faire — **prochaine étape** |
 | 7 | Reprise des données BauBit, mise en production Infomaniak | à faire |
 | 8 | Vue mobile / tablette (ouvriers) | janvier 2027 |
 | 9 | Widget de temps au bureau, stocks | janvier 2027 |
@@ -185,20 +185,52 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   BauBit), `components/reports/HoursGrid` (Entrée = ligne suivante, flèches, enregistrement à la sortie de cellule),
   `ReportItemsTab`, `ReportFilesTab`, `components/shared/ElementPicker` (partagé avec le sous-détail de prix).
   Hooks `hooks/useDailyReports.ts`. Collaborateurs : `/collaborateurs` (`CollaboratorsPage`, gestion).
-- Reste pour la phase 5 : trois niveaux de prix (brut → majoré → client) sur les lignes, statut « facturé » alimenté
-  par la facturation, gestion des types de travail (liste en lecture seule sur la page Collaborateurs).
+- Reste pour la phase 6 : statut « facturé » alimenté par la facturation (facture finale depuis les rapports validés).
 
-### Données d'exemple restantes
-Le contrôle des heures utilise encore `lib/demo.ts` (badge « Données d'exemple » via la prop `demo` de
-`Workspace`). À remplacer en phase 5.
-Côté base, `DemoDataSeeder` charge des données **fictives** en environnement `local` uniquement (dont collaborateurs,
-types de travail et trois rapports sur le devis d'exemple).
+### Régie et contrôle des heures (phase 5)
+- **Trois niveaux de prix sur chaque ligne de rapport** (heures `daily_report_hours` et ressources
+  `daily_report_items`) : brut = coût (`hourly_cost` / `unit_cost`), **régie** (`regie_price`, tarif majoré de
+  l'entreprise), **client** (`client_price`, prix final) ; montants `amount` / `regie_amount` / `client_amount`,
+  totaux `total_amount` / `total_regie` / `total_client` sur le rapport. Calcul dans `App\Support\RegiePricing` :
+  - heures → **position régie du collaborateur** (`collaborators.regie_element_id` = élément de coûts de la famille
+    1 Salaire, ex. « 010.010 Chef d'équipe 98.- »), surchargeable par `collaborators.regie_price` ;
+  - ressources → `price_elements.regie_price`, sinon coût brut × (1 + majoration), arrondi à 5 ct ;
+  - prix client = prix régie par défaut. Les champs sont remplis dans les hooks `saving` des modèles si absents ;
+    `applyTariffs()` (ligne ou rapport) réapplique les tarifs actuels et remet le client au régie.
+  - Réglages (table `settings`, admin, **jamais exposés aux ouvriers** : `Setting::MANAGEMENT_KEYS`) :
+    `regie_markup_percent` (30) et `work_day_hours` (9).
+- **API régie** (`roles:admin,responsable`, `RegieController`) : `GET /regie/lines?project_id=&status=&from=&to=
+  &collaborator_id=&all=1` (rapports `is_regie` seulement, sauf `all`) → lignes aplaties (`kind` hour | item, trois prix,
+  trois montants, `locked` si facturé), les rapports et les totaux ; `PUT /regie/lines/{hour|item}/{id}`
+  (`cost_price` / `regie_price` / `client_price` ; le client suit le régie tant qu'il n'a pas été fixé à part ; 403 si
+  facturé) ; `POST /regie/apply-tariffs` (`project_id` ou `report_ids`, rapports non facturés).
+- **Contrôle des heures** (`HoursControlController`) : `GET /hours-control?month=AAAA-MM` (collaborateurs : heures
+  productives, rapports en cours, absences), `GET /hours-control/{collaborator}?month=` (matrice projets × jours,
+  cellule = `{hours, status, report_ids}`, statut `en_cours` si un rapport du jour l'est encore), `POST
+  /hours-control/{collaborator}/validate?month=` (rapports en cours où il a des heures → en contrôle).
+  Seules les heures productives comptent (étape du devis ou type de travail en `h`). Attention MySQL
+  `only_full_group_by` : préfixer les colonnes dans les agrégats.
+- **Absences** (`collaborator_absences`, une par collaborateur et par jour, types `CollaboratorAbsence::TYPES`) :
+  `POST /collaborators/{id}/absences` `{from, to?, type, hours?, note?}` (période → jours ouvrés ; 0 h efface).
+- **Types de travail** : `apiResource('work-types')` store/update/destroy (gestion) ; un type utilisé est désactivé
+  au lieu d'être supprimé ; `GET /work-types?all=1` inclut les inactifs.
+- Front : `pages/RegiePage` (lignes du projet courant groupées par rapport, `components/regie/PriceCell` éditable en
+  place, onglet Récapitulation par famille et par rapport, marge affichée ; hooks `hooks/useRegie.ts` : la ligne
+  renvoyée remplace celle du cache et les totaux sont recalculés localement), `pages/HoursControlPage` (mois et
+  collaborateur dans l'URL `?mois=&collaborateur=`, couleur de cellule = statut du rapport, clic = ouvre le rapport,
+  ligne « Vacances / absences » cliquable → `components/hours/AbsenceDialog`, hooks `hooks/useHoursControl.ts`),
+  `components/reports/WorkTypesEditor` sur la page Collaborateurs (avec position régie et tarif régie propre),
+  réglages de régie dans `SettingsPage`.
+- `lib/demo.ts` et le badge « Données d'exemple » ont disparu : tout est branché sur l'API. `DemoDataSeeder` charge
+  des données **fictives** en environnement `local` uniquement (deux chantiers avec devis et rapports d'août 2026,
+  absences, positions régie des collaborateurs).
 
 ## Modules et routes front
 Navigation dans `frontend/src/lib/navigation.ts` (groupes calqués sur les rubans BauBit),
 filtrée par rôle. Pages dans `frontend/src/pages/` :
 `/dashboard`, `/projets`, `/clients`, `/rapports`, `/regie`, `/controle-heures`,
-`/documents`, `/statistiques`, `/catalogue`, `/listes-prix`, `/modeles-devis`, `/collaborateurs`, `/users`, `/settings`.
+`/documents`, `/statistiques`, `/catalogue`, `/listes-prix`, `/modeles-devis`, `/sous-details-types`,
+`/collaborateurs`, `/users`, `/settings`.
 Les modules non développés utilisent `components/ModulePlaceholder.tsx` : **remplacer**
 le placeholder par la vraie page lors de la phase concernée.
 
