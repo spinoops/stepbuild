@@ -63,7 +63,10 @@ export function useEntityForm<V extends FieldValues>(form: UseFormReturn<V>, opt
   useEffect(() => {
     let timer: number | undefined
     const subscription = form.watch((_values, info) => {
-      if (info.type !== 'change') {
+      // Frappe dans un champ (type « change »), ou valeur posée par le code avec setValue (type absent,
+      // nom présent : statut choisi dans StatusSelect, numéro proposé…). reset() n'a pas de nom : ignoré.
+      const programmatic = info.type === undefined && info.name !== undefined
+      if (info.type !== 'change' && !programmatic) {
         return
       }
       dirtyRef.current = true
