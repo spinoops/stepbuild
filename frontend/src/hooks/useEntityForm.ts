@@ -79,8 +79,9 @@ export function useEntityForm<V extends FieldValues>(form: UseFormReturn<V>, opt
   useEffect(() => {
     if (pendingFocus && Date.now() - pendingFocus.at < 3000) {
       const field = document.querySelector<HTMLInputElement>(`form [name="${pendingFocus.name}"]`)
-      pendingFocus = null
-      if (field) {
+      // Formulaire intermédiaire désactivé (fiche en cours de chargement) : on attend le montage suivant.
+      if (field && !field.disabled) {
+        pendingFocus = null
         field.focus()
         if (typeof field.setSelectionRange === 'function' && /^(text|search|tel|url|password)$|^$/.test(field.type ?? '')) {
           const end = field.value.length
