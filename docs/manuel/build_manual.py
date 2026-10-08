@@ -593,12 +593,12 @@ def build_story():
             "Un devis <b>accepté</b> passe automatiquement le projet au statut <b>Adjugé</b>, et devient le devis "
             "de référence des rapports journaliers.",
         ]),
-        Paragraph('Nouvelle version, explorateur', H2),
+        Paragraph('Nouvelle version, liste des documents', H2),
         bullets([
             "<b>Nouvelle version</b> copie le devis avec toutes ses étapes et positions : DE.1 devient DE.2. "
             "Utile quand le client demande une variante ; l'original reste intact.",
-            "L'onglet <b>Explorateur</b> liste tous les documents, tous projets confondus. Un clic ouvre le devis "
-            "et sélectionne son projet.",
+            "Sans devis ouvert (bouton <b>Explorateur documents</b> du menu, ou aucun projet choisi), la page liste "
+            "tous les documents, tous projets confondus. Un clic ouvre le devis et sélectionne son projet.",
             "La corbeille supprime le document après confirmation.",
         ]),
     ]

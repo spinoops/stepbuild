@@ -28,7 +28,7 @@ import { toast } from '@/lib/toast'
 import { setDocument, setProject, useWorkspace } from '@/lib/workspaceStore'
 import type { DocumentDetail } from '@/types'
 
-const TABS = ['Détail', 'En-tête', 'Récapitulation', 'Aperçu', 'Explorateur']
+const TABS = ['Détail', 'En-tête', 'Récapitulation', 'Aperçu']
 
 const EXPLORER_COLUMNS: GridColumn<DocumentDetail>[] = [
   { key: 'number', header: 'N° de document', value: (d) => d.number, width: 160 },
@@ -72,8 +72,10 @@ export default function DocumentsPage() {
   const saveAsTemplate = useSaveDocumentAsTemplate()
   const [chooserOpen, setChooserOpen] = useState(false)
 
-  const activeTab = tab ?? (currentId ? 'Détail' : 'Explorateur')
-  const explorer = useResourceList<DocumentDetail>('documents', useDebounced(query, 250), {}, activeTab === 'Explorateur')
+  const activeTab = tab ?? 'Détail'
+  // Sans document ouvert, la page liste tous les documents (explorateur), sans onglet dédié.
+  const showDocument = currentId !== null
+  const explorer = useResourceList<DocumentDetail>('documents', useDebounced(query, 250), {}, !showDocument)
 
   // Ouvrir un document en fait le document courant, et son projet le projet courant.
   useEffect(() => {
@@ -153,7 +155,6 @@ export default function DocumentsPage() {
 
   const positions = doc?.steps?.reduce((sum, step) => sum + step.positions.length, 0) ?? null
   const status = pending > 0 ? SAVE_LABELS.saving : SAVE_LABELS[saveState]
-  const showDocument = activeTab !== 'Explorateur'
 
   return (
     <>
@@ -234,10 +235,11 @@ export default function DocumentsPage() {
       }
     >
       <div className="flex h-full flex-col">
-        <TabStrip tabs={TABS} active={activeTab} onChange={setTab} className="shrink-0 px-4" />
+        {showDocument && <TabStrip tabs={TABS} active={activeTab} onChange={setTab} className="shrink-0 px-4" />}
 
         {!showDocument ? (
           <>
+            <div className="flex h-11 shrink-0 items-center px-4 text-[13px] font-semibold text-gray-800">Tous les documents</div>
             <DataGrid
               className="min-h-0 flex-1"
               columns={EXPLORER_COLUMNS}
@@ -259,7 +261,7 @@ export default function DocumentsPage() {
               <p className="max-w-md text-[13px]">
                 {projectId
                   ? 'Créez le devis du projet : ses étapes serviront ensuite aux rapports journaliers, à la régie et à la facture.'
-                  : "Choisissez un projet dans la barre du haut, ou ouvrez un document depuis l'explorateur."}
+                  : 'Choisissez un projet dans la barre du haut, ou ouvrez un document depuis la liste.'}
               </p>
             )}
           </div>

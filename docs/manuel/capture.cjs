@@ -175,13 +175,12 @@ async function token(email) {
   await wait(400)
   await shot('14-devis-etapes', { x: 0, y: 150, width: 330, height: 680 })
 
-  // 15 / 16 / 17 — en-tête, récapitulation, explorateur
+  // 15 / 16 / 17 — en-tête, récapitulation, liste de tous les documents (sans devis ouvert)
   await clickText('En-tête', 'main button')
   await shot('15-devis-entete')
   await clickText('Récapitulation', 'main button')
   await shot('16-devis-recap', { x: 320, y: 190, width: 1120, height: 420 })
-  await clickText('Explorateur', 'main button')
-  await wait(1200)
+  await go('/documents', 2200)
   await shot('17-devis-explorateur', { x: 320, y: 150, width: 1120, height: 300 })
 
   // 18 — utilisateurs
