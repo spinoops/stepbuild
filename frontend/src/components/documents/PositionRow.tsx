@@ -5,6 +5,7 @@ import { toast } from '@/lib/toast'
 import type { DocumentActions, PositionPayload } from '@/hooks/useDocuments'
 import type { DocumentPosition } from '@/types'
 import { Icon } from '@/components/icons'
+import UnitSelect from '@/components/shared/UnitSelect'
 
 interface Draft {
   code: string
@@ -224,7 +225,7 @@ export default function PositionRow({
       {isItem && (
         <>
           <td className="py-0.5">
-            <input value={draft.unit} onChange={(e) => change({ unit: e.target.value })} className={CELL} aria-label="Unité" />
+            <UnitSelect value={draft.unit} onChange={(e) => change({ unit: e.target.value })} className={`${CELL} px-0`} aria-label="Unité" />
           </td>
           <td className="py-0.5">
             <input

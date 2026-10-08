@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -45,6 +46,9 @@ class DatabaseSeeder extends Seeder
             );
             $user->syncRoles([$roles[$role]]);
         }
+
+        // Unités de mesure par défaut (tous environnements, jamais écrasées).
+        Unit::seedDefaults();
 
         // Sous-détails de prix types du métreur (données réelles, tous environnements).
         $this->call(BreakdownTemplateSeeder::class);

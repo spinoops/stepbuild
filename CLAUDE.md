@@ -225,6 +225,15 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   des données **fictives** en environnement `local` uniquement (deux chantiers avec devis et rapports d'août 2026,
   absences, positions régie des collaborateurs).
 
+### Unités de mesure
+Table `units` (code imprimé, libellé, ordre, actif), `Unit::DEFAULTS` = codes BauBit du devis type (M1, M2, M3, H., Jour,
+Pce…), créées par `Unit::seedDefaults()` dans `DatabaseSeeder` (tous environnements, jamais écrasées). `GET /units`
+pour tous les rôles ; store/update/destroy/reorder pour la gestion. Les positions, articles et éléments gardent
+l'unité **en texte** (code) : supprimer ou désactiver une unité ne touche pas aux données. Front :
+`components/shared/UnitSelect` (liste + valeur actuelle hors liste conservée, remonté quand la liste arrive pour
+react-hook-form) dans `PositionRow` et le formulaire d'article ; éditeur `components/settings/UnitsEditor` sur la
+page Configuration.
+
 ## Modules et routes front
 Navigation dans `frontend/src/lib/navigation.ts` (groupes calqués sur les rubans BauBit),
 filtrée par rôle. Pages dans `frontend/src/pages/` :

@@ -7,6 +7,7 @@ import { toast } from '@/lib/toast'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Spinner from '@/components/ui/Spinner'
+import UnitsEditor from '@/components/settings/UnitsEditor'
 
 const schema = z.object({
   app_name: z.string().min(1, 'Le nom est requis.').max(255),
@@ -103,6 +104,10 @@ export default function SettingsPage() {
           Enregistrer
         </Button>
       </form>
+
+      <div className="mt-6">
+        <UnitsEditor />
+      </div>
     </div>
   )
 }

@@ -342,6 +342,15 @@ export interface Collaborator {
   updated_at: string
 }
 
+/** Unité de mesure (GET /api/units) : le code est ce qui s'imprime. */
+export interface Unit {
+  id: number
+  code: string
+  label: string | null
+  position: number
+  is_active: boolean
+}
+
 /** Colonne supplémentaire de la grille des heures (repas, kilomètres, formation…). */
 export interface WorkType {
   id: number

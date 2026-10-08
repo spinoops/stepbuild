@@ -11,8 +11,9 @@ import type { GridColumn } from '@/components/baubit/DataGrid'
 import GridPager from '@/components/baubit/GridPager'
 import Tree from '@/components/baubit/Tree'
 import type { TreeNode } from '@/components/baubit/Tree'
-import { BbCheckbox, BbInput, BbSelect, BbTextarea, Field, SectionTitle } from '@/components/baubit/Form'
+import { BB_FIELD, BbCheckbox, BbInput, BbSelect, BbTextarea, Field, SectionTitle } from '@/components/baubit/Form'
 import { Icon } from '@/components/icons'
+import UnitSelect from '@/components/shared/UnitSelect'
 import { useDebounced } from '@/hooks/useDebounced'
 import { SAVE_LABELS, useEntityForm } from '@/hooks/useEntityForm'
 import type { SaveState } from '@/hooks/useEntityForm'
@@ -397,12 +398,7 @@ function ArticleForm({ article, isNew, chapters, defaultChapterId, disabled, onS
           </BbSelect>
         </Field>
         <Field label="Unité" labelWidth={100}>
-          <BbInput className="w-24" list="catalog-units" {...register('unit')} />
-          <datalist id="catalog-units">
-            {['H.', 'Jour', 'Pce', 'M1', 'M2', 'M3', 'Kg', 'To', 'Bloc', 'MS', 'L'].map((unit) => (
-              <option key={unit} value={unit} />
-            ))}
-          </datalist>
+          <UnitSelect extra={article?.unit} className={`${BB_FIELD} w-32`} {...register('unit')} />
           <BbCheckbox label="Titre de chapitre" className="ml-4" {...register('is_title')} />
         </Field>
 

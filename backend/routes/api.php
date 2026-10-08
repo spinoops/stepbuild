@@ -24,6 +24,7 @@ use App\Http\Controllers\QuoteTemplateController;
 use App\Http\Controllers\RegieController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkTypeController;
 use Illuminate\Support\Facades\Route;
@@ -86,6 +87,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/daily-reports/{report}/files/{file}', [DailyReportFileController::class, 'update']);
     Route::delete('/daily-reports/{report}/files/{file}', [DailyReportFileController::class, 'destroy']);
 
+    // Unités de mesure (devis, catalogue, rapports) : lecture pour tous.
+    Route::get('/units', [UnitController::class, 'index']);
+
     // Projets en lecture : tous les rôles (l'ouvrier choisit son chantier, sans aucun prix).
     Route::get('/projects/stats', [ProjectController::class, 'stats']);
     Route::get('/projects', [ProjectController::class, 'index']);
@@ -141,6 +145,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/collaborators/{collaborator}/absences', [CollaboratorAbsenceController::class, 'store']);
         Route::delete('/collaborators/{collaborator}/absences/{absence}', [CollaboratorAbsenceController::class, 'destroy']);
         Route::apiResource('work-types', WorkTypeController::class)->only(['store', 'update', 'destroy'])->parameters(['work-types' => 'workType']);
+        Route::post('/units/reorder', [UnitController::class, 'reorder']);
+        Route::apiResource('units', UnitController::class)->only(['store', 'update', 'destroy']);
 
         // Régie : trois niveaux de prix (brut, régie, client) sur les lignes des rapports.
         Route::get('/regie/lines', [RegieController::class, 'index']);

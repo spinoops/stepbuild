@@ -30,19 +30,19 @@ export function SectionTitle({ children }: { children: ReactNode }) {
   )
 }
 
-const BASE =
+export const BB_FIELD =
   'h-8 rounded-md border border-gray-300 bg-white px-2.5 text-[13px] text-gray-800 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 read-only:bg-gray-50 read-only:text-gray-600 disabled:bg-gray-50 disabled:text-gray-400'
 
 export function BbInput({ className = '', invalid = false, ...props }: ComponentProps<'input'> & { invalid?: boolean }) {
   if (invalid) {
     className = `${className} border-red-400 focus:border-red-500 focus:ring-red-100`
   }
-  return <input className={`${BASE} ${className}`} {...props} />
+  return <input className={`${BB_FIELD} ${className}`} {...props} />
 }
 
 export function BbSelect({ className = '', children, ...props }: ComponentProps<'select'>) {
   return (
-    <select className={`${BASE} ${className}`} {...props}>
+    <select className={`${BB_FIELD} ${className}`} {...props}>
       {children}
     </select>
   )
