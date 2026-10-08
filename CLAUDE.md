@@ -98,7 +98,9 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   temporaire** (`project-photos.file`, 6 h) car une balise `<img>` n'envoie pas le token. Pas besoin de
   `storage:link`. En production : dossier `storage/` inscriptible et inclus dans les sauvegardes ;
   `upload_max_filesize` / `post_max_size` ≥ 10 Mo par photo (12 photos max par envoi).
-- Le **projet courant** (`workspaceStore.projectId`, numérique) est choisi dans la barre de contexte ou en
+- Le **projet courant** (`workspaceStore.projectId`, numérique) est reflété dans l'URL (`?projet=12`, composant
+  `components/shell/WorkspaceUrlSync` : rechargement, lien collé et bouton Retour le conservent ; sur `/projets` c'est `?id=`).
+  Il est choisi dans la barre de contexte ou en
   ouvrant une fiche ; les modules suivants (devis, rapports) doivent s'y rattacher.
 - Composants : `components/projects/` (`ProjectForm`, `ProjectAddressesTab`, `ProjectPhotosTab`), hooks `hooks/useProjects.ts`.
 

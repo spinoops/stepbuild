@@ -11,6 +11,7 @@ import ErrorBoundary from '@/components/ErrorBoundary'
 import Ribbon from '@/components/shell/Ribbon'
 import ContextBar from '@/components/shell/ContextBar'
 import WorkspaceTabs from '@/components/shell/WorkspaceTabs'
+import WorkspaceUrlSync from '@/components/shell/WorkspaceUrlSync'
 import StatusBar from '@/components/shell/StatusBar'
 
 /**
@@ -55,6 +56,7 @@ export default function AppLayout() {
   return (
     <div className="bb flex h-screen min-w-[1100px] flex-col overflow-hidden bg-gray-50">
       <Ribbon brand={brand} user={userSlot} />
+      <WorkspaceUrlSync />
       <ContextBar />
       <WorkspaceTabs />
 
