@@ -1,5 +1,5 @@
 /** Rôles applicatifs (cf. seeder backend). */
-export type Role = 'admin' | 'responsable' | 'ouvrier'
+export type Role = 'admin' | 'responsable' | 'ouvrier' | 'stock'
 
 export interface User {
   id: number
@@ -111,6 +111,45 @@ export interface PriceElement {
   price_updated_at: string | null
   usage_count: number
   updated_at: string
+}
+
+/** Produit suivi en stock (GET /api/stock/items) : jamais de prix. */
+export interface StockItem {
+  id: number
+  price_element_id: number
+  number: string | null
+  description: string | null
+  unit: string | null
+  group_code: string | null
+  family: number | null
+  quantity: number
+  min_quantity: number | null
+  location: string | null
+  note: string | null
+  status: 'ok' | 'bas' | 'rupture'
+  counted_at: string | null
+  counted_by: string | null
+  updated_at: string | null
+}
+
+export interface StockMovement {
+  id: number
+  type: 'entree' | 'sortie' | 'inventaire'
+  quantity: number
+  quantity_after: number
+  note: string | null
+  user: string | null
+  created_at: string | null
+}
+
+/** Élément de coûts proposé à la mise en stock (GET /api/stock/products). */
+export interface StockProduct {
+  id: number
+  family: number
+  group_code: string | null
+  number: string
+  description: string
+  unit: string | null
 }
 
 /** Réponse de GET /api/search. */

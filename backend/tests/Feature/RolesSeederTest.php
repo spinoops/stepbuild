@@ -21,7 +21,7 @@ it('est idempotent : relancer le seeder ne duplique rien', function () {
     $this->seed(DatabaseSeeder::class);
     $this->seed(DatabaseSeeder::class);
 
-    expect(Role::count())->toBe(3);
+    expect(Role::count())->toBe(count(RolesSeeder::ROLES));
     expect(User::whereIn('email', [
         'admin@chantier.test',
         'responsable@chantier.test',
@@ -43,6 +43,6 @@ it('le seeder des rôles seul ne crée aucun compte', function () {
     $this->seed(RolesSeeder::class);
     $this->seed(RolesSeeder::class);
 
-    expect(Role::count())->toBe(3)
+    expect(Role::count())->toBe(count(RolesSeeder::ROLES))
         ->and(User::count())->toBe(0);
 });

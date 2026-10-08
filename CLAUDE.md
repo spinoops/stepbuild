@@ -30,7 +30,7 @@ pour l'affichage : `frontend/src/lib/phases.ts`.
 | 6 | Acomptes, factures, facture finale, export PDF ; statistiques | à faire — **prochaine étape** |
 | 7 | Reprise des données BauBit, mise en production Infomaniak | **mécanisme de déploiement prêt** (GitHub Actions → Infomaniak, `DEPLOY.md`) ; **import catalogue + éléments de coûts BauBit prêt** (`stepbuild:import-baubit`) ; reste : mise en ligne effective, reprise adresses / projets / devis / rapports |
 | 8 | Vue mobile / tablette (ouvriers) | janvier 2027 |
-| 9 | Widget de temps au bureau, stocks | janvier 2027 |
+| 9 | Widget de temps au bureau, stocks | **stocks faits** (rôle `stock`, vue `/stock`) ; widget de temps : janvier 2027 |
 
 Jalons de l'offre inchangés : démo 1 fin octobre, logiciel fonctionnel le 1er décembre 2026,
 mise en production le 1er janvier 2027.
@@ -54,6 +54,10 @@ d'étapes » sont des gabarits réutilisables.
 - `responsable` : chantiers, prix, régie, documents, contrôle, statistiques.
 - `ouvrier` : ses rapports journaliers et les projets ; **jamais de prix ni de marges**
   (côté API : ne jamais exposer les montants aux ouvriers ; côté front : `canSeePrices()`).
+- `stock` : **uniquement la vue des stocks** (`/stock`), sans aucun prix. Un compte qui n'a que ce rôle est servi dans
+  une coque réduite (`components/stock/StockShell`, bascule dans `App.tsx` via `isStockOnly()`), toute autre adresse
+  renvoie sur `/stock` ; côté API, les routes chantiers/rapports sont `roles:admin,responsable,ouvrier` et les stocks
+  `roles:admin,responsable,stock`.
 
 Comptes de démo (seeder, **hors production seulement**) : `admin@chantier.test`, `responsable@chantier.test`,
 `ouvrier@chantier.test` — mot de passe `password`.
@@ -234,6 +238,21 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   des données **fictives** en environnement `local` uniquement (deux chantiers avec devis et rapports d'août 2026,
   absences, positions régie des collaborateurs).
 
+### Stocks (phase 9, livré en avance le 08.10.2026)
+- `stock_items` (un élément de coûts suivi : `price_element_id` unique, `quantity`, `min_quantity` = seuil « à
+  commander », `location`, `note`, `counted_at` / `counted_by`) et `stock_movements` (`type` entree | sortie | inventaire,
+  `quantity` signée, `quantity_after`, `user_id`, `note`). `StockItem::apply()` est le seul chemin de modification de la
+  quantité ; `status()` = rupture (≤ 0) | bas (≤ seuil) | ok. Familles stockables : 2 à 5 (pas salaire ni tiers).
+- API `StockController` : `GET /stock/items` (tout, la vue filtre en mémoire), `GET /stock/products?search=` (éléments
+  pas encore suivis, **sans prix**), `POST /stock/items`, `PUT|DELETE /stock/items/{id}`, `POST
+  /stock/items/{id}/movements` (renvoie `item` + `movement`), `GET /stock/items/{id}/movements`. Aucune ressource stock
+  n'émet de prix.
+- Front : `pages/StockPage` (une seule page : recherche instantanée, filtres Tous / À commander / Rupture, colonne
+  Quantité saisie au clavier **« 12 » = inventaire, « +5 » = entrée, « -3 » = sortie, Entrée = ligne suivante**, seuil
+  et emplacement éditables en place, historique dépliable, ajout depuis le catalogue par `ProductPicker`), hooks
+  `hooks/useStock.ts` (le produit renvoyé remplace celui du cache). Pour admin/responsable la page est dans la coque
+  normale (Données de base → Stocks).
+
 ### Unités de mesure
 Table `units` (code imprimé, libellé, ordre, actif), `Unit::DEFAULTS` = codes BauBit du devis type (M1, M2, M3, H., Jour,
 Pce…), créées par `Unit::seedDefaults()` dans `DatabaseSeeder` (tous environnements, jamais écrasées). `GET /units`
@@ -273,7 +292,7 @@ Navigation dans `frontend/src/lib/navigation.ts` (groupes calqués sur les ruban
 filtrée par rôle. Pages dans `frontend/src/pages/` :
 `/dashboard`, `/projets`, `/clients`, `/rapports`, `/regie`, `/controle-heures`,
 `/documents`, `/statistiques`, `/catalogue`, `/listes-prix`, `/modeles-devis`, `/sous-details-types`,
-`/collaborateurs`, `/users`, `/settings`.
+`/collaborateurs`, `/stock`, `/users`, `/settings`.
 Les modules non développés utilisent `components/ModulePlaceholder.tsx` : **remplacer**
 le placeholder par la vraie page lors de la phase concernée.
 

@@ -11,12 +11,13 @@ use Spatie\Permission\PermissionRegistrar;
  *  - admin       : tout, y compris utilisateurs et configuration.
  *  - responsable : gestion complète des chantiers (prix, régie, documents, contrôle).
  *  - ouvrier     : saisie de ses rapports journaliers, sans accès aux prix ni aux marges.
+ *  - stock       : uniquement la vue des stocks (quantités, seuils, mouvements), sans aucun prix.
  *
  * Idempotent : exécuté à chaque déploiement, sans risque pour les données.
  */
 class RolesSeeder extends Seeder
 {
-    public const ROLES = ['admin', 'responsable', 'ouvrier'];
+    public const ROLES = ['admin', 'responsable', 'ouvrier', 'stock'];
 
     public function run(): void
     {

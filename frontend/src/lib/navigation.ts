@@ -55,6 +55,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/modeles-devis', label: 'Modèles de devis', icon: 'tree', roles: GESTION },
       { to: '/sous-details-types', label: 'Sous-détails types', icon: 'calculator', roles: GESTION },
       { to: '/collaborateurs', label: 'Collaborateurs', icon: 'users', roles: GESTION },
+      { to: '/stock', label: 'Stocks', icon: 'box', roles: ['admin', 'responsable', 'stock'] },
     ],
   },
   {

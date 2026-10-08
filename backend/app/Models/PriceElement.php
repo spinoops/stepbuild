@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\HasSearchText;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -54,6 +55,12 @@ class PriceElement extends Model
             'price_updated_at' => 'datetime',
             'usage_count' => 'integer',
         ];
+    }
+
+    /** Suivi de stock de cet élément, s'il est en stock. */
+    public function stockItem(): HasOne
+    {
+        return $this->hasOne(StockItem::class, 'price_element_id');
     }
 
     public function searchableFields(): array

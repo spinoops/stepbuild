@@ -17,12 +17,33 @@ import CollaboratorsPage from '@/pages/CollaboratorsPage'
 import BreakdownTemplatesPage from '@/pages/BreakdownTemplatesPage'
 import UsersPage from '@/pages/UsersPage'
 import SettingsPage from '@/pages/SettingsPage'
+import StockPage from '@/pages/StockPage'
+import StockShell from '@/components/stock/StockShell'
+import { useAuth } from '@/auth/AuthContext'
+import { isStockOnly } from '@/lib/roles'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import RoleRoute from '@/components/RoleRoute'
 import AppLayout from '@/components/AppLayout'
 import PagePane from '@/components/PagePane'
 
 export default function App() {
+  const { user } = useAuth()
+
+  // Rôle stock seul : une coque réduite et une seule vue, quelle que soit l'adresse demandée.
+  if (isStockOnly(user)) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<StockShell />}>
+            <Route path="/stock" element={<StockPage />} />
+          </Route>
+        </Route>
+        <Route path="*" element={<Navigate to="/stock" replace />} />
+      </Routes>
+    )
+  }
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -48,6 +69,7 @@ export default function App() {
             <Route path="/modeles-devis" element={<QuoteTemplatesPage />} />
             <Route path="/collaborateurs" element={<CollaboratorsPage />} />
             <Route path="/sous-details-types" element={<BreakdownTemplatesPage />} />
+            <Route path="/stock" element={<StockPage />} />
           </Route>
 
           {/* Administration : admin uniquement */}

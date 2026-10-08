@@ -25,6 +25,7 @@ use App\Http\Controllers\QuoteTemplateController;
 use App\Http\Controllers\RegieController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\StockController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkTypeController;
@@ -84,32 +85,45 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'me']);
 
-    // Rapports journaliers : tous les rôles (l'ouvrier ne voit que les siens, jamais de montant).
-    Route::get('/collaborators', [CollaboratorController::class, 'index']);
-    Route::get('/work-types', [CollaboratorController::class, 'workTypes']);
-    Route::get('/daily-reports', [DailyReportController::class, 'index']);
-    Route::post('/projects/{project}/daily-reports', [DailyReportController::class, 'store'])->whereNumber('project');
-    Route::get('/daily-reports/{report}', [DailyReportController::class, 'show']);
-    Route::put('/daily-reports/{report}', [DailyReportController::class, 'update']);
-    Route::delete('/daily-reports/{report}', [DailyReportController::class, 'destroy']);
-    Route::post('/daily-reports/{report}/copy-team', [DailyReportController::class, 'copyTeam']);
-    Route::post('/daily-reports/{report}/collaborators', [DailyReportHourController::class, 'addCollaborator']);
-    Route::delete('/daily-reports/{report}/collaborators/{collaborator}', [DailyReportHourController::class, 'removeCollaborator']);
-    Route::put('/daily-reports/{report}/hours', [DailyReportHourController::class, 'setCell']);
-    Route::post('/daily-reports/{report}/items', [DailyReportItemController::class, 'store']);
-    Route::put('/daily-reports/{report}/items/{item}', [DailyReportItemController::class, 'update']);
-    Route::delete('/daily-reports/{report}/items/{item}', [DailyReportItemController::class, 'destroy']);
-    Route::post('/daily-reports/{report}/files', [DailyReportFileController::class, 'store']);
-    Route::put('/daily-reports/{report}/files/{file}', [DailyReportFileController::class, 'update']);
-    Route::delete('/daily-reports/{report}/files/{file}', [DailyReportFileController::class, 'destroy']);
+    // Stocks : admin, responsable et rôle « stock » (qui n'a que cette vue, sans aucun prix).
+    Route::middleware('roles:admin,responsable,stock')->group(function () {
+        Route::get('/stock/items', [StockController::class, 'index']);
+        Route::get('/stock/products', [StockController::class, 'products']);
+        Route::post('/stock/items', [StockController::class, 'store']);
+        Route::put('/stock/items/{item}', [StockController::class, 'update']);
+        Route::delete('/stock/items/{item}', [StockController::class, 'destroy']);
+        Route::post('/stock/items/{item}/movements', [StockController::class, 'move']);
+        Route::get('/stock/items/{item}/movements', [StockController::class, 'movements']);
+    });
 
-    // Unités de mesure (devis, catalogue, rapports) : lecture pour tous.
-    Route::get('/units', [UnitController::class, 'index']);
+    // Chantiers et rapports : admin, responsable et ouvrier (l'ouvrier ne voit que les siens, jamais de montant).
+    Route::middleware('roles:admin,responsable,ouvrier')->group(function () {
+        Route::get('/collaborators', [CollaboratorController::class, 'index']);
+        Route::get('/work-types', [CollaboratorController::class, 'workTypes']);
+        Route::get('/daily-reports', [DailyReportController::class, 'index']);
+        Route::post('/projects/{project}/daily-reports', [DailyReportController::class, 'store'])->whereNumber('project');
+        Route::get('/daily-reports/{report}', [DailyReportController::class, 'show']);
+        Route::put('/daily-reports/{report}', [DailyReportController::class, 'update']);
+        Route::delete('/daily-reports/{report}', [DailyReportController::class, 'destroy']);
+        Route::post('/daily-reports/{report}/copy-team', [DailyReportController::class, 'copyTeam']);
+        Route::post('/daily-reports/{report}/collaborators', [DailyReportHourController::class, 'addCollaborator']);
+        Route::delete('/daily-reports/{report}/collaborators/{collaborator}', [DailyReportHourController::class, 'removeCollaborator']);
+        Route::put('/daily-reports/{report}/hours', [DailyReportHourController::class, 'setCell']);
+        Route::post('/daily-reports/{report}/items', [DailyReportItemController::class, 'store']);
+        Route::put('/daily-reports/{report}/items/{item}', [DailyReportItemController::class, 'update']);
+        Route::delete('/daily-reports/{report}/items/{item}', [DailyReportItemController::class, 'destroy']);
+        Route::post('/daily-reports/{report}/files', [DailyReportFileController::class, 'store']);
+        Route::put('/daily-reports/{report}/files/{file}', [DailyReportFileController::class, 'update']);
+        Route::delete('/daily-reports/{report}/files/{file}', [DailyReportFileController::class, 'destroy']);
 
-    // Projets en lecture : tous les rôles (l'ouvrier choisit son chantier, sans aucun prix).
-    Route::get('/projects/stats', [ProjectController::class, 'stats']);
-    Route::get('/projects', [ProjectController::class, 'index']);
-    Route::get('/projects/{project}', [ProjectController::class, 'show'])->whereNumber('project');
+        // Unités de mesure (devis, catalogue, rapports) : lecture pour tous.
+        Route::get('/units', [UnitController::class, 'index']);
+
+        // Projets en lecture : tous les rôles (l'ouvrier choisit son chantier, sans aucun prix).
+        Route::get('/projects/stats', [ProjectController::class, 'stats']);
+        Route::get('/projects', [ProjectController::class, 'index']);
+        Route::get('/projects/{project}', [ProjectController::class, 'show'])->whereNumber('project');
+    });
 
     // Gestion (admin + responsable) : données de base. Jamais accessible aux ouvriers (prix).
     Route::middleware('roles:admin,responsable')->group(function () {

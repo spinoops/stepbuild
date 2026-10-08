@@ -15,7 +15,7 @@ it('ne crée en production que les rôles, les unités et les sous-détails type
     // Appel direct : `db:seed` demanderait une confirmation en production.
     app(DatabaseSeeder::class)->setContainer(app())->__invoke();
 
-    expect(Role::pluck('name')->sort()->values()->all())->toBe(['admin', 'ouvrier', 'responsable'])
+    expect(Role::pluck('name')->sort()->values()->all())->toBe(['admin', 'ouvrier', 'responsable', 'stock'])
         ->and(User::count())->toBe(0)
         ->and(Unit::count())->toBeGreaterThan(0);
 });
