@@ -1,5 +1,9 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { BB_FIELD } from '@/components/baubit/Form'
+import UnitSelect from '@/components/shared/UnitSelect'
+import { PRICE_PATTERN, nullable, toNumber } from '@/lib/crud'
+import { toast } from '@/lib/toast'
 import DataGrid from '@/components/baubit/DataGrid'
 import type { GridColumn } from '@/components/baubit/DataGrid'
 import { Icon } from '@/components/icons'
@@ -30,6 +34,7 @@ function ElementBrowser({ onClose, family, onPick, showPrices = true }: ElementB
   const [group, setGroup] = useState<string | null>(null)
   const [term, setTerm] = useState('')
   const [selected, setSelected] = useState<number | null>(null)
+  const [creating, setCreating] = useState(false)
   const search = useDebounced(term.trim(), 200)
 
   const groups = useQuery({
@@ -135,11 +140,30 @@ function ElementBrowser({ onClose, family, onPick, showPrices = true }: ElementB
               showFilter={false}
               emptyText={elements.isLoading ? 'Chargement…' : 'Aucun élément.'}
             />
+            {creating && (
+              <NewElementForm
+                family={family}
+                groups={(groups.data ?? []).map((item) => item.code)}
+                group={group}
+                description={term.trim()}
+                onCancel={() => setCreating(false)}
+                onCreated={(element) => {
+                  onPick(element, false)
+                  onClose()
+                }}
+              />
+            )}
             <div className="mt-3 flex items-center gap-2">
               <span className="text-[12px] text-gray-400">
                 {rows.length} élément{rows.length > 1 ? 's' : ''} · double-clic ou Entrée pour insérer
               </span>
               <span className="ml-auto flex gap-2">
+                {showPrices && !creating && (
+                  <button type="button" onClick={() => setCreating(true)} className="flex h-8 items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 text-[13px] text-gray-700 hover:bg-gray-50">
+                    <Icon name="plus" className="h-3.5 w-3.5" />
+                    Nouvel élément
+                  </button>
+                )}
                 <button type="button" onClick={() => pick(true)} disabled={!current} className="h-8 rounded-md border border-gray-300 bg-white px-3 text-[13px] text-gray-700 hover:bg-gray-50 disabled:opacity-40">
                   Insérer et continuer
                 </button>
@@ -152,5 +176,89 @@ function ElementBrowser({ onClose, family, onPick, showPrices = true }: ElementB
         </div>
       </div>
     </Modal>
+  )
+}
+
+interface NewElementFormProps {
+  family: number
+  groups: string[]
+  group: string | null
+  description: string
+  onCancel: () => void
+  onCreated: (element: PriceElement) => void
+}
+
+/** Création d'un élément de coûts depuis la fenêtre (gestion), puis insertion immédiate. */
+function NewElementForm({ family, groups, group: initialGroup, description: initial, onCancel, onCreated }: NewElementFormProps) {
+  const queryClient = useQueryClient()
+  const [group, setGroup] = useState(initialGroup ?? '')
+  const [number, setNumber] = useState('')
+  const [description, setDescription] = useState(initial)
+  const [unit, setUnit] = useState('')
+  const [net, setNet] = useState('')
+  const [regie, setRegie] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const valid = number.trim() !== '' && description.trim() !== '' && PRICE_PATTERN.test(net) && PRICE_PATTERN.test(regie)
+
+  async function submit() {
+    if (!valid || busy) return
+    setBusy(true)
+    try {
+      const element = (
+        await api.post<{ data: PriceElement }>('/price-elements', {
+          family,
+          group_code: nullable(group),
+          number: number.trim(),
+          description: description.trim(),
+          unit: nullable(unit),
+          net_price: toNumber(net),
+          regie_price: toNumber(regie),
+        })
+      ).data.data
+      void queryClient.invalidateQueries({ queryKey: ['price-elements'] })
+      void queryClient.invalidateQueries({ queryKey: ['search-index'] })
+      toast('Élément de coûts créé et inséré.', 'success')
+      onCreated(element)
+    } catch {
+      toast("L'élément n'a pas pu être créé.", 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form
+      className="mt-3 rounded-lg border border-primary-200 bg-primary-50/50 p-3"
+      onSubmit={(event) => {
+        event.preventDefault()
+        void submit()
+      }}
+    >
+      <div className="mb-2 text-[13px] font-semibold text-gray-800">Nouvel élément de coûts · {costFamily(family).label}</div>
+      <div className="flex items-center gap-2">
+        <input value={group} onChange={(e) => setGroup(e.target.value)} list="element-groups" placeholder="Groupe" maxLength={20} className={`${BB_FIELD} w-24`} aria-label="Groupe" />
+        <datalist id="element-groups">
+          {groups.map((code) => (
+            <option key={code} value={code} />
+          ))}
+        </datalist>
+        <input value={number} onChange={(e) => setNumber(e.target.value)} placeholder="N° (obligatoire)" maxLength={30} className={`${BB_FIELD} w-32`} aria-label="Numéro" />
+        <input autoFocus value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Désignation (obligatoire)" maxLength={500} className={`${BB_FIELD} min-w-0 flex-1`} aria-label="Désignation" />
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <UnitSelect value={unit} onChange={(e) => setUnit(e.target.value)} className={`${BB_FIELD} w-28`} aria-label="Unité" />
+        <input value={net} onChange={(e) => setNet(e.target.value)} placeholder="Prix net" inputMode="decimal" className={`${BB_FIELD} w-28 text-right ${PRICE_PATTERN.test(net) ? '' : 'border-red-400'}`} aria-label="Prix net" />
+        <input value={regie} onChange={(e) => setRegie(e.target.value)} placeholder="Prix régie" inputMode="decimal" className={`${BB_FIELD} w-28 text-right ${PRICE_PATTERN.test(regie) ? '' : 'border-red-400'}`} aria-label="Prix régie" />
+        <span className="ml-auto flex gap-2">
+          <button type="button" onClick={onCancel} className="h-8 rounded-md px-3 text-[13px] text-gray-600 hover:bg-gray-100">
+            Annuler
+          </button>
+          <button type="submit" disabled={!valid || busy} className="h-8 rounded-md bg-accent-600 px-3 text-[13px] font-medium text-white hover:bg-accent-700 disabled:opacity-40">
+            Créer et insérer
+          </button>
+        </span>
+      </div>
+    </form>
   )
 }

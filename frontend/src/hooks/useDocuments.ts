@@ -181,11 +181,21 @@ export function useArticlePicker() {
   })
 }
 
-/** Crée un article à la volée dans le catalogue (depuis le champ de recherche d'un devis). */
+export interface NewArticlePayload {
+  catalog_chapter_id: number
+  description: string
+  code?: string | null
+  sub_code?: string | null
+  unit?: string | null
+  purchase_price?: number | null
+  sale_price?: number | null
+}
+
+/** Crée un article à la volée dans le catalogue (champ de recherche ou fenêtre de recherche d'un devis). */
 export function useCreateArticleOnTheFly() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: { catalog_chapter_id: number; description: string }) =>
+    mutationFn: async (payload: NewArticlePayload) =>
       (await api.post<{ data: CatalogArticle }>('/catalog-articles', payload)).data.data,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['catalog-articles'] })

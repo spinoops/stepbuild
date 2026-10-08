@@ -4,10 +4,15 @@ import type { GridColumn } from '@/components/baubit/DataGrid'
 import Tree from '@/components/baubit/Tree'
 import { Icon } from '@/components/icons'
 import Modal from '@/components/ui/Modal'
+import UnitSelect from '@/components/shared/UnitSelect'
+import { BB_FIELD } from '@/components/baubit/Form'
 import { useCatalogChapters, useChapterTree } from '@/hooks/useCatalog'
-import { useArticlePicker } from '@/hooks/useDocuments'
+import { useArticlePicker, useCreateArticleOnTheFly } from '@/hooks/useDocuments'
 import type { PickerArticle } from '@/hooks/useDocuments'
+import { PRICE_PATTERN, nullable, toNumber } from '@/lib/crud'
 import { searchIndex } from '@/lib/searchIndex'
+import { toast } from '@/lib/toast'
+import type { CatalogChapter } from '@/types'
 
 interface ArticleBrowserDialogProps {
   open: boolean
@@ -41,6 +46,7 @@ function ArticleBrowser({ onClose, onPick, chapterId = null }: ArticleBrowserDia
   const [chapter, setChapter] = useState<number | null>(chapterId)
   const [term, setTerm] = useState('')
   const [selected, setSelected] = useState<number | null>(null)
+  const [creating, setCreating] = useState(false)
 
   const chapterIds = useMemo(() => {
     if (chapter === null) return null
@@ -129,11 +135,29 @@ function ArticleBrowser({ onClose, onPick, chapterId = null }: ArticleBrowserDia
               showFilter={false}
               emptyText={picker.isLoading ? 'Chargement du catalogue…' : 'Aucun article.'}
             />
+            {creating && (
+              <NewArticleForm
+                chapters={chapters.data ?? []}
+                chapterId={chapter}
+                description={term.trim()}
+                onCancel={() => setCreating(false)}
+                onCreated={(article) => {
+                  onPick(article, false)
+                  onClose()
+                }}
+              />
+            )}
             <div className="mt-3 flex items-center gap-2">
               <span className="text-[12px] text-gray-400">
                 {rows.length} article{rows.length > 1 ? 's' : ''} · double-clic ou Entrée pour insérer
               </span>
               <span className="ml-auto flex gap-2">
+                {!creating && (
+                  <button type="button" onClick={() => setCreating(true)} className="flex h-8 items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 text-[13px] text-gray-700 hover:bg-gray-50">
+                    <Icon name="plus" className="h-3.5 w-3.5" />
+                    Nouvel article
+                  </button>
+                )}
                 <button type="button" onClick={() => pick(true)} disabled={!current} className="h-8 rounded-md border border-gray-300 bg-white px-3 text-[13px] text-gray-700 hover:bg-gray-50 disabled:opacity-40">
                   Insérer et continuer
                 </button>
@@ -146,5 +170,102 @@ function ArticleBrowser({ onClose, onPick, chapterId = null }: ArticleBrowserDia
         </div>
       </div>
     </Modal>
+  )
+}
+
+interface NewArticleFormProps {
+  chapters: CatalogChapter[]
+  /** Chapitre sélectionné dans la fenêtre (proposé par défaut). */
+  chapterId: number | null
+  /** Texte de la recherche, repris comme description. */
+  description: string
+  onCancel: () => void
+  onCreated: (article: PickerArticle) => void
+}
+
+/** Création d'un article dans le catalogue depuis la fenêtre, puis insertion immédiate dans l'étape. */
+function NewArticleForm({ chapters, chapterId, description: initial, onCancel, onCreated }: NewArticleFormProps) {
+  const create = useCreateArticleOnTheFly()
+  const [chapter, setChapter] = useState(chapterId ? String(chapterId) : '')
+  const [code, setCode] = useState('')
+  const [description, setDescription] = useState(initial)
+  const [unit, setUnit] = useState('')
+  const [purchase, setPurchase] = useState('')
+  const [sale, setSale] = useState('')
+
+  const valid = chapter !== '' && description.trim() !== '' && PRICE_PATTERN.test(purchase) && PRICE_PATTERN.test(sale)
+
+  async function submit() {
+    if (!valid || create.isPending) return
+    try {
+      const article = await create.mutateAsync({
+        catalog_chapter_id: Number(chapter),
+        code: nullable(code),
+        description: description.trim(),
+        unit: nullable(unit),
+        purchase_price: toNumber(purchase),
+        sale_price: toNumber(sale),
+      })
+      const chapterCode = chapters.find((item) => item.id === article.catalog_chapter_id)?.code
+      toast('Article ajouté au catalogue et inséré.', 'success')
+      onCreated({
+        id: article.id,
+        code: [chapterCode, article.code, article.sub_code].filter(Boolean).join('.'),
+        description: article.description,
+        unit: article.unit,
+        sale: article.sale_price,
+        purchase: article.purchase_price,
+        chapterId: article.catalog_chapter_id,
+      })
+    } catch {
+      toast("L'article n'a pas pu être créé.", 'error')
+    }
+  }
+
+  const sorted = [...chapters].sort((a, b) => a.code.localeCompare(b.code, 'fr', { numeric: true }))
+
+  return (
+    <form
+      className="mt-3 rounded-lg border border-primary-200 bg-primary-50/50 p-3"
+      onSubmit={(event) => {
+        event.preventDefault()
+        void submit()
+      }}
+    >
+      <div className="mb-2 text-[13px] font-semibold text-gray-800">Nouvel article du catalogue</div>
+      <div className="grid grid-cols-[1fr_90px] gap-2">
+        <select value={chapter} onChange={(e) => setChapter(e.target.value)} className={`${BB_FIELD} w-full`} aria-label="Chapitre">
+          <option value="">— chapitre —</option>
+          {sorted.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.code} - {item.label}
+            </option>
+          ))}
+        </select>
+        <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Code" maxLength={20} className={`${BB_FIELD} w-full`} aria-label="Code" />
+        <textarea
+          autoFocus
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={2}
+          placeholder="Description (obligatoire)"
+          className={`${BB_FIELD} col-span-2 h-auto w-full py-1.5`}
+          aria-label="Description"
+        />
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <UnitSelect value={unit} onChange={(e) => setUnit(e.target.value)} className={`${BB_FIELD} w-28`} aria-label="Unité" />
+        <input value={purchase} onChange={(e) => setPurchase(e.target.value)} placeholder="Prix d'achat" inputMode="decimal" className={`${BB_FIELD} w-28 text-right ${PRICE_PATTERN.test(purchase) ? '' : 'border-red-400'}`} aria-label="Prix d'achat" />
+        <input value={sale} onChange={(e) => setSale(e.target.value)} placeholder="Prix de vente" inputMode="decimal" className={`${BB_FIELD} w-28 text-right ${PRICE_PATTERN.test(sale) ? '' : 'border-red-400'}`} aria-label="Prix de vente" />
+        <span className="ml-auto flex gap-2">
+          <button type="button" onClick={onCancel} className="h-8 rounded-md px-3 text-[13px] text-gray-600 hover:bg-gray-100">
+            Annuler
+          </button>
+          <button type="submit" disabled={!valid || create.isPending} className="h-8 rounded-md bg-accent-600 px-3 text-[13px] font-medium text-white hover:bg-accent-700 disabled:opacity-40">
+            Créer et insérer
+          </button>
+        </span>
+      </div>
+    </form>
   )
 }
