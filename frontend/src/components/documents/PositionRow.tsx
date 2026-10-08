@@ -225,7 +225,7 @@ export default function PositionRow({
       {isItem && (
         <>
           <td className="py-0.5">
-            <UnitSelect value={draft.unit} onChange={(e) => change({ unit: e.target.value })} className={`${CELL} px-0`} aria-label="Unité" />
+            <UnitSelect value={draft.unit} onChange={(e) => change({ unit: e.target.value })} className={`${CELL} cursor-pointer appearance-none px-1`} aria-label="Unité" />
           </td>
           <td className="py-0.5">
             <input
