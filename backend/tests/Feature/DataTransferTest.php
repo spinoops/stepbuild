@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Address;
+use App\Models\Collaborator;
 use App\Models\PriceElement;
 use App\Models\StockItem;
 use App\Models\User;
@@ -19,7 +20,7 @@ afterEach(function () {
     File::delete($this->file);
 });
 
-it('exporte puis réimporte les données métier à l\'identique, comptes de démo à la corbeille', function () {
+it('exporte puis réimporte les données métier à l\'identique ; avec --with-users, comptes de démo à la corbeille', function () {
     $this->seed(DatabaseSeeder::class);
     Address::factory()->count(3)->create(['remark' => "Ligne 1\nLigne 2 — avec « guillemets » et l'apostrophe"]);
     $before = Address::orderBy('id')->get()->toArray();
@@ -39,7 +40,7 @@ it('exporte puis réimporte les données métier à l\'identique, comptes de dé
         'created_at' => now(), 'updated_at' => now(),
     ]);
 
-    $this->artisan('stepbuild:import-data', ['file' => $this->file, '--force' => true, '--no-backup' => true])->assertSuccessful();
+    $this->artisan('stepbuild:import-data', ['file' => $this->file, '--force' => true, '--no-backup' => true, '--with-users' => true])->assertSuccessful();
 
     expect(Address::orderBy('id')->get()->toArray())->toEqual($before)
         ->and(StockItem::count())->toBe(1)
@@ -52,11 +53,38 @@ it('exporte puis réimporte les données métier à l\'identique, comptes de dé
     $this->postJson('/api/login', ['email' => 'admin@chantier.test', 'password' => 'password'])->assertUnprocessable();
 });
 
-it('garde les comptes de démo actifs avec --keep-demo-accounts', function () {
+it('ne touche jamais aux comptes de la cible par défaut et coupe les liens vers les comptes du fichier', function () {
+    // Base « locale » : comptes de démo, un collaborateur lié au compte ouvrier, un stock compté par l'admin.
+    $this->seed(DatabaseSeeder::class);
+    $worker = User::where('email', 'ouvrier@chantier.test')->firstOrFail();
+    $admin = User::where('email', 'admin@chantier.test')->firstOrFail();
+    Collaborator::create(['last_name' => 'Lié', 'user_id' => $worker->id]);
+    $element = PriceElement::create(['family' => 2, 'group_code' => 'M92', 'number' => '1', 'description' => 'Sac', 'unit' => 'Sac']);
+    StockItem::create(['price_element_id' => $element->id])->apply('inventaire', 4, $admin);
+    $this->artisan('stepbuild:export-data', ['--output' => $this->file])->assertSuccessful();
+
+    // Base « production » : les comptes de démo ont disparu, un vrai compte existe.
+    User::query()->forceDelete();
+    $prod = User::create(['name' => 'Stéphane', 'email' => 'prod@lachat.test', 'password' => 'motdepasse-prod']);
+    $prod->assignRole('admin');
+
+    $this->artisan('stepbuild:import-data', ['file' => $this->file, '--force' => true, '--no-backup' => true])->assertSuccessful();
+
+    expect(User::count())->toBe(1)
+        ->and(User::first()->email)->toBe('prod@lachat.test')
+        ->and(User::first()->hasRole('admin'))->toBeTrue()
+        ->and(Collaborator::where('last_name', 'Lié')->first()->user_id)->toBeNull()
+        ->and(StockItem::first()->quantity)->toBe(4.0)
+        ->and(StockItem::first()->counted_by)->toBeNull()
+        ->and(StockItem::first()->movements()->first()->user_id)->toBeNull();
+    $this->postJson('/api/login', ['email' => 'prod@lachat.test', 'password' => 'motdepasse-prod'])->assertOk();
+});
+
+it('garde les comptes de démo actifs avec --with-users --keep-demo-accounts', function () {
     $this->seed(DatabaseSeeder::class);
     $this->artisan('stepbuild:export-data', ['--output' => $this->file])->assertSuccessful();
 
-    $this->artisan('stepbuild:import-data', ['file' => $this->file, '--force' => true, '--no-backup' => true, '--keep-demo-accounts' => true])
+    $this->artisan('stepbuild:import-data', ['file' => $this->file, '--force' => true, '--no-backup' => true, '--with-users' => true, '--keep-demo-accounts' => true])
         ->assertSuccessful();
 
     expect(User::count())->toBe(3)

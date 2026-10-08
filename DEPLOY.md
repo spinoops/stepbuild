@@ -300,12 +300,15 @@ php backend/artisan stepbuild:admin login@step-one.ch --name="Step One"
 
 ### F bis. Reprendre les données du PC (une fois, au démarrage)
 
-Comptes (avec leurs mots de passe chiffrés), réglages, unités, types de travail, adresses, catalogue,
-éléments de coûts, sous-détails types, modèles de devis, projets, collaborateurs, absences, devis et
-rapports de la base locale peuvent être repris en production. Ne sont jamais repris : connexions,
-liens de mot de passe, caches, Telescope, migrations ; le journal d'activité seulement avec
-`--with-journal`. **Les comptes de démonstration `@chantier.test` sont mis à la corbeille** à
-l'import (`--keep-demo-accounts` pour les garder).
+Réglages, unités, types de travail, adresses, catalogue, éléments de coûts, sous-détails types,
+modèles de devis, projets, collaborateurs, absences, devis, rapports et stocks de la base locale
+peuvent être repris en production. **Les comptes et rôles de la production ne sont jamais touchés** :
+ceux du fichier sont ignorés et les liens vers des comptes (collaborateur ↔ compte, auteur d'un rapport
+ou d'un mouvement de stock) sont remis à vide — relier ensuite chaque ouvrier à son compte dans
+Collaborateurs. Ne sont jamais repris non plus : connexions, liens de mot de passe, caches, Telescope,
+migrations ; le journal d'activité seulement avec `--with-journal`. Pour reprendre malgré tout les
+comptes du fichier (ils **remplacent** alors ceux de la cible), `--with-users` ; les comptes de
+démonstration `@chantier.test` passent alors à la corbeille (`--keep-demo-accounts` pour les garder).
 
 1. **En local**, sur la **même version** du code que la production (l'import refuse un fichier
    exporté avec d'autres migrations) :
@@ -327,8 +330,8 @@ php backend/artisan stepbuild:import-data donnees-<date>.sql
 rm backend/storage/app/transfer/donnees-*.sql     # il contient les comptes
 ```
 
-4. Chacun se reconnecte (les anciennes connexions sont effacées). Si aucun compte réel n'existait
-   encore dans la base locale, créer l'admin avec `stepbuild:admin` (§ F).
+4. Chacun se reconnecte (les anciennes connexions sont effacées). Si aucun compte n'existe encore,
+   créer l'admin avec `stepbuild:admin` (§ F).
 
 ### G. Ensuite
 

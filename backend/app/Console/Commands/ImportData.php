@@ -15,7 +15,8 @@ use Throwable;
  * En production : remplace les données métier par celles d'un fichier produit par
  * stepbuild:export-data (sauvegarde de la base d'abord). Les tables reprises sont
  * vidées puis remplies ; les connexions sont réinitialisées (chacun se reconnecte).
- * Les comptes de démonstration (@chantier.test) sont mis à la corbeille.
+ * **Les comptes et rôles de la cible ne sont jamais touchés** (sauf --with-users explicite,
+ * auquel cas les comptes de démonstration @chantier.test sont mis à la corbeille).
  *
  *   php artisan stepbuild:import-data donnees-20261008-120000.sql
  *       (fichier déposé dans backend/storage/app/transfer/, ou chemin complet)
@@ -26,7 +27,8 @@ class ImportData extends Command
                             {file : Fichier exporté (nom dans storage/app/transfer ou chemin)}
                             {--force : Ne pas demander de confirmation}
                             {--no-backup : Ne pas sauvegarder la base avant (déconseillé)}
-                            {--keep-demo-accounts : Garder les comptes @chantier.test actifs}
+                            {--with-users : Reprendre aussi les comptes et rôles du fichier (REMPLACE ceux de la cible ; jamais par défaut)}
+                            {--keep-demo-accounts : Avec --with-users, garder les comptes @chantier.test actifs}
                             {--ignore-schema : Importer même si les migrations appliquées diffèrent (déconseillé)}';
 
     protected $description = 'Remplace les données métier par celles exportées en local (sauvegarde d\'abord).';
@@ -56,7 +58,16 @@ class ImportData extends Command
             return self::FAILURE;
         }
 
-        $this->warn('Les comptes, réglages, adresses, catalogue, projets, devis et rapports actuels vont être REMPLACÉS.');
+        $withUsers = (bool) $this->option('with-users');
+        if ($withUsers) {
+            $this->warn('Les COMPTES, réglages, adresses, catalogue, projets, devis, rapports et stocks actuels vont être REMPLACÉS.');
+        } else {
+            $statements = array_values(array_filter($statements, fn (string $sql) => ! preg_match(
+                '/^(?:DELETE FROM|INSERT INTO) `('.implode('|', DataTransfer::USER_TABLES).')`/',
+                $sql,
+            )));
+            $this->warn('Les comptes actuels sont conservés ; réglages, adresses, catalogue, projets, devis, rapports et stocks vont être REMPLACÉS.');
+        }
         if (! $this->option('force') && ! $this->confirm('Continuer ?', false)) {
             $this->line('Annulé.');
 
@@ -74,6 +85,11 @@ class ImportData extends Command
         }
 
         Schema::disableForeignKeyConstraints();
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite ignore PRAGMA foreign_keys à l'intérieur d'une transaction (tests) : on diffère les
+            // contrôles à la validation ; les liens vers des comptes sont remis à vide avant.
+            DB::statement('PRAGMA defer_foreign_keys = ON');
+        }
         try {
             foreach (DataTransfer::ALWAYS_CLEARED as $table) {
                 if (Schema::hasTable($table)) {
@@ -82,6 +98,15 @@ class ImportData extends Command
             }
             foreach ($statements as $sql) {
                 DB::unprepared($sql);
+            }
+            if (! $withUsers) {
+                // Les ids de comptes du fichier sont ceux de la base d'origine : on coupe les liens plutôt
+                // que de les laisser pointer vers de mauvaises personnes.
+                foreach (DataTransfer::USER_REFERENCES as $table => $columns) {
+                    if (Schema::hasTable($table)) {
+                        DB::table($table)->update(array_fill_keys($columns, null));
+                    }
+                }
             }
         } catch (Throwable $e) {
             $this->error('Import interrompu : '.$e->getMessage());
@@ -92,7 +117,7 @@ class ImportData extends Command
             Schema::enableForeignKeyConstraints();
         }
 
-        if (! $this->option('keep-demo-accounts')) {
+        if ($withUsers && ! $this->option('keep-demo-accounts')) {
             $demo = User::where('email', 'like', '%'.DataTransfer::DEMO_EMAIL_DOMAIN)->get();
             foreach ($demo as $user) {
                 $user->delete();
@@ -102,6 +127,7 @@ class ImportData extends Command
             }
         }
 
+        Artisan::call('db:seed', ['--class' => 'Database\\Seeders\\RolesSeeder', '--force' => true]);
         Artisan::call('permission:cache-reset');
         Artisan::call('cache:clear');
 

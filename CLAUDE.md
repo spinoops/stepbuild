@@ -388,7 +388,9 @@ secrets GitHub, le `.env` et le DNS changent).
 - **Reprise local → prod** : `stepbuild:export-data` (fichier SQL `storage/app/transfer/donnees-<date>.sql`, tables
   listées dans `App\Support\DataTransfer`, en-tête avec les migrations appliquées) puis, sur le serveur,
   `stepbuild:import-data <fichier>` (sauvegarde, refus si les migrations diffèrent, tables vidées puis remplies,
-  connexions effacées, comptes `@chantier.test` mis à la corbeille). Les fichiers de `storage/app/private` se copient à part.
+  connexions effacées ; **les comptes et rôles de la cible ne sont jamais touchés** : tables `DataTransfer::USER_TABLES`
+  ignorées et colonnes `USER_REFERENCES` remises à vide ; `--with-users` les remplace, comptes `@chantier.test` alors mis
+  à la corbeille). Les fichiers de `storage/app/private` se copient à part.
 - `backend/.env.production.example` = modèle du `.env` de prod ; `backend/public/.user.ini` = limites
   d'envoi (photos) et mémoire (PDF). `release.ps1` = archive de secours sans GitHub.
 Signature des documents client : « Stéphane Offreda — Step One ».

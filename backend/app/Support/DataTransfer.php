@@ -68,6 +68,23 @@ class DataTransfer
         ]));
     }
 
+    /** Tables des comptes : jamais touchées à l'import, sauf --with-users explicite. */
+    public const USER_TABLES = ['users', 'roles', 'permissions', 'role_has_permissions', 'model_has_roles', 'model_has_permissions'];
+
+    /**
+     * Colonnes qui pointent vers un compte : sans reprise des comptes, les ids du fichier n'ont pas de sens
+     * sur la cible, elles sont remises à vide (le lien collaborateur ↔ compte se refait dans Collaborateurs).
+     *
+     * @var array<string, list<string>>
+     */
+    public const USER_REFERENCES = [
+        'collaborators' => ['user_id'],
+        'documents' => ['user_id'],
+        'daily_reports' => ['created_by'],
+        'stock_items' => ['counted_by'],
+        'stock_movements' => ['user_id'],
+    ];
+
     /** Tables vidées à l'import même sans données reprises (elles pointent vers les anciens ids). */
     public const ALWAYS_CLEARED = ['personal_access_tokens', 'sessions', 'password_reset_tokens', 'cache', 'cache_locks'];
 }
