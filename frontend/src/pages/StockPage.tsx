@@ -9,12 +9,13 @@ import { normalize } from '@/lib/searchIndex'
 import { toast } from '@/lib/toast'
 import type { StockItem, StockProduct } from '@/types'
 
-type Filter = 'all' | 'low' | 'out'
+type Filter = 'all' | 'low' | 'out' | 'uncounted'
 
 const STATUS: Record<StockItem['status'], { label: string; className: string; rank: number }> = {
   rupture: { label: 'Rupture', className: 'bg-red-100 text-red-700', rank: 0 },
   bas: { label: 'À commander', className: 'bg-amber-100 text-amber-800', rank: 1 },
   ok: { label: 'OK', className: 'bg-emerald-100 text-emerald-700', rank: 2 },
+  a_compter: { label: 'À compter', className: 'bg-gray-100 text-gray-600', rank: 3 },
 }
 
 const QUANTITY_PATTERN = /^\s*([+-])?\s*(\d[\d'’\s]*([.,]\d{1,2})?)\s*$/
@@ -71,7 +72,18 @@ export default function StockPage() {
     const all = items.data ?? []
     const words = normalize(search).split(/\s+/).filter(Boolean)
     return all
-      .filter((item) => (filter === 'all' ? true : filter === 'out' ? item.status === 'rupture' : item.status !== 'ok'))
+      .filter((item) => {
+        switch (filter) {
+          case 'out':
+            return item.status === 'rupture'
+          case 'low':
+            return item.status === 'rupture' || item.status === 'bas'
+          case 'uncounted':
+            return item.status === 'a_compter'
+          default:
+            return true
+        }
+      })
       .filter((item) => {
         if (words.length === 0) {
           return true
@@ -84,7 +96,12 @@ export default function StockPage() {
 
   const counts = useMemo(() => {
     const all = items.data ?? []
-    return { total: all.length, low: all.filter((i) => i.status !== 'ok').length, out: all.filter((i) => i.status === 'rupture').length }
+    return {
+      total: all.length,
+      low: all.filter((i) => i.status === 'rupture' || i.status === 'bas').length,
+      out: all.filter((i) => i.status === 'rupture').length,
+      uncounted: all.filter((i) => i.status === 'a_compter').length,
+    }
   }, [items.data])
 
   function focusQuantity(id: number) {
@@ -150,6 +167,7 @@ export default function StockPage() {
               ['all', `Tous (${counts.total})`],
               ['low', `À commander (${counts.low})`],
               ['out', `Rupture (${counts.out})`],
+              ['uncounted', `À compter (${counts.uncounted})`],
             ] as [Filter, string][]
           ).map(([key, label]) => (
             <button

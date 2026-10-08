@@ -92,5 +92,6 @@ it('trie les produits en stock par désignation', function () {
     StockItem::create(['price_element_id' => makeProduct(['description' => 'Zinc en plaque', 'number' => '1'])->id]);
     StockItem::create(['price_element_id' => makeProduct(['description' => 'Ardoise', 'number' => '2'])->id]);
 
-    $this->getJson('/api/stock/items')->assertJsonPath('data.0.description', 'Ardoise')->assertJsonPath('data.1.description', 'Zinc en plaque');
+    $this->getJson('/api/stock/items')->assertJsonPath('data.0.description', 'Ardoise')->assertJsonPath('data.1.description', 'Zinc en plaque')
+        ->assertJsonPath('data.0.status', 'a_compter'); // mis en stock sans comptage
 });

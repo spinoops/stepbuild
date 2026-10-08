@@ -36,9 +36,12 @@ class StockItem extends Model
         return $this->belongsTo(User::class, 'counted_by')->withTrashed();
     }
 
-    /** rupture (≤ 0), bas (≤ seuil) ou ok. */
+    /** a_compter (jamais compté), rupture (≤ 0), bas (≤ seuil) ou ok. */
     public function status(): string
     {
+        if ($this->counted_at === null) {
+            return 'a_compter';
+        }
         if ($this->quantity <= 0) {
             return 'rupture';
         }

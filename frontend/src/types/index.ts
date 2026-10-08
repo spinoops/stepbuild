@@ -126,7 +126,7 @@ export interface StockItem {
   min_quantity: number | null
   location: string | null
   note: string | null
-  status: 'ok' | 'bas' | 'rupture'
+  status: 'ok' | 'bas' | 'rupture' | 'a_compter'
   counted_at: string | null
   counted_by: string | null
   updated_at: string | null

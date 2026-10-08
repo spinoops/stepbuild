@@ -242,7 +242,13 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
 - `stock_items` (un élément de coûts suivi : `price_element_id` unique, `quantity`, `min_quantity` = seuil « à
   commander », `location`, `note`, `counted_at` / `counted_by`) et `stock_movements` (`type` entree | sortie | inventaire,
   `quantity` signée, `quantity_after`, `user_id`, `note`). `StockItem::apply()` est le seul chemin de modification de la
-  quantité ; `status()` = rupture (≤ 0) | bas (≤ seuil) | ok. Familles stockables : 2 à 5 (pas salaire ni tiers).
+  quantité ; `status()` = a_compter (jamais compté) | rupture (≤ 0) | bas (≤ seuil) | ok. Familles stockables : 2 à 5
+  (pas salaire ni tiers).
+- **Liste client** : `backend/database/baubit/elements_xlsx_to_json.py` convertit un export Excel BauBit des éléments
+  de coûts en JSON, puis `php artisan stepbuild:import-stock-list <json> [--dry-run] [--no-prices] [--no-stock]`
+  (`App\Support\StockListImport`) retrouve chaque élément (code régie + numéro + désignation), crée les inconnus
+  (`baubit_id` = `XLS-<code>`), rafraîchit les prix dont la « mutation » est plus récente, et met l'article en stock
+  « à compter ». Fait le 08.10.2026 avec `_construction/Matériaux 2026.xlsx` (9 988 lignes, famille 2).
 - API `StockController` : `GET /stock/items` (tout, la vue filtre en mémoire), `GET /stock/products?search=` (éléments
   pas encore suivis, **sans prix**), `POST /stock/items`, `PUT|DELETE /stock/items/{id}`, `POST
   /stock/items/{id}/movements` (renvoie `item` + `movement`), `GET /stock/items/{id}/movements`. Aucune ressource stock

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\RunsBulkImport;
 use App\Support\BaubitImport;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,8 @@ use Throwable;
  */
 class ImportBaubit extends Command
 {
+    use RunsBulkImport;
+
     protected $signature = 'stepbuild:import-baubit
                             {dir : Dossier des fichiers JSON exportés (elements, regie_positions, catalog_chapters, catalog_positions)}
                             {--catalog : Seulement le catalogue d\'articles}
@@ -38,18 +41,9 @@ class ImportBaubit extends Command
             return self::FAILURE;
         }
 
-        // 12 000 éléments et leurs prix tiennent en mémoire, mais pas dans les 128 Mo par défaut du CLI.
-        $limit = (string) ini_get('memory_limit');
-        $bytes = (int) $limit * match (strtoupper(substr($limit, -1))) {
-            'G' => 1024 ** 3, 'M' => 1024 ** 2, 'K' => 1024, default => 1
-        };
-        if ($bytes > 0 && $bytes < 512 * 1024 ** 2) {
-            ini_set('memory_limit', '512M');
-        }
+        $this->prepareBulkImport();
         $import->onProgress = fn (string $step, int $done, int $total) => $this->line("  {$step} : {$done} / {$total}");
 
-        // Pas de journal d'activité pour des milliers de lignes reprises en bloc.
-        activity()->disableLogging();
         DB::beginTransaction();
         try {
             if ($all || $this->option('elements')) {
