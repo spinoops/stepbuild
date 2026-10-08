@@ -15,8 +15,8 @@ export default function StockShell() {
   const appName = settings?.app_name ?? 'Lachat Construction'
 
   return (
-    <div className="bb flex min-h-screen flex-col bg-gray-50">
-      <header className="flex h-12 items-center gap-3 bg-[#1c1c1c] px-4 text-white">
+    <div className="bb flex h-screen flex-col overflow-hidden bg-gray-50">
+      <header className="flex h-12 shrink-0 items-center gap-3 bg-[#1c1c1c] px-4 text-white">
         <Brand size={26} title={appName} />
         <span className="text-[14px] font-semibold tracking-wide">Stocks</span>
         <span className="hidden text-[12px] text-gray-400 sm:inline">{appName}</span>
@@ -31,7 +31,7 @@ export default function StockShell() {
           <Icon name="logout" className="h-4 w-4" />
         </button>
       </header>
-      <main className="min-h-0 flex-1">
+      <main className="min-h-0 flex-1 overflow-hidden">
         <ErrorBoundary resetKey="stock">
           <Outlet />
         </ErrorBoundary>

@@ -46,6 +46,23 @@ it('propose les produits pas encore suivis, sans aucun prix', function () {
     $this->getJson('/api/stock/products?search=ouvrier')->assertJsonCount(0, 'data');
 });
 
+it('filtre les produits libres par famille et groupe, et liste les groupes avec leur nombre', function () {
+    actingAsRole('stock');
+    makeProduct(['number' => '020.001', 'description' => 'Chiffon de nettoyage couleur']);
+    makeProduct(['number' => '020.002', 'description' => 'Seau', 'group_code' => 'M95']);
+    makeProduct(['family' => 5, 'group_code' => 'O95', 'number' => '361.796', 'description' => 'Accu 36 volts']);
+    StockItem::create(['price_element_id' => makeProduct(['number' => '020.003', 'description' => 'Déjà suivi'])->id]);
+
+    $this->getJson('/api/stock/products?family=2&sort=number&limit=300')->assertOk()->assertJsonCount(2, 'data')->assertJsonPath('data.0.number', '020.001');
+    $this->getJson('/api/stock/products?family=2&group=M95')->assertJsonCount(1, 'data')->assertJsonPath('data.0.description', 'Seau');
+    $this->getJson('/api/stock/products?family=5')->assertJsonCount(1, 'data');
+
+    $this->getJson('/api/stock/products/groups?family=2')->assertOk()
+        ->assertJsonCount(2, 'data')
+        ->assertJsonPath('data.0.code', 'M92')->assertJsonPath('data.0.total', 1)
+        ->assertJsonPath('data.1.code', 'M95')->assertJsonPath('data.1.total', 1);
+});
+
 it('met un produit en stock, applique entrées, sorties et inventaire avec l\'historique', function () {
     $user = actingAsRole('stock');
     $product = makeProduct();

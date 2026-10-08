@@ -11,7 +11,7 @@ import Modal from '@/components/ui/Modal'
 import { useDebounced } from '@/hooks/useDebounced'
 import { api } from '@/lib/api'
 import { costFamily } from '@/lib/costFamilies'
-import type { Paginated, PriceElement } from '@/types'
+import type { Paginated, PriceElement, StockProduct } from '@/types'
 
 interface ElementBrowserDialogProps {
   open: boolean
@@ -20,6 +20,36 @@ interface ElementBrowserDialogProps {
   family: number
   onPick: (element: PriceElement, keepOpen: boolean) => void
   showPrices?: boolean
+  /**
+   * Source « stock » : produits pas encore suivis (GET /stock/products), jamais de prix — c'est la
+   * fenêtre du rôle stock, qui n'a pas accès aux listes de prix.
+   */
+  source?: 'price-elements' | 'stock'
+  /** Familles proposées en onglets au-dessus des groupes (sinon la seule famille donnée). */
+  families?: number[]
+}
+
+/** Produit libre renvoyé par /stock/products, présenté comme un élément de coûts sans prix. */
+function toElement(product: StockProduct): PriceElement {
+  return {
+    id: product.id,
+    family: product.family,
+    group_code: product.group_code,
+    number: product.number,
+    description: product.description,
+    unit: product.unit,
+    unit_regie: null,
+    supplier_price: null,
+    net_price: null,
+    regie_price: null,
+    regie_code: null,
+    unit_factor: 1,
+    discount_amount: null,
+    discount_percent: null,
+    price_updated_at: null,
+    usage_count: 0,
+    updated_at: '',
+  }
 }
 
 /**
@@ -30,22 +60,30 @@ export default function ElementBrowserDialog(props: ElementBrowserDialogProps) {
   return props.open ? <ElementBrowser {...props} /> : null
 }
 
-function ElementBrowser({ onClose, family, onPick, showPrices = true }: ElementBrowserDialogProps) {
+function ElementBrowser({ onClose, family: initialFamily, onPick, showPrices = true, source = 'price-elements', families }: ElementBrowserDialogProps) {
+  const [family, setFamily] = useState(initialFamily)
   const [group, setGroup] = useState<string | null>(null)
   const [term, setTerm] = useState('')
   const [selected, setSelected] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
   const search = useDebounced(term.trim(), 200)
 
+  const stock = source === 'stock'
   const groups = useQuery({
-    queryKey: ['price-elements', 'groups', family],
-    queryFn: async () => (await api.get<{ data: { code: string; total: number }[] }>('/price-elements/groups', { params: { family } })).data.data,
+    queryKey: [stock ? 'stock' : 'price-elements', 'groups', family],
+    queryFn: async () =>
+      (await api.get<{ data: { code: string; total: number }[] }>(stock ? '/stock/products/groups' : '/price-elements/groups', { params: { family } })).data.data,
     staleTime: 60_000,
   })
   const elements = useQuery({
-    queryKey: ['price-elements', 'browser', family, group, search],
-    queryFn: async () =>
-      (await api.get<Paginated<PriceElement>>('/price-elements', { params: { family, group: group ?? undefined, search: search || undefined, per_page: 300, sort: 'number' } })).data.data,
+    queryKey: [stock ? 'stock' : 'price-elements', 'browser', family, group, search],
+    queryFn: async () => {
+      const params = { family, group: group ?? undefined, search: search || undefined, sort: 'number' }
+      if (stock) {
+        return (await api.get<{ data: StockProduct[] }>('/stock/products', { params: { ...params, limit: 300 } })).data.data.map(toElement)
+      }
+      return (await api.get<Paginated<PriceElement>>('/price-elements', { params: { ...params, per_page: 300 } })).data.data
+    },
     staleTime: 30_000,
   })
 
@@ -76,13 +114,31 @@ function ElementBrowser({ onClose, family, onPick, showPrices = true }: ElementB
     <Modal open onClose={onClose} size="xl">
       <div className="bb flex h-[70vh] min-h-[420px] flex-col">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">Éléments de coûts · {costFamily(family).label}</h3>
+          <h3 className="text-lg font-semibold text-gray-900">{stock ? 'Produits du catalogue' : 'Éléments de coûts'} · {costFamily(family).label}</h3>
           <button type="button" onClick={onClose} className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="Fermer">
             <Icon name="close" className="h-4 w-4" />
           </button>
         </div>
         <div className="flex min-h-0 flex-1 gap-4">
           <div className="flex w-[220px] shrink-0 flex-col overflow-auto rounded-lg border border-gray-200">
+            {families && families.length > 1 && (
+              <div className="flex flex-wrap gap-1 border-b border-gray-200 bg-gray-50 p-1.5">
+                {families.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => {
+                      setFamily(id)
+                      setGroup(null)
+                      setSelected(null)
+                    }}
+                    className={`rounded px-2 py-1 text-[12px] ${family === id ? 'bg-primary-600 text-white' : 'text-gray-700 hover:bg-white'}`}
+                  >
+                    {costFamily(id).label}
+                  </button>
+                ))}
+              </div>
+            )}
             <button
               type="button"
               onClick={() => setGroup(null)}

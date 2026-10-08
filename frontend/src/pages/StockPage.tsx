@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import type { KeyboardEvent, UIEvent } from 'react'
 import { useStockHistory, useStockItems, useStockMutations, useStockProducts } from '@/hooks/useStock'
 import type { MovementType } from '@/hooks/useStock'
 import { useDebounced } from '@/hooks/useDebounced'
 import { Icon } from '@/components/icons'
+import ElementBrowserDialog from '@/components/shared/ElementBrowserDialog'
 import { fmtAmount } from '@/lib/format'
 import { normalize } from '@/lib/searchIndex'
 import { toast } from '@/lib/toast'
@@ -67,7 +68,6 @@ export default function StockPage() {
   const { add, update, remove, move } = useStockMutations()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
-  const [adding, setAdding] = useState(false)
   const [historyId, setHistoryId] = useState<number | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -103,6 +103,16 @@ export default function StockPage() {
   // Rendu par tranches : 10 000 lignes d'un coup figeraient le navigateur.
   const [limit, setLimit] = useState(PAGE)
   const visible = rows.length > limit ? rows.slice(0, limit) : rows
+  const hasMore = rows.length > visible.length
+  const total = rows.length
+
+  // Défilement : à 400 px du bas du tableau, 200 lignes de plus (jamais au-delà du total).
+  function onScroll(e: UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget
+    if (hasMore && el.scrollTop + el.clientHeight >= el.scrollHeight - 400) {
+      setLimit((n) => (n >= total ? n : n + PAGE))
+    }
+  }
 
   const counts = useMemo(() => {
     const all = items.data ?? []
@@ -196,39 +206,30 @@ export default function StockPage() {
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          onClick={() => setAdding((open) => !open)}
-          className="flex h-11 items-center gap-2 rounded-lg bg-accent-600 px-4 text-[14px] font-medium text-white shadow-sm hover:bg-accent-700"
-        >
-          <Icon name="plus" className="h-4 w-4" />
-          Ajouter un produit
-        </button>
-      </div>
-
-      {adding && (
-        <ProductPicker
-          onClose={() => {
-            setAdding(false)
-            searchRef.current?.focus()
-          }}
-          onPick={(product) =>
+        <AddProduct
+          onPick={(product, keepOpen) =>
             add.mutate(
               { price_element_id: product.id },
               {
                 onSuccess: (item) => {
                   toast(`${product.description} ajouté au stock.`, 'success')
-                  onAdded(item)
+                  if (!keepOpen) {
+                    onAdded(item)
+                  }
                 },
                 onError: () => toast("Ce produit n'a pas pu être ajouté.", 'error'),
               },
             )
           }
         />
-      )}
+      </div>
+
+      <p className="-mt-1 text-[12px] text-gray-500">
+        Dans la colonne Quantité : tapez <b>12</b> pour un comptage, <b>+5</b> pour une entrée, <b>-3</b> pour une sortie, puis <b>Entrée</b> pour passer au produit suivant.
+      </p>
 
       {/* Tableau */}
-      <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+      <div onScroll={onScroll} className="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 bg-white shadow-sm">
         <table className="w-full border-collapse text-[14px]">
           <thead className="sticky top-0 z-10 bg-gray-100 text-[12px] font-semibold text-gray-600 uppercase">
             <tr>
@@ -265,23 +266,16 @@ export default function StockPage() {
                 </td>
               </tr>
             )}
-            {rows.length > visible.length && (
+            {hasMore && (
               <tr className="border-t border-gray-200 bg-gray-50">
-                <td colSpan={7} className="px-3 py-3 text-center text-[13px] text-gray-600">
-                  {visible.length} produits affichés sur {rows.length}. Affinez la recherche, ou{' '}
-                  <button type="button" onClick={() => setLimit((n) => n + PAGE)} className="font-medium text-primary-700 underline hover:text-primary-900">
-                    afficher {Math.min(PAGE, rows.length - visible.length)} de plus
-                  </button>
-                  .
+                <td colSpan={7} className="px-3 py-3 text-center text-[13px] text-gray-500">
+                  {visible.length} produits affichés sur {rows.length} · la suite se charge en défilant, ou affinez la recherche.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-      <p className="text-[12px] text-gray-500">
-        Dans la colonne Quantité : tapez <b>12</b> pour un comptage, <b>+5</b> pour une entrée, <b>-3</b> pour une sortie, puis <b>Entrée</b> pour passer au produit suivant.
-      </p>
     </div>
   )
 }
@@ -466,14 +460,29 @@ function History({ itemId, unit }: { itemId: number; unit: string | null }) {
   )
 }
 
-/** Choix d'un produit du catalogue à mettre en stock (recherche serveur, flèches + Entrée). */
-function ProductPicker({ onPick, onClose }: { onPick: (product: StockProduct) => void; onClose: () => void }) {
+/** Familles d'éléments que l'on peut stocker (matériaux, machines, exploitation, outillage). */
+const STOCK_FAMILIES = [2, 3, 4, 5]
+
+/**
+ * Ajout d'un produit : on tape, les produits libres du catalogue apparaissent (Entrée ajoute) ; la
+ * loupe ouvre la même fenêtre de recherche que les lignes de rapport (familles, groupes), sans prix.
+ */
+function AddProduct({ onPick }: { onPick: (product: StockProduct, keepOpen: boolean) => void }) {
   const [term, setTerm] = useState('')
+  const [open, setOpen] = useState(false)
+  const [browsing, setBrowsing] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const products = useStockProducts(useDebounced(term, 200))
-  const list = products.data ?? []
+  const list = term.trim().length >= 2 ? (products.data ?? []) : []
   // La sélection reste dans la liste même quand les résultats changent.
   const active = Math.min(activeIndex, Math.max(list.length - 1, 0))
+
+  function choose(product: StockProduct) {
+    onPick(product, false)
+    setTerm('')
+    setActiveIndex(0)
+    setOpen(false)
+  }
 
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'ArrowDown') {
@@ -484,44 +493,59 @@ function ProductPicker({ onPick, onClose }: { onPick: (product: StockProduct) =>
       setActiveIndex(Math.max(active - 1, 0))
     } else if (e.key === 'Enter' && list[active]) {
       e.preventDefault()
-      onPick(list[active])
-      setTerm('')
-      setActiveIndex(0)
+      choose(list[active])
     } else if (e.key === 'Escape') {
-      onClose()
+      setTerm('')
+      setOpen(false)
     }
   }
 
   return (
-    <div className="rounded-lg border border-primary-200 bg-primary-50/40 p-3">
-      <div className="flex items-center gap-2">
+    <div className="relative min-w-[300px] flex-1">
+      <div className="flex h-11 items-center gap-2 rounded-lg border border-gray-300 bg-white pl-3 pr-1 shadow-sm focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-100">
+        <Icon name="plus" className="h-4 w-4 shrink-0 text-accent-600" />
         <input
-          autoFocus
           value={term}
           onChange={(e) => {
             setTerm(e.target.value)
             setActiveIndex(0)
+            setOpen(true)
           }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => window.setTimeout(() => setOpen(false), 120)}
           onKeyDown={onKeyDown}
-          placeholder="Nom ou n° du produit dans le catalogue des éléments de coûts…"
-          className="h-10 flex-1 rounded-md border border-gray-300 bg-white px-3 text-[14px] outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+          placeholder="Ajouter un produit : nom ou n°…"
+          className="h-full min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-gray-400"
         />
-        <button type="button" onClick={onClose} className="rounded-md p-2 text-gray-500 hover:bg-white" title="Fermer">
-          <Icon name="close" className="h-4 w-4" />
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setBrowsing(true)}
+          title="Rechercher dans le catalogue (fenêtre)"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-primary-700"
+        >
+          <Icon name="search" className="h-4 w-4" />
         </button>
       </div>
-      {term.trim().length >= 2 && (
-        <ul className="mt-2 max-h-72 overflow-auto rounded-md border border-gray-200 bg-white">
+      <ElementBrowserDialog
+        open={browsing}
+        onClose={() => setBrowsing(false)}
+        source="stock"
+        family={2}
+        families={STOCK_FAMILIES}
+        showPrices={false}
+        onPick={(element, keepOpen) => onPick({ id: element.id, family: element.family, group_code: element.group_code, number: element.number, description: element.description, unit: element.unit }, keepOpen)}
+      />
+      {open && list.length > 0 && (
+        <ul className="absolute left-0 right-0 z-20 mt-1 max-h-80 overflow-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg">
           {list.map((product, index) => (
             <li key={product.id}>
               <button
                 type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => {
-                  onPick(product)
-                  setTerm('')
-                }}
-                className={`flex w-full items-center gap-3 px-3 py-2 text-left ${index === active ? 'bg-primary-600 text-white' : 'hover:bg-gray-50'}`}
+                onClick={() => choose(product)}
+                className={`flex w-full items-center gap-3 px-3 py-1.5 text-left text-[13px] ${index === active ? 'bg-primary-600 text-white' : 'hover:bg-gray-50'}`}
               >
                 <span className={`w-20 shrink-0 text-[12px] ${index === active ? 'text-primary-100' : 'text-gray-500'}`}>{product.number}</span>
                 <span className="flex-1 truncate">{product.description}</span>
@@ -529,8 +553,12 @@ function ProductPicker({ onPick, onClose }: { onPick: (product: StockProduct) =>
               </button>
             </li>
           ))}
-          {list.length === 0 && <li className="px-3 py-3 text-[13px] text-gray-400">{products.isFetching ? 'Recherche…' : 'Aucun produit libre ne correspond.'}</li>}
         </ul>
+      )}
+      {open && term.trim().length >= 2 && list.length === 0 && (
+        <div className="absolute left-0 right-0 z-20 mt-1 rounded-md border border-gray-200 bg-white px-3 py-2 text-[13px] text-gray-400 shadow-lg">
+          {products.isFetching ? 'Recherche…' : 'Aucun produit libre ne correspond. Essayez la loupe.'}
+        </div>
       )}
     </div>
   )

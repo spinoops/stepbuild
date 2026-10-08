@@ -89,6 +89,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('roles:admin,responsable,stock')->group(function () {
         Route::get('/stock/items', [StockController::class, 'index']);
         Route::get('/stock/products', [StockController::class, 'products']);
+        Route::get('/stock/products/groups', [StockController::class, 'productGroups']);
         Route::post('/stock/items', [StockController::class, 'store']);
         Route::put('/stock/items/{item}', [StockController::class, 'update']);
         Route::delete('/stock/items/{item}', [StockController::class, 'destroy']);

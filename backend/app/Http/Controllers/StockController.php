@@ -66,17 +66,28 @@ class StockController extends Controller
         return response()->json(['data' => $data]);
     }
 
-    /** Produits du catalogue d'éléments pas encore suivis, pour en ajouter un (recherche serveur, sans prix). */
+    /** Éléments stockables pas encore suivis (base des recherches de la fenêtre et du champ d'ajout). */
+    private function availableProducts(Request $request)
+    {
+        return PriceElement::query()
+            ->whereIn('family', self::STOCKABLE_FAMILIES)
+            ->whereNotIn('id', StockItem::query()->select('price_element_id'))
+            ->when($request->filled('family'), fn ($q) => $q->where('family', (int) $request->query('family')))
+            ->when($request->filled('group'), fn ($q) => $q->where('group_code', (string) $request->query('group')));
+    }
+
+    /**
+     * Produits du catalogue d'éléments pas encore suivis, pour en ajouter un (recherche serveur, sans prix).
+     * Paramètres : search, family, group, limit (300 max) ; sort=number pour la fenêtre de recherche.
+     */
     public function products(Request $request): JsonResponse
     {
         $term = trim((string) $request->query('search', ''));
-        $limit = min(max((int) $request->query('limit', 30), 1), 100);
+        $limit = min(max((int) $request->query('limit', 30), 1), 300);
 
-        $elements = PriceElement::query()
-            ->whereIn('family', self::STOCKABLE_FAMILIES)
-            ->whereNotIn('id', StockItem::query()->select('price_element_id'))
+        $elements = $this->availableProducts($request)
             ->when($term !== '', fn ($q) => $q->search($term))
-            ->orderByDesc('usage_count')->orderBy('number')
+            ->when($request->query('sort') === 'number', fn ($q) => $q->orderBy('number'), fn ($q) => $q->orderByDesc('usage_count')->orderBy('number'))
             ->limit($limit)
             ->get(['id', 'family', 'group_code', 'number', 'description', 'unit']);
 
@@ -88,6 +99,20 @@ class StockController extends Controller
             'description' => $e->description,
             'unit' => $e->unit,
         ])]);
+    }
+
+    /** Groupes (M92…) des produits pas encore suivis, avec leur nombre, pour la fenêtre de recherche. */
+    public function productGroups(Request $request): JsonResponse
+    {
+        $groups = $this->availableProducts($request)
+            ->whereNotNull('group_code')
+            ->selectRaw('group_code as code, count(*) as total')
+            ->groupBy('group_code')
+            ->orderBy('group_code')
+            ->get()
+            ->map(fn ($row) => ['code' => $row->code, 'total' => (int) $row->total]);
+
+        return response()->json(['data' => $groups]);
     }
 
     public function store(StoreStockItemRequest $request): JsonResponse
