@@ -18,7 +18,10 @@ const STATUS: Record<StockItem['status'], { label: string; className: string; ra
   a_compter: { label: 'À compter', className: 'bg-gray-100 text-gray-600', rank: 3 },
 }
 
-const QUANTITY_PATTERN = /^\s*([+-])?\s*(\d[\d'’\s]*([.,]\d{1,2})?)\s*$/
+/** Lignes rendues d'un coup ; le reste arrive par « Afficher plus » ou en affinant la recherche. */
+const PAGE = 200
+
+const QUANTITY_PATTERN =/^\s*([+-])?\s*(\d[\d'’\s]*([.,]\d{1,2})?)\s*$/
 
 /** « +5 » → entrée, « -3 » → sortie, « 12 » → inventaire (quantité comptée). */
 function parseQuantity(text: string): { type: MovementType; quantity: number } | null {
@@ -68,11 +71,20 @@ export default function StockPage() {
   const [historyId, setHistoryId] = useState<number | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
+  // Texte de recherche normalisé une fois par chargement, et ordre de base (état puis désignation,
+  // l'API livre déjà par désignation) : la frappe ne refait que le filtrage.
+  const indexed = useMemo(
+    () =>
+      (items.data ?? [])
+        .map((item) => ({ item, text: normalize(`${item.number ?? ''} ${item.description ?? ''} ${item.location ?? ''} ${item.group_code ?? ''}`) }))
+        .sort((a, b) => STATUS[a.item.status].rank - STATUS[b.item.status].rank),
+    [items.data],
+  )
+
   const rows = useMemo(() => {
-    const all = items.data ?? []
     const words = normalize(search).split(/\s+/).filter(Boolean)
-    return all
-      .filter((item) => {
+    return indexed
+      .filter(({ item }) => {
         switch (filter) {
           case 'out':
             return item.status === 'rupture'
@@ -84,15 +96,13 @@ export default function StockPage() {
             return true
         }
       })
-      .filter((item) => {
-        if (words.length === 0) {
-          return true
-        }
-        const text = normalize(`${item.number ?? ''} ${item.description ?? ''} ${item.location ?? ''} ${item.group_code ?? ''}`)
-        return words.every((word) => text.includes(word))
-      })
-      .sort((a, b) => STATUS[a.status].rank - STATUS[b.status].rank || (a.description ?? '').localeCompare(b.description ?? '', 'fr'))
-  }, [items.data, search, filter])
+      .filter(({ text }) => words.every((word) => text.includes(word)))
+      .map(({ item }) => item)
+  }, [indexed, search, filter])
+
+  // Rendu par tranches : 10 000 lignes d'un coup figeraient le navigateur.
+  const [limit, setLimit] = useState(PAGE)
+  const visible = rows.length > limit ? rows.slice(0, limit) : rows
 
   const counts = useMemo(() => {
     const all = items.data ?? []
@@ -148,13 +158,16 @@ export default function StockPage() {
             ref={searchRef}
             autoFocus
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setLimit(PAGE)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
                 setSearch('')
               }
-              if (e.key === 'Enter' && rows[0]) {
-                focusQuantity(rows[0].id)
+              if (e.key === 'Enter' && visible[0]) {
+                focusQuantity(visible[0].id)
               }
             }}
             placeholder="Rechercher un produit (nom, n°, emplacement)…"
@@ -173,7 +186,10 @@ export default function StockPage() {
             <button
               key={key}
               type="button"
-              onClick={() => setFilter(key)}
+              onClick={() => {
+                setFilter(key)
+                setLimit(PAGE)
+              }}
               className={`h-11 px-3 ${filter === key ? 'bg-primary-600 text-white' : 'text-gray-700 hover:bg-gray-50'}`}
             >
               {label}
@@ -226,13 +242,13 @@ export default function StockPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((item, index) => (
+            {visible.map((item, index) => (
               <StockRow
                 key={item.id}
                 item={item}
                 historyOpen={historyId === item.id}
                 onToggleHistory={() => setHistoryId(historyId === item.id ? null : item.id)}
-                onQuantity={(text, goNext) => commitQuantity(item, text, goNext && rows[index + 1] ? () => focusQuantity(rows[index + 1].id) : undefined)}
+                onQuantity={(text, goNext) => commitQuantity(item, text, goNext && visible[index + 1] ? () => focusQuantity(visible[index + 1].id) : undefined)}
                 onMin={(value) => update.mutate({ id: item.id, min_quantity: value }, { onError: () => toast('Seuil non enregistré.', 'error') })}
                 onLocation={(value) => update.mutate({ id: item.id, location: value }, { onError: () => toast('Emplacement non enregistré.', 'error') })}
                 onRemove={() => {
@@ -246,6 +262,17 @@ export default function StockPage() {
               <tr>
                 <td colSpan={7} className="px-3 py-10 text-center text-gray-400">
                   {items.isLoading ? 'Chargement…' : counts.total === 0 ? 'Aucun produit suivi. Commencez par « Ajouter un produit ».' : 'Aucun produit ne correspond.'}
+                </td>
+              </tr>
+            )}
+            {rows.length > visible.length && (
+              <tr className="border-t border-gray-200 bg-gray-50">
+                <td colSpan={7} className="px-3 py-3 text-center text-[13px] text-gray-600">
+                  {visible.length} produits affichés sur {rows.length}. Affinez la recherche, ou{' '}
+                  <button type="button" onClick={() => setLimit((n) => n + PAGE)} className="font-medium text-primary-700 underline hover:text-primary-900">
+                    afficher {Math.min(PAGE, rows.length - visible.length)} de plus
+                  </button>
+                  .
                 </td>
               </tr>
             )}

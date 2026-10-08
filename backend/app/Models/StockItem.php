@@ -39,13 +39,19 @@ class StockItem extends Model
     /** a_compter (jamais compté), rupture (≤ 0), bas (≤ seuil) ou ok. */
     public function status(): string
     {
-        if ($this->counted_at === null) {
+        return self::statusFor($this->counted_at !== null, (float) $this->quantity, $this->min_quantity);
+    }
+
+    /** Même règle, utilisable sur une ligne brute (liste complète sans hydratation Eloquent). */
+    public static function statusFor(bool $counted, float $quantity, ?float $minQuantity): string
+    {
+        if (! $counted) {
             return 'a_compter';
         }
-        if ($this->quantity <= 0) {
+        if ($quantity <= 0) {
             return 'rupture';
         }
-        if ($this->min_quantity !== null && $this->quantity <= $this->min_quantity) {
+        if ($minQuantity !== null && $quantity <= $minQuantity) {
             return 'bas';
         }
 

@@ -9,6 +9,7 @@ use App\Models\PriceElement;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Recherche globale : adresses, articles du catalogue, éléments de coûts.
@@ -38,24 +39,31 @@ class SearchController extends Controller
                 trim("{$a->street} {$a->email} {$a->phone}"),
             ]);
 
-        $articles = CatalogArticle::with('chapter:id,code')
-            ->where('is_title', false)
-            ->get(['id', 'catalog_chapter_id', 'code', 'sub_code', 'description', 'unit', 'usage_count'])
-            ->map(fn (CatalogArticle $a) => [
-                $a->id,
-                $a->description,
-                trim(implode('.', array_filter([$a->chapter?->code, $a->code, $a->sub_code])).' · '.($a->unit ?? ''), ' ·'),
-                $a->usage_count,
+        // Catalogue et éléments de coûts : plus de 13 000 lignes depuis la reprise BauBit → requêtes
+        // brutes (pas d'hydratation Eloquent), sinon l'index met plusieurs secondes à se construire.
+        $articles = DB::table('catalog_articles as a')
+            ->leftJoin('catalog_chapters as c', 'c.id', '=', 'a.catalog_chapter_id')
+            ->whereNull('a.deleted_at')
+            ->where('a.is_title', false)
+            ->orderBy('a.id')
+            ->get(['a.id', 'c.code as chapter_code', 'a.code', 'a.sub_code', 'a.description', 'a.unit', 'a.usage_count'])
+            ->map(fn ($a) => [
+                (int) $a->id,
+                (string) $a->description,
+                trim(implode('.', array_filter([$a->chapter_code, $a->code, $a->sub_code])).' · '.($a->unit ?? ''), ' ·'),
+                (int) $a->usage_count,
                 '',
             ]);
 
-        $elements = PriceElement::query()
+        $elements = DB::table('price_elements')
+            ->whereNull('deleted_at')
+            ->orderBy('id')
             ->get(['id', 'family', 'number', 'description', 'group_code', 'usage_count'])
-            ->map(fn (PriceElement $e) => [
-                $e->id,
-                $e->description,
-                trim("{$e->number} · ".(PriceElement::FAMILIES[$e->family] ?? ''), ' ·'),
-                $e->usage_count,
+            ->map(fn ($e) => [
+                (int) $e->id,
+                (string) $e->description,
+                trim("{$e->number} · ".(PriceElement::FAMILIES[(int) $e->family] ?? ''), ' ·'),
+                (int) $e->usage_count,
                 (string) $e->group_code,
             ]);
 
