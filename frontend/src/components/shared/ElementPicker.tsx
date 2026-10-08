@@ -5,6 +5,7 @@ import { fmtAmount } from '@/lib/format'
 import { useDebounced } from '@/hooks/useDebounced'
 import type { Paginated, PriceElement } from '@/types'
 import { Icon } from '@/components/icons'
+import ElementBrowserDialog from '@/components/shared/ElementBrowserDialog'
 
 interface ElementPickerProps {
   /** Famille d'éléments de coûts cherchée (1 salaire … 6 tiers). */
@@ -28,6 +29,7 @@ export default function ElementPicker({ family, placeholder, onPick, onFree, sho
   const [term, setTerm] = useState('')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
+  const [browsing, setBrowsing] = useState(false)
   const query = useDebounced(term.trim(), 150)
 
   const results = useQuery({
@@ -84,7 +86,18 @@ export default function ElementPicker({ family, placeholder, onPick, onFree, sho
           placeholder={placeholder}
           className="h-7 w-full bg-transparent text-[12px] text-gray-700 outline-none placeholder:text-gray-300 focus:placeholder:text-gray-400 disabled:cursor-not-allowed"
         />
+        <button
+          type="button"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => setBrowsing(true)}
+          disabled={disabled}
+          title="Rechercher dans les éléments de coûts (fenêtre)"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-primary-700 disabled:opacity-40"
+        >
+          <Icon name="search" className="h-3.5 w-3.5" />
+        </button>
       </div>
+      <ElementBrowserDialog open={browsing} onClose={() => setBrowsing(false)} family={family} showPrices={showPrices} onPick={(element) => onPick(element)} />
       {open && term.trim() && (
         <ul className="absolute left-4 z-20 mt-0.5 w-[520px] overflow-hidden rounded-md border border-gray-200 bg-white py-1 text-[13px] shadow-lg">
           {found.map((element, index) => (

@@ -199,7 +199,8 @@ it('liste les documents d\'un projet et fournit les articles pour la saisie rapi
 
     $picker = $this->getJson('/api/catalog-articles/picker')->assertOk()->json('data');
     expect($picker)->toHaveCount(2);
-    expect($picker[0])->toBe([$picker[0][0], '12.025', 'Carrelage sol', 'M2', 120, 70, 0]);
+    expect(array_slice($picker[0], 0, 7))->toBe([$picker[0][0], '12.025', 'Carrelage sol', 'M2', 120, 70, 0])
+        ->and($picker[0][7])->toBeInt();   // chapitre, pour la fenêtre de recherche
 
     $groups = collect($this->getJson('/api/search/index')->json('groups'))->keyBy('key');
     expect($groups['documents']['items'])->toHaveCount(2);

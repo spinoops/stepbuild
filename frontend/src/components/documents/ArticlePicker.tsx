@@ -3,9 +3,12 @@ import { searchIndex } from '@/lib/searchIndex'
 import { useArticlePicker } from '@/hooks/useDocuments'
 import type { PickerArticle } from '@/hooks/useDocuments'
 import { Icon } from '@/components/icons'
+import ArticleBrowserDialog from '@/components/documents/ArticleBrowserDialog'
 
 interface ArticlePickerProps {
   stepId: number
+  /** Chapitre de l'étape : présélectionné dans la fenêtre de recherche. */
+  chapterId?: number | null
   /** L'étape vient d'un chapitre du catalogue : on peut y créer un article à la volée. */
   canCreateArticle: boolean
   onPickArticle: (article: PickerArticle) => void
@@ -26,8 +29,9 @@ type Choice =
  * Champ d'ajout de position d'une étape : on tape, les articles du catalogue apparaissent
  * instantanément, Entrée insère. Sans résultat : ligne libre, ou création de l'article à la volée.
  */
-export default function ArticlePicker({ stepId, canCreateArticle, onPickArticle, onFreeLine, onCreateArticle, busy = false }: ArticlePickerProps) {
+export default function ArticlePicker({ stepId, chapterId = null, canCreateArticle, onPickArticle, onFreeLine, onCreateArticle, busy = false }: ArticlePickerProps) {
   const picker = useArticlePicker()
+  const [browsing, setBrowsing] = useState(false)
   const [term, setTerm] = useState('')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
@@ -95,8 +99,19 @@ export default function ArticlePicker({ stepId, canCreateArticle, onPickArticle,
         onKeyDown={onKeyDown}
         disabled={busy}
         placeholder="Ajouter une position, un sous-titre ou un texte : tapez un article, un code ou un libellé…"
-        className="h-8 w-full rounded-md border border-dashed border-gray-300 bg-white pl-8 pr-3 text-[13px] outline-none transition placeholder:text-gray-400 focus:border-solid focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+        className="h-8 w-full rounded-md border border-dashed border-gray-300 bg-white pl-8 pr-9 text-[13px] outline-none transition placeholder:text-gray-400 focus:border-solid focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
       />
+      <button
+        type="button"
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => setBrowsing(true)}
+        disabled={busy}
+        title="Rechercher dans le catalogue (fenêtre)"
+        className="absolute right-1 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-primary-700"
+      >
+        <Icon name="search" className="h-4 w-4" />
+      </button>
+      <ArticleBrowserDialog open={browsing} onClose={() => setBrowsing(false)} chapterId={chapterId} onPick={(article) => onPickArticle(article)} />
 
       {open && choices.length > 0 && (
         <div className="absolute left-0 top-9 z-30 w-[720px] max-w-full overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-xl">

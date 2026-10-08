@@ -113,7 +113,10 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   remplace le cache (`useDocumentActions` dans `hooks/useDocuments.ts`), sans rechargement.
 - **Saisie rapide** (`components/documents/`) : `ArticlePicker` par étape cherche en mémoire dans
   `/api/catalog-articles/picker` ; Entrée insère, puis quantité → Entrée → prix → Entrée → retour au champ d'ajout.
-  Sans résultat : ligne libre, ou **création de l'article à la volée** dans le chapitre de l'étape.
+  Sans résultat : ligne libre, ou **création de l'article à la volée** dans le chapitre de l'étape. La loupe du champ ouvre
+  `ArticleBrowserDialog` (chapitres en arbre, recherche en mémoire, double-clic ou Entrée insère, « Insérer et
+  continuer ») ; même principe pour les éléments de coûts avec `components/shared/ElementBrowserDialog` (groupes,
+  recherche serveur) depuis `ElementPicker` (rapports, sous-détail). `DataGrid` a reçu `onActivate` (double-clic).
   `PositionRow` garde un brouillon local (enregistré à la sortie de ligne ou après 1,5 s) : ne pas resynchroniser
   ses champs depuis le serveur pendant la saisie.
   Réordonnancement par **glisser-déposer** natif (poignée `data-handle`, dépose dans l'étape ou vers une autre étape :

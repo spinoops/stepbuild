@@ -302,6 +302,7 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
                   <td colSpan={6} className="py-1.5" style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
                     <ArticlePicker
                       stepId={step.id}
+                      chapterId={step.catalog_chapter_id}
                       canCreateArticle={Boolean(step.catalog_chapter_id)}
                       busy={busyStep === step.id}
                       onPickArticle={(article) => void add(step, { catalog_article_id: article.id }, true)}

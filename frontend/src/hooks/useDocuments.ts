@@ -155,9 +155,10 @@ export interface PickerArticle {
   unit: string | null
   sale: number | null
   purchase: number | null
+  chapterId: number
 }
 
-type PickerRow = [number, string, string, string | null, number | null, number | null, number]
+type PickerRow = [number, string, string, string | null, number | null, number | null, number, number]
 
 /**
  * Articles du catalogue pour la saisie rapide : chargés une fois, cherchés en mémoire
@@ -169,8 +170,8 @@ export function useArticlePicker() {
     queryFn: async (): Promise<{ index: SearchIndex; articles: Map<number, PickerArticle> }> => {
       const rows = (await api.get<{ data: PickerRow[] }>('/catalog-articles/picker')).data.data
       const articles = new Map<number, PickerArticle>()
-      const items = rows.map(([id, code, description, unit, sale, purchase, usage]) => {
-        articles.set(id, { id, code, description, unit, sale, purchase })
+      const items = rows.map(([id, code, description, unit, sale, purchase, usage, chapterId]) => {
+        articles.set(id, { id, code, description, unit, sale, purchase, chapterId })
         const sublabel = [code, unit, sale !== null ? `${fmtAmount(sale)} CHF` : null].filter(Boolean).join(' · ')
         return [id, description, sublabel, usage, code] as [number, string, string, number, string]
       })

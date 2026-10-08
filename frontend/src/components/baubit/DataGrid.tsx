@@ -33,6 +33,8 @@ interface DataGridProps<T> {
   rowClass?: (row: T, index: number) => string | undefined
   selectedKey?: string | null
   onSelect?: (row: T) => void
+  /** Double-clic sur une ligne (ouvrir, insérer…). */
+  onActivate?: (row: T) => void
   showFilter?: boolean
   /** Ligne(s) de pied de tableau (<tr>). */
   footer?: ReactNode
@@ -71,6 +73,7 @@ export default function DataGrid<T>({
   rowClass,
   selectedKey,
   onSelect,
+  onActivate,
   showFilter = true,
   footer,
   className = '',
@@ -216,6 +219,7 @@ export default function DataGrid<T>({
               <tr
                 key={key}
                 onClick={() => onSelect?.(row)}
+                onDoubleClick={() => onActivate?.(row)}
                 className={`cursor-default transition ${selected ? 'bg-primary-50' : `${cls} hover:brightness-[0.97]`}`}
               >
                 <td className={`w-1 border-b border-gray-100 ${selected ? 'bg-primary-600' : ''}`} />

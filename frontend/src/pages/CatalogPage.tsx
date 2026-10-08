@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -10,15 +9,14 @@ import DataGrid from '@/components/baubit/DataGrid'
 import type { GridColumn } from '@/components/baubit/DataGrid'
 import GridPager from '@/components/baubit/GridPager'
 import Tree from '@/components/baubit/Tree'
-import type { TreeNode } from '@/components/baubit/Tree'
 import { BB_FIELD, BbCheckbox, BbInput, BbSelect, BbTextarea, Field, SectionTitle } from '@/components/baubit/Form'
 import { Icon } from '@/components/icons'
 import UnitSelect from '@/components/shared/UnitSelect'
 import { useDebounced } from '@/hooks/useDebounced'
 import { SAVE_LABELS, useEntityForm } from '@/hooks/useEntityForm'
 import type { SaveState } from '@/hooks/useEntityForm'
+import { useCatalogChapters, useChapterTree } from '@/hooks/useCatalog'
 import { useSelection } from '@/hooks/useSelection'
-import { api } from '@/lib/api'
 import {
   EMPTY_QUERY,
   PRICE_PATTERN,
@@ -66,13 +64,6 @@ type FormValues = z.infer<typeof schema>
 
 const text = (value: number | null | undefined) => (value === null || value === undefined ? '' : String(value))
 
-function useChapters() {
-  return useQuery({
-    queryKey: ['catalog-chapters'],
-    queryFn: async () => (await api.get<{ data: CatalogChapter[] }>('/catalog-chapters')).data.data,
-  })
-}
-
 /** Catalogue d'articles : chapitres (= modèles d'étapes des devis) à gauche, articles à droite. */
 export default function CatalogPage() {
   const { selectedId, isNew, select } = useSelection()
@@ -81,7 +72,7 @@ export default function CatalogPage() {
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [formVersion, setFormVersion] = useState(0)
 
-  const chapters = useChapters()
+  const chapters = useCatalogChapters()
   const chapterList = useMemo(() => chapters.data ?? [], [chapters.data])
   const list = useResourceList<CatalogArticle>('catalog-articles', useDebounced(query, 250), { chapter_id: chapterId })
   const rows = list.data?.data ?? []
@@ -92,18 +83,7 @@ export default function CatalogPage() {
   const single = useResourceItem<CatalogArticle>('catalog-articles', currentId, !inList)
   const article = isNew ? null : (inList ?? single.data ?? null)
 
-  const tree = useMemo<TreeNode[]>(() => {
-    const label = (chapter: CatalogChapter) => `${chapter.code} - ${chapter.label}`
-    return chapterList
-      .filter((chapter) => chapter.parent_id === null)
-      .map((chapter) => ({
-        id: String(chapter.id),
-        label: label(chapter),
-        children: chapterList
-          .filter((child) => child.parent_id === chapter.id)
-          .map((child) => ({ id: String(child.id), label: label(child) })),
-      }))
-  }, [chapterList])
+  const tree = useChapterTree(chapterList)
 
   const currentChapter = chapterList.find((chapter) => chapter.id === chapterId) ?? null
 

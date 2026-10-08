@@ -59,6 +59,7 @@ class CatalogArticleController extends Controller
                 $a->sale_price,
                 $a->purchase_price,
                 $a->usage_count,
+                $a->catalog_chapter_id,
             ]);
 
         return response()->json(['data' => $items]);
