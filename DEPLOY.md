@@ -1,6 +1,6 @@
 # Déploiement (Infomaniak mutualisé)
 
-Mise en production du **logiciel de chantier Lachat** sur **https://planning.lachatconstruction.ch**,
+Mise en production de **StepBuild** (logiciel de chantier de Lachat Construction) sur **https://planning.lachatconstruction.ch**,
 avec la même méthode que Planning Chantier, ProTime-Cuttat et StepWork : code par Git,
 déploiement automatique par GitHub Actions. Le §5 est le runbook de la première mise en ligne.
 
@@ -132,7 +132,7 @@ pousser un correctif sur `master`, pour renvoyer le front correspondant.
 - Ne jamais committer le `.env` réel (exclu par les `.gitignore`).
 - **Aucun compte de démo en production** : en `APP_ENV=production`, `DatabaseSeeder` ne crée
   ni les comptes `@chantier.test` ni les données d'exemple. Premier compte :
-  `php backend/artisan chantier:admin <email>` (§5.F).
+  `php backend/artisan stepbuild:admin <email>` (§5.F).
 - Les ouvriers ne voient jamais un prix : règle appliquée côté API (`User::canSeePrices()`),
   pas seulement dans l'interface.
 - Telescope ne se charge qu'en local (voir `AppServiceProvider`).
@@ -157,7 +157,7 @@ php artisan up
 
 ### Tâche planifiée (une fois)
 
-Le planificateur d'Infomaniak appelle une **URL**. Elle lance `chantier:cron` : **sauvegarde**
+Le planificateur d'Infomaniak appelle une **URL**. Elle lance `stepbuild:cron` : **sauvegarde**
 si la dernière a plus de 20 h.
 
 1. Sur le serveur, générer un jeton secret et le mettre dans `backend/.env` :
@@ -185,7 +185,7 @@ la même chose (`routes/console.php`, sauvegarde à 3 h).
 | | Valeur |
 |---|---|
 | Domaine | `https://planning.lachatconstruction.ch` (interface + API) |
-| Dépôt Git | `https://github.com/spinoops/chantier-lachat` (privé, branche `master`) — nom à adapter |
+| Dépôt Git | `https://github.com/spinoops/stepbuild` (privé, branche `master`) |
 | Dossier sur le serveur | `~/apps/planning-chantier-lachat` (clone du dépôt) — compte Step One, temporaire |
 | Doc root | `apps/planning-chantier-lachat/backend/public` |
 | Base MySQL | créée dans le Manager (hôte `xxxxx.myd.infomaniak.com`, nom, utilisateur, mot de passe) |
@@ -193,7 +193,7 @@ la même chose (`routes/console.php`, sauvegarde à 3 h).
 
 ### A. En local : dépôt GitHub
 
-1. Sur https://github.com/new : dépôt **`chantier-lachat`**, **privé**, sans README ni
+1. Sur https://github.com/new : dépôt **`stepbuild`**, **privé**, sans README ni
    `.gitignore` (le projet a les siens).
 2. Le projet est déjà un dépôt Git (branche `master`). Contrôler qu'aucun secret ni document
    client n'est suivi, puis brancher GitHub et envoyer :
@@ -202,7 +202,7 @@ la même chose (`routes/console.php`, sauvegarde à 3 h).
 cd D:\wamp64\www\app-chantier
 git status
 git ls-files | Select-String "\.env$|_construction"   # ne doit RIEN afficher
-git remote add origin https://github.com/spinoops/chantier-lachat.git
+git remote add origin https://github.com/spinoops/stepbuild.git
 git push -u origin master
 ```
 
@@ -231,16 +231,16 @@ servir qu'à un dépôt (celles de Planning, ProTime et StepWork sont prises). O
 dédiée, avec un alias :
 
 ```bash
-ssh-keygen -t ed25519 -C "infomaniak-chantier" -f ~/.ssh/chantier_github -N ""
-cat ~/.ssh/chantier_github.pub
-#   → coller sur GitHub : dépôt chantier-lachat → Settings → Deploy keys → Add deploy key
+ssh-keygen -t ed25519 -C "infomaniak-stepbuild" -f ~/.ssh/stepbuild_github -N ""
+cat ~/.ssh/stepbuild_github.pub
+#   → coller sur GitHub : dépôt stepbuild → Settings → Deploy keys → Add deploy key
 #     (lecture seule suffit)
 
 cat >> ~/.ssh/config <<'EOF'
-Host github-chantier
+Host github-stepbuild
   HostName github.com
   User git
-  IdentityFile ~/.ssh/chantier_github
+  IdentityFile ~/.ssh/stepbuild_github
   IdentitiesOnly yes
 EOF
 chmod 600 ~/.ssh/config
@@ -253,7 +253,7 @@ contient que la page par défaut d'Infomaniak, la supprimer d'abord.
 ```bash
 mkdir -p ~/apps/planning-chantier-lachat && cd ~/apps/planning-chantier-lachat
 ls -A
-git clone git@github-chantier:spinoops/chantier-lachat.git .
+git clone git@github-stepbuild:spinoops/stepbuild.git .
 composer install --no-dev --optimize-autoloader --working-dir=backend
 
 cp backend/.env.production.example backend/.env
@@ -289,7 +289,7 @@ envoie le front dans `backend/public`. Tout vert = en ligne.
 
 ```bash
 cd ~/apps/planning-chantier-lachat
-php backend/artisan chantier:admin login@step-one.ch --name="Step One"
+php backend/artisan stepbuild:admin login@step-one.ch --name="Step One"
 ```
 
 4. Dans l'application, **Utilisateurs** : créer les comptes du client (admin, responsables,
@@ -305,7 +305,7 @@ sa base est une base de démo, ne pas y saisir de données réelles.
 
 ## 6. Secours sans GitHub
 
-`.\release.ps1` (en local) produit `release\chantier-<date>.zip` : le dossier `backend/`
+`.\release.ps1` (en local) produit `release\stepbuild-<date>.zip` : le dossier `backend/`
 avec ses dépendances de production et le front déjà copié dans `public/`. Le décompresser
 dans `~/apps/planning-chantier-lachat/backend` (sans écraser `.env` ni `storage/`), puis lancer les
 commandes artisan du §1.

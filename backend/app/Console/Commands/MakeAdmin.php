@@ -14,11 +14,11 @@ use Illuminate\Support\Str;
  * aucun compte de démo n'existe. Sans option, un mot de passe est généré et affiché une
  * seule fois ; avec --mail, un lien pour définir le mot de passe est envoyé à la place.
  *
- *   php artisan chantier:admin login@step-one.ch --name="Step One"
+ *   php artisan stepbuild:admin login@step-one.ch --name="Step One"
  */
 class MakeAdmin extends Command
 {
-    protected $signature = 'chantier:admin
+    protected $signature = 'stepbuild:admin
                             {email : Adresse e-mail du compte}
                             {--name= : Nom affiché (création uniquement)}
                             {--password= : Mot de passe (défaut : généré et affiché)}

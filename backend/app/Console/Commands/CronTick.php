@@ -13,7 +13,7 @@ use Throwable;
  */
 class CronTick extends Command
 {
-    protected $signature = 'chantier:cron';
+    protected $signature = 'stepbuild:cron';
 
     protected $description = "Sauvegarde quotidienne de la base (appelé par le planificateur d'URL).";
 

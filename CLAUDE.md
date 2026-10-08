@@ -3,8 +3,10 @@
 Contexte pour Claude Code sur ce dépôt. À lire avant toute intervention.
 
 ## Projet
-**app-chantier** — logiciel de gestion de chantier pour **Lachat Construction Sàrl**, qui
-remplace BauBit PRO. Dérivé du template **baseapp** (Laravel 13 API + React SPA).
+**StepBuild** (dossier local `app-chantier`, dépôt GitHub `spinoops/stepbuild`) — logiciel de gestion de
+chantier pour **Lachat Construction Sàrl**, qui remplace BauBit PRO. « StepBuild » est le nom du programme
+(titre de l'onglet, page de connexion, `APP_NAME`) ; le nom affiché dans la coque reste le réglage `app_name`
+(« Lachat Construction », modifiable par l'admin). Dérivé du template **baseapp** (Laravel 13 API + React SPA).
 Les documents de référence sont dans `_construction/` (non versionné) :
 - `Offres et plans du logiciel/Plan de création - Logiciel de chantier.docx` — **spécification fonctionnelle** (à relire avant chaque phase).
 - `Offres et plans du logiciel/Offre - Logiciel de chantier.docx` — périmètre, phases, planning (mise en production 1er janvier 2027).
@@ -306,7 +308,7 @@ Le `php` du PATH Windows est en **8.1** (trop vieux pour Laravel 13, qui exige *
 `.env`, `vendor/`, `node_modules/`, `frontend/dist/`, `storage/*`, `_construction/` (données client).
 
 ## Mode d'emploi client
-`docs/Mode d'emploi - Logiciel de chantier.pdf`, généré par `docs/manuel/` : `npm run captures` (puppeteer sur
+`docs/Mode d'emploi - StepBuild.pdf`, généré par `docs/manuel/` : `npm run captures` (puppeteer sur
 Chrome, données d'exemple ; `FRONT_URL` / `API_URL` pour d'autres ports) puis `npm run pdf` (reportlab,
 `build_manual.py`, police Helvetica → caractères WinAnsi seulement). **À compléter à chaque phase livrée**
 (chapitre par module, version et date en tête du script).
@@ -322,11 +324,11 @@ avant `migrate --force`, `db:seed --class=DatabaseSeeder --force`, rsync du fron
 `apps/planning-chantier-lachat` ; passage prévu sur le compte du client (`DEPLOY.md` § 7 : seuls les
 secrets GitHub, le `.env` et le DNS changent).
 - **Production** : `DatabaseSeeder` ne crée **aucun compte de démo** en `APP_ENV=production` (rôles via
-  `RolesSeeder`, unités, sous-détails types seulement). Premier compte : `php artisan chantier:admin <email>`
+  `RolesSeeder`, unités, sous-détails types seulement). Premier compte : `php artisan stepbuild:admin <email>`
   (mot de passe généré et affiché une fois, `--password=`, ou `--mail` pour un lien).
 - **Sauvegardes** : `App\Services\BackupService` (`backup:run`, mysqldump sinon dump PDO, rotation
   `BACKUP_KEEP`) dans `storage/app/private/backups`. Tâche planifiée Infomaniak par URL
-  `GET /api/cron/run/{CRON_TOKEN}` → `chantier:cron` (sauvegarde si la dernière a plus de 20 h).
+  `GET /api/cron/run/{CRON_TOKEN}` → `stepbuild:cron` (sauvegarde si la dernière a plus de 20 h).
 - `backend/.env.production.example` = modèle du `.env` de prod ; `backend/public/.user.ini` = limites
   d'envoi (photos) et mémoire (PDF). `release.ps1` = archive de secours sans GitHub.
 Signature des documents client : « Stéphane Offreda — Step One ».

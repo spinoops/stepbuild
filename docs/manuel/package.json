@@ -1,5 +1,5 @@
 {
-  "name": "manuel-app-chantier",
+  "name": "manuel-stepbuild",
   "private": true,
   "description": "Génération du mode d'emploi PDF (captures d'écran + mise en page)",
   "scripts": {

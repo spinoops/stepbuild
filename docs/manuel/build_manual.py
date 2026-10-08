@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Génère le mode d'emploi PDF du logiciel de gestion de chantier.
+Génère le mode d'emploi PDF de StepBuild (logiciel de gestion de chantier).
 
     1. Lancer l'application (dev.bat), avec les données d'exemple.
     2. npm install ; npm run captures     -> docs/manuel/shots/*.png
-    3. npm run pdf                         -> docs/Mode d'emploi - Logiciel de chantier.pdf
+    3. npm run pdf                         -> docs/Mode d'emploi - StepBuild.pdf
 
 Police Helvetica intégrée à reportlab : éviter les caractères hors WinAnsi (flèches, etc.).
 """
@@ -24,7 +24,7 @@ from reportlab.platypus.tableofcontents import TableOfContents
 HERE = os.path.dirname(os.path.abspath(__file__))
 SHOTS = os.path.join(HERE, 'shots')
 LOGO = os.path.join(HERE, '..', '..', 'frontend', 'public', 'logo-lachat.png')
-OUTPUT = os.path.join(HERE, '..', "Mode d'emploi - Logiciel de chantier.pdf")
+OUTPUT = os.path.join(HERE, '..', "Mode d'emploi - StepBuild.pdf")
 
 VERSION = '0.3'
 DATE = '8 octobre 2026'
@@ -183,7 +183,7 @@ def cover(canvas, doc):
     canvas.setFont('Helvetica-Bold', 34)
     canvas.drawString(MARGIN, PAGE_H - 7.6 * cm, "Mode d'emploi")
     canvas.setFont('Helvetica', 17)
-    canvas.drawString(MARGIN, PAGE_H - 8.7 * cm, 'Logiciel de gestion de chantier')
+    canvas.drawString(MARGIN, PAGE_H - 8.7 * cm, 'StepBuild — Logiciel de gestion de chantier')
     canvas.setFillColor(colors.HexColor('#9ca3af'))
     canvas.setFont('Helvetica', 11)
     canvas.drawString(MARGIN, PAGE_H - 10.1 * cm, f'Version {VERSION}  ·  {DATE}')
@@ -215,7 +215,7 @@ def later(canvas, doc):
     canvas.line(MARGIN, PAGE_H - 1.35 * cm, PAGE_W - MARGIN, PAGE_H - 1.35 * cm)
     canvas.setFont('Helvetica', 8.5)
     canvas.setFillColor(GREY)
-    canvas.drawString(MARGIN, PAGE_H - 1.15 * cm, "Logiciel de gestion de chantier — Mode d'emploi")
+    canvas.drawString(MARGIN, PAGE_H - 1.15 * cm, "StepBuild — Mode d'emploi")
     canvas.drawRightString(PAGE_W - MARGIN, PAGE_H - 1.15 * cm, 'Lachat Construction Sàrl')
     canvas.setStrokeColor(LINE)
     canvas.setLineWidth(0.5)
@@ -242,7 +242,7 @@ def build_story():
     # ------------------------------------------------------------------ 1
     s += chapter('1. Avant de commencer')
     s += [
-        p("Le logiciel de gestion de chantier est une application web : il s'utilise dans un navigateur, sans rien "
+        p("StepBuild est une application web : il s'utilise dans un navigateur, sans rien "
           "installer. Il reprend votre façon de travailler avec BauBit (projets, devis, rapports, régie) dans une "
           "interface plus rapide.", LEAD),
         Paragraph('Ce dont vous avez besoin', H2),
@@ -850,7 +850,7 @@ def build_story():
 def main():
     doc = Manual(
         OUTPUT, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=2.1 * cm, bottomMargin=2.1 * cm,
-        title="Mode d'emploi — Logiciel de gestion de chantier",
+        title="Mode d'emploi — StepBuild",
         author='Stéphane Offreda — Step One', subject='Lachat Construction Sàrl',
     )
     frame = Frame(MARGIN, 2.1 * cm, CONTENT_W, PAGE_H - 4.2 * cm, id='main', leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)

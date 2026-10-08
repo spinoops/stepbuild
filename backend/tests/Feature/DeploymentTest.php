@@ -30,7 +30,7 @@ it('répond sur /api/health en indiquant l\'état de la base', function () {
 it('crée le premier admin avec un mot de passe généré, affiché une seule fois', function () {
     Notification::fake();
 
-    $this->artisan('chantier:admin', ['email' => 'Login@Step-One.ch', '--name' => 'Step One'])
+    $this->artisan('stepbuild:admin', ['email' => 'Login@Step-One.ch', '--name' => 'Step One'])
         ->expectsOutputToContain('Mot de passe généré')
         ->assertSuccessful();
 
@@ -42,27 +42,27 @@ it('crée le premier admin avec un mot de passe généré, affiché une seule fo
 });
 
 it('crée le compte admin avec le mot de passe donné et permet la connexion', function () {
-    $this->artisan('chantier:admin', ['email' => 'admin@lachat.test', '--password' => 'motdepasse-solide'])->assertSuccessful();
+    $this->artisan('stepbuild:admin', ['email' => 'admin@lachat.test', '--password' => 'motdepasse-solide'])->assertSuccessful();
 
     $this->postJson('/api/login', ['email' => 'admin@lachat.test', 'password' => 'motdepasse-solide'])->assertOk();
     expect(Hash::check('motdepasse-solide', User::where('email', 'admin@lachat.test')->first()->password))->toBeTrue();
 
     // Relancer sur un compte existant le promeut sans le dupliquer.
-    $this->artisan('chantier:admin', ['email' => 'admin@lachat.test'])->assertSuccessful();
+    $this->artisan('stepbuild:admin', ['email' => 'admin@lachat.test'])->assertSuccessful();
     expect(User::where('email', 'admin@lachat.test')->count())->toBe(1);
 });
 
 it('envoie le lien pour définir le mot de passe avec --mail', function () {
     Notification::fake();
 
-    $this->artisan('chantier:admin', ['email' => 'chef@lachat.test', '--mail' => true])->assertSuccessful();
+    $this->artisan('stepbuild:admin', ['email' => 'chef@lachat.test', '--mail' => true])->assertSuccessful();
 
     Notification::assertSentTo(User::where('email', 'chef@lachat.test')->firstOrFail(), ResetPassword::class);
 });
 
 it('refuse une adresse invalide ou un mot de passe trop court pour le compte admin', function () {
-    $this->artisan('chantier:admin', ['email' => 'pas-une-adresse'])->assertFailed();
-    $this->artisan('chantier:admin', ['email' => 'ok@lachat.test', '--password' => 'court'])->assertFailed();
+    $this->artisan('stepbuild:admin', ['email' => 'pas-une-adresse'])->assertFailed();
+    $this->artisan('stepbuild:admin', ['email' => 'ok@lachat.test', '--password' => 'court'])->assertFailed();
     expect(User::count())->toBe(0);
 });
 

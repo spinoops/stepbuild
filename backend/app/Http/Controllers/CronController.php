@@ -8,7 +8,7 @@ use Throwable;
 
 /**
  * GET /api/cron/run/{token} — appelé par le planificateur de tâches d'Infomaniak
- * (qui appelle une URL). Lance chantier:cron (sauvegarde quotidienne).
+ * (qui appelle une URL). Lance stepbuild:cron (sauvegarde quotidienne).
  *
  * Le jeton doit correspondre à CRON_TOKEN (.env) ; sinon 404, comme si l'adresse
  * n'existait pas. Sans CRON_TOKEN, l'adresse est désactivée.
@@ -24,7 +24,7 @@ class CronController extends Controller
 
         @set_time_limit(600);
         try {
-            $status = Artisan::call('chantier:cron');
+            $status = Artisan::call('stepbuild:cron');
         } catch (Throwable $e) {
             report($e);
 

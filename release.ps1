@@ -1,13 +1,13 @@
 <#
 .SYNOPSIS
-    Prépare une archive de mise en ligne de secours du logiciel de chantier (Infomaniak),
+    Prépare une archive de mise en ligne de secours de StepBuild (Infomaniak),
     pour le cas où GitHub Actions serait indisponible.
 
 .DESCRIPTION
     1. Build du front dans frontend/dist (API relative : même domaine).
-    2. Copie du backend dans release\chantier (sans .env, vendor de dev, logs, sauvegardes).
+    2. Copie du backend dans release\stepbuild (sans .env, vendor de dev, logs, sauvegardes).
     3. composer install --no-dev dans la copie (le serveur n'a besoin ni de Node ni de Composer).
-    4. Archive release\chantier-AAAAMMJJ-HHMM.zip à décompresser dans backend/ sur le serveur.
+    4. Archive release\stepbuild-AAAAMMJJ-HHMM.zip à décompresser dans backend/ sur le serveur.
 
     Le dossier cible (doc root) du site Infomaniak pointe sur backend/public.
     Ensuite : commandes artisan du § 1 de DEPLOY.md.
@@ -20,7 +20,7 @@ $root     = $PSScriptRoot
 $backend  = Join-Path $root 'backend'
 $frontend = Join-Path $root 'frontend'
 $outDir   = Join-Path $root 'release'
-$stage    = Join-Path $outDir 'chantier'
+$stage    = Join-Path $outDir 'stepbuild'
 
 # --- PHP >= 8.3 de WAMP en tête du PATH (composer / artisan ; le php du PATH est en 8.1) ---
 $php = Get-ChildItem 'D:\wamp64\bin\php' -Directory -ErrorAction SilentlyContinue |
@@ -71,7 +71,7 @@ try {
 finally { Pop-Location }
 
 # --- 4. Archive ---
-$zip = Join-Path $outDir ("chantier-{0}.zip" -f (Get-Date -Format 'yyyyMMdd-HHmm'))
+$zip = Join-Path $outDir ("stepbuild-{0}.zip" -f (Get-Date -Format 'yyyyMMdd-HHmm'))
 Write-Host "-> Archive $zip..." -ForegroundColor Green
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip -CompressionLevel Optimal

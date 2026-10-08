@@ -1,4 +1,4 @@
-# app-chantier — logiciel de gestion de chantier
+# StepBuild — logiciel de gestion de chantier
 
 Application sur mesure pour **Lachat Construction Sàrl** (remplacement de BauBit PRO),
 dérivée du template **baseapp** : une **API REST Laravel 13** (authentification par token
@@ -15,7 +15,7 @@ Contexte de développement détaillé : `CLAUDE.md`.
 | Frontend  | React 19, Vite, TypeScript, TailwindCSS v4, axios, react-router-dom    |
 
 ```
-app-chantier/
+app-chantier/   (dépôt GitHub : stepbuild)
 ├── backend/    # API Laravel (http://localhost:8001)
 └── frontend/   # SPA React (http://localhost:5174)
 ```

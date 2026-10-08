@@ -15,7 +15,7 @@ Artisan::command('inspire', function () {
 |
 | Sur un serveur avec crontab : `php artisan schedule:run` chaque minute. Sur Infomaniak
 | mutualisé, le planificateur appelle plutôt l'URL /api/cron/run/{CRON_TOKEN}
-| (CronController → chantier:cron). Voir DEPLOY.md, § 4.
+| (CronController → stepbuild:cron). Voir DEPLOY.md, § 4.
 |
 */
 

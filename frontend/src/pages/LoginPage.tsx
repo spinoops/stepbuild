@@ -56,7 +56,7 @@ export default function LoginPage() {
         <div className="space-y-1">
           <Brand size={30} />
           <h1 className="text-lg font-semibold text-gray-900">{settings?.app_name ?? 'Lachat Construction'}</h1>
-          <p className="text-xs text-gray-500">Gestion de chantier</p>
+          <p className="text-xs text-gray-500">StepBuild · Gestion de chantier</p>
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
