@@ -2,13 +2,11 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthContext'
 import { NAV_GROUPS } from '@/lib/navigation'
 import { useProjectStats } from '@/hooks/useProjects'
-import { CURRENT_PHASE, PHASES } from '@/lib/phases'
 import { PROJECT_STATUSES } from '@/lib/status'
 import type { ProjectStatus } from '@/types'
 import { ROLE_LABELS, hasRole, primaryRole } from '@/lib/roles'
 import { Icon } from '@/components/icons'
 import PageHeader from '@/components/ui/PageHeader'
-import Card from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 
 const FLOW = [
@@ -19,8 +17,6 @@ const FLOW = [
   { icon: 'file', title: 'Facture', text: 'Facture finale depuis les rapports validés.', to: '/documents' },
 ] as const
 
-const PHASE_TONE = { done: 'green', current: 'primary', planned: 'gray' } as const
-const PHASE_LABEL = { done: 'Livrée', current: 'En cours', planned: 'À venir' } as const
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -113,35 +109,6 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="mt-8">
-        <Card title="Avancement du développement" aside={<Badge tone="primary">Phase {CURRENT_PHASE}</Badge>}>
-          <ol className="space-y-3">
-            {PHASES.map((phase) => (
-              <li key={phase.number} className="flex gap-3">
-                <span
-                  className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-                    phase.status === 'current'
-                      ? 'bg-primary-600 text-white'
-                      : phase.status === 'done'
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-100 text-gray-500'
-                  }`}
-                >
-                  {phase.status === 'done' ? <Icon name="check" className="h-3.5 w-3.5" /> : phase.number}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-gray-900">{phase.title}</span>
-                    <Badge tone={PHASE_TONE[phase.status]}>{PHASE_LABEL[phase.status]}</Badge>
-                    <span className="text-xs text-gray-400">{phase.period}</span>
-                  </div>
-                  <p className="text-sm text-gray-500">{phase.summary}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </Card>
-      </section>
     </div>
   )
 }

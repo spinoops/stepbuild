@@ -235,7 +235,7 @@ Les modules non développés utilisent `components/ModulePlaceholder.tsx` : **re
 le placeholder par la vraie page lors de la phase concernée.
 
 Statuts (libellés, codes BauBit, couleurs) dans `frontend/src/lib/status.ts`.
-Phases affichées sur le tableau de bord : `frontend/src/lib/phases.ts` (mettre à jour `status`).
+Phases du projet : `frontend/src/lib/phases.ts` (mettre à jour `status` ; n'alimente plus que la barre d'état, la liste a été retirée du tableau de bord le 08.10.2026).
 
 ## ⚠️ Piège PHP (IMPORTANT)
 Le `php` du PATH Windows est en **8.1** (trop vieux pour Laravel 13, qui exige **PHP >= 8.3**).
