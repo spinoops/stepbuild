@@ -28,7 +28,7 @@ export default function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { email: 'admin@chantier.test', password: 'password' },
+    defaultValues: { email: '', password: '' },
   })
 
   async function onSubmit(values: FormValues) {

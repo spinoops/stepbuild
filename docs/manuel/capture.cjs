@@ -47,7 +47,7 @@ async function token(email) {
   }
   const loginAs = async (email) => {
     const value = await token(email)
-    await page.evaluate((t) => localStorage.setItem('baseapp_token', t), value)
+    await page.evaluate((t) => localStorage.setItem('stepbuild_token', t), value)
   }
   // Projet courant de la barre de contexte (perdu à chaque rechargement de page : à refaire après chaque go()).
   const selectProject = async (number) => {
