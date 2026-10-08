@@ -4,6 +4,7 @@ use App\Models\CatalogArticle;
 use App\Models\CatalogChapter;
 use App\Models\Collaborator;
 use App\Models\PriceElement;
+use App\Models\StockItem;
 use App\Models\Unit;
 use Illuminate\Support\Facades\File;
 
@@ -78,6 +79,43 @@ it('reprend les éléments de coûts avec prix fournisseur, net et régie, et le
 
     expect(PriceElement::count())->toBe(3) // l'élément inactif et la position régie déjà couverte sont ignorés
         ->and(CatalogArticle::count())->toBe(0);
+});
+
+it('ne duplique pas un élément déjà connu sous une autre clé et laisse son stock intact', function () {
+    // Élément créé par la liste client (clé XLS), mis en stock et compté.
+    $existing = PriceElement::create(['family' => 2, 'group_code' => 'M92', 'number' => '020.000', 'description' => '3M 2012 chiffon microfibre bleu (10 pcs) paquet', 'unit' => 'Paquet', 'supplier_price' => 17.00, 'regie_code' => '2.020.000']);
+    $existing->baubit_id = 'XLS-2.020.000';
+    $existing->save();
+    $stock = StockItem::create(['price_element_id' => $existing->id, 'min_quantity' => 4, 'location' => 'Étagère B']);
+    $stock->apply('inventaire', 7);
+
+    $this->artisan('stepbuild:import-baubit', ['dir' => $this->dir, '--elements' => true])->assertSuccessful();
+    $this->artisan('stepbuild:import-baubit', ['dir' => $this->dir, '--elements' => true])->assertSuccessful();
+
+    expect(PriceElement::where('regie_code', '2.020.000')->count())->toBe(1)
+        ->and($existing->fresh()->baubit_id)->toBe('CEL-13622')
+        ->and($existing->fresh()->supplier_price)->toBe(18.8)
+        ->and(StockItem::count())->toBe(1);
+    $stock->refresh();
+    expect($stock->price_element_id)->toBe($existing->id)
+        ->and($stock->quantity)->toBe(7.0)->and($stock->min_quantity)->toBe(4.0)->and($stock->location)->toBe('Étagère B')
+        ->and($stock->movements()->count())->toBe(1);
+});
+
+it('ne change pas l\'identité d\'un produit en stock lors d\'une nouvelle reprise, seulement ses prix', function () {
+    $accu = PriceElement::create(['family' => 5, 'group_code' => 'O95', 'number' => '361.796', 'description' => 'Accu Bosch 36 V (désignation du dépôt)', 'unit' => 'Pièce', 'supplier_price' => 90]);
+    $accu->baubit_id = 'CEL-20001';
+    $accu->save();
+    StockItem::create(['price_element_id' => $accu->id])->apply('inventaire', 3);
+
+    $this->artisan('stepbuild:import-baubit', ['dir' => $this->dir, '--elements' => true])->assertSuccessful();
+
+    $accu->refresh();
+    expect($accu->description)->toBe('Accu Bosch 36 V (désignation du dépôt)')
+        ->and($accu->unit)->toBe('Pièce')
+        ->and($accu->number)->toBe('361.796')
+        ->and($accu->supplier_price)->toBe(100.0)   // le prix, lui, suit BauBit
+        ->and(StockItem::where('price_element_id', $accu->id)->first()->quantity)->toBe(3.0);
 });
 
 it('reprend les employés avec leur coût horaire et leur position régie, sans les comptes techniques', function () {

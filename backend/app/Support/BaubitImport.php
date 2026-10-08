@@ -106,12 +106,14 @@ class BaubitImport
             if ($family < 1 || $family > 6) {
                 continue;
             }
-            $element = $this->element('CEL-'.$row['id']);
+            $number = $this->number($row['number'] ?? null, $row['regie_code'] ?? null);
+            $description = mb_substr(trim((string) ($row['name'] ?: ($row['name_d'] ?? ''))), 0, 500);
+            $element = $this->element('CEL-'.$row['id'], $family, $row['regie_code'] ?: null, $number, $description);
             $element->fill([
                 'family' => $family,
                 'group_code' => (self::FAMILY_LETTER[$family] ?? '').trim((string) ($row['group'] ?? self::FAMILY_GROUP[$family])),
-                'number' => $this->number($row['number'] ?? null, $row['regie_code'] ?? null),
-                'description' => mb_substr(trim((string) ($row['name'] ?: ($row['name_d'] ?? ''))), 0, 500),
+                'number' => $number,
+                'description' => $description,
                 'unit' => $this->unit($row['unit'] ?? null, true),
                 'unit_regie' => $this->unit($row['unit_regie'] ?? ($row['unit'] ?? null), true),
                 'supplier_price' => $this->price($row['supplier_price'] ?? null),
@@ -123,6 +125,7 @@ class BaubitImport
                 'discount_percent' => $this->price($row['discount_percent'] ?? null),
                 'price_updated_at' => ! empty($row['price_date']) ? $row['price_date'] : null,
             ]);
+            $this->keepStockedIdentity($element);
             $created = ! $element->exists;
             $element->deleted_at = null;
             $element->save();
@@ -142,12 +145,14 @@ class BaubitImport
             if ($family < 1 || $family > 6 || ! str_contains($code, '.')) {
                 continue;
             }
-            $element = $this->element('RPO-'.$row['id']);
+            $number = substr($code, strpos($code, '.') + 1);
+            $description = mb_substr(trim((string) $row['name']), 0, 500);
+            $element = $this->element('RPO-'.$row['id'], $family, $code, $number, $description);
             $element->fill([
                 'family' => $family,
                 'group_code' => self::FAMILY_LETTER[$family].self::FAMILY_GROUP[$family],
-                'number' => substr($code, strpos($code, '.') + 1),
-                'description' => mb_substr(trim((string) $row['name']), 0, 500),
+                'number' => $number,
+                'description' => $description,
                 'unit' => $this->unit($row['unit'] ?? null, true),
                 'unit_regie' => $this->unit($row['unit'] ?? null, true),
                 'supplier_price' => $this->price($row['price_purchase'] ?? null),
@@ -156,6 +161,7 @@ class BaubitImport
                 'regie_code' => $code,
                 'unit_factor' => 1,
             ]);
+            $this->keepStockedIdentity($element);
             $created = ! $element->exists;
             $element->deleted_at = null;
             $element->save();
@@ -163,13 +169,38 @@ class BaubitImport
         }
     }
 
-    /** Élément existant (clé BauBit, corbeille comprise) ou nouveau ; `baubit_id` n'est pas assignable en masse. */
-    private function element(string $baubitId): PriceElement
+    /**
+     * Élément existant ou nouveau, sans jamais créer de doublon : par sa clé BauBit (corbeille comprise),
+     * sinon par famille + code régie + numéro + désignation (élément venu de la liste client « XLS-… » ou
+     * saisi à la main), sinon par famille + numéro + désignation. Les lignes existantes gardent leur id :
+     * les stocks, rapports et sous-détails qui les référencent ne bougent pas. `baubit_id` n'est pas
+     * assignable en masse.
+     */
+    private function element(string $baubitId, int $family, ?string $regieCode, string $number, string $description): PriceElement
     {
-        $element = PriceElement::withTrashed()->where('baubit_id', $baubitId)->first() ?? new PriceElement;
+        $element = PriceElement::withTrashed()->where('baubit_id', $baubitId)->first();
+        if ($element === null) {
+            $base = PriceElement::withTrashed()->where('family', $family)->where('number', $number)->where('description', $description)->orderBy('id');
+            $element = ($regieCode ? (clone $base)->where('regie_code', $regieCode)->first() : null) ?? $base->first();
+        }
+        $element ??= new PriceElement;
         $element->baubit_id = $baubitId;
 
         return $element;
+    }
+
+    /**
+     * Un produit suivi en stock garde son identité telle que le magasinier la connaît (famille, groupe,
+     * numéro, désignation, unités, code régie) : une nouvelle reprise BauBit ne rafraîchit que ses prix.
+     */
+    private function keepStockedIdentity(PriceElement $element): void
+    {
+        if (! $element->exists || ! $element->stockItem()->exists()) {
+            return;
+        }
+        foreach (['family', 'group_code', 'number', 'description', 'unit', 'unit_regie', 'regie_code'] as $field) {
+            $element->{$field} = $element->getOriginal($field);
+        }
     }
 
     // ------------------------------------------------------------------ employés

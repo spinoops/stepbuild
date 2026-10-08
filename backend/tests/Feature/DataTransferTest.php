@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\Address;
+use App\Models\PriceElement;
+use App\Models\StockItem;
 use App\Models\User;
 use App\Support\DataTransfer;
 use Database\Seeders\DatabaseSeeder;
@@ -21,6 +23,10 @@ it('exporte puis réimporte les données métier à l\'identique, comptes de dé
     $this->seed(DatabaseSeeder::class);
     Address::factory()->count(3)->create(['remark' => "Ligne 1\nLigne 2 — avec « guillemets » et l'apostrophe"]);
     $before = Address::orderBy('id')->get()->toArray();
+    // Les stocks voyagent avec les éléments de coûts qu'ils référencent.
+    $element = PriceElement::create(['family' => 2, 'group_code' => 'M92', 'number' => '020.000', 'description' => 'Chiffon', 'unit' => 'Paquet']);
+    $stock = StockItem::create(['price_element_id' => $element->id, 'min_quantity' => 2]);
+    $stock->apply('inventaire', 9, null, 'Comptage');
 
     $this->artisan('stepbuild:export-data', ['--output' => $this->file])->assertSuccessful();
     expect(file_get_contents($this->file))->toContain(DataTransfer::MIGRATIONS_PREFIX)->toContain('INSERT INTO `addresses`');
@@ -36,6 +42,10 @@ it('exporte puis réimporte les données métier à l\'identique, comptes de dé
     $this->artisan('stepbuild:import-data', ['file' => $this->file, '--force' => true, '--no-backup' => true])->assertSuccessful();
 
     expect(Address::orderBy('id')->get()->toArray())->toEqual($before)
+        ->and(StockItem::count())->toBe(1)
+        ->and(StockItem::first()->price_element_id)->toBe($element->id)
+        ->and(StockItem::first()->quantity)->toBe(9.0)
+        ->and(StockItem::first()->movements()->count())->toBe(1)
         ->and(DB::table('personal_access_tokens')->count())->toBe(0)
         ->and(User::withTrashed()->where('email', 'admin@chantier.test')->first()->trashed())->toBeTrue()
         ->and(User::count())->toBe(0);

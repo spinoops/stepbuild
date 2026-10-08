@@ -5,7 +5,7 @@ namespace App\Support;
 /**
  * Reprise des données métier d'une base vers une autre (local → production) :
  * comptes et rôles, réglages, unités, types de travail, adresses, catalogue, éléments de
- * coûts, sous-détails types, modèles de devis, projets, collaborateurs, devis, rapports.
+ * coûts, sous-détails types, modèles de devis, projets, collaborateurs, devis, rapports, stocks.
  *
  * Jamais repris : connexions (jetons, sessions), liens de mot de passe, caches, files
  * d'attente, Telescope, migrations. Le journal d'activité seulement sur demande.
@@ -62,6 +62,8 @@ class DataTransfer
             'daily_report_hours',
             'daily_report_items',
             'daily_report_files',
+            'stock_items',
+            'stock_movements',
             $withActivityLog ? 'activity_log' : null,
         ]));
     }

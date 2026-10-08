@@ -35,6 +35,12 @@ class PriceElement extends Model
     /** Un prix qui change date l'élément (« Mutation de » dans BauBit), sauf date fournie explicitement. */
     protected static function booted(): void
     {
+        // Un élément suivi en stock ne disparaît jamais physiquement (la corbeille, elle, est permise).
+        static::deleting(function (self $element) {
+            if ($element->isForceDeleting() && $element->stockItem()->exists()) {
+                throw new \RuntimeException("L'élément {$element->number} est suivi en stock : il ne peut pas être supprimé définitivement.");
+            }
+        });
         static::saving(function (self $element) {
             if ($element->isDirty(['supplier_price', 'net_price', 'regie_price']) && ! $element->isDirty('price_updated_at')) {
                 $element->price_updated_at = now();

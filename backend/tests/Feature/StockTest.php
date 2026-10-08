@@ -104,6 +104,19 @@ it('met un produit en stock, applique entrées, sorties et inventaire avec l\'hi
     expect(StockItem::count())->toBe(0);
 });
 
+it('garde le produit en stock quand son élément part à la corbeille et refuse sa suppression définitive', function () {
+    actingAsRole('responsable');
+    $product = makeProduct();
+    $item = StockItem::create(['price_element_id' => $product->id]);
+    $item->apply('inventaire', 5);
+
+    $this->deleteJson("/api/price-elements/{$product->id}")->assertOk();   // corbeille
+    $this->getJson('/api/stock/items')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.quantity', 5);
+
+    expect(fn () => $product->fresh()->forceDelete())->toThrow(RuntimeException::class);
+    expect(StockItem::count())->toBe(1);
+});
+
 it('trie les produits en stock par désignation', function () {
     actingAsRole('responsable');
     StockItem::create(['price_element_id' => makeProduct(['description' => 'Zinc en plaque', 'number' => '1'])->id]);

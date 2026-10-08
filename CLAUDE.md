@@ -244,6 +244,12 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `quantity` signée, `quantity_after`, `user_id`, `note`). `StockItem::apply()` est le seul chemin de modification de la
   quantité ; `status()` = a_compter (jamais compté) | rupture (≤ 0) | bas (≤ seuil) | ok. Familles stockables : 2 à 5
   (pas salaire ni tiers).
+- **Les stocks survivent à toutes les reprises** : les éléments gardent leur id (`import-baubit` retrouve un élément par
+  clé BauBit, sinon par code régie + numéro + désignation, sinon numéro + désignation, et ne supprime jamais rien) ;
+  **un élément suivi en stock garde son identité** (famille, groupe, numéro, désignation, unités, code régie :
+  `BaubitImport::keepStockedIdentity()`), seuls ses prix suivent BauBit ;
+  `stock_items` / `stock_movements` font partie du transfert local → prod (`DataTransfer`) ; un élément suivi en stock
+  ne peut pas être supprimé définitivement (`PriceElement::deleting`), la corbeille laisse le produit visible.
 - **Liste client** : `backend/database/baubit/elements_xlsx_to_json.py` convertit un export Excel BauBit des éléments
   de coûts en JSON, puis `php artisan stepbuild:import-stock-list <json> [--dry-run] [--no-prices] [--no-stock]`
   (`App\Support\StockListImport`) retrouve chaque élément (code régie + numéro + désignation), crée les inconnus
