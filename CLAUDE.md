@@ -28,7 +28,7 @@ pour l'affichage : `frontend/src/lib/phases.ts`.
 | 4 | Rapports journaliers sur les étapes du devis, workflow en cours → en contrôle → facturé ; collaborateurs | **fait** (API + front) |
 | 5 | Régie (brut → régie → client sur chaque ligne de rapport), contrôle des heures, absences | **fait** (API + front) |
 | 6 | Acomptes, factures, facture finale, export PDF ; statistiques | à faire — **prochaine étape** |
-| 7 | Reprise des données BauBit, mise en production Infomaniak | **mécanisme de déploiement prêt** (GitHub Actions → Infomaniak, `DEPLOY.md`) ; reste : mise en ligne effective et reprise BauBit |
+| 7 | Reprise des données BauBit, mise en production Infomaniak | **mécanisme de déploiement prêt** (GitHub Actions → Infomaniak, `DEPLOY.md`) ; **import catalogue + éléments de coûts BauBit prêt** (`stepbuild:import-baubit`) ; reste : mise en ligne effective, reprise adresses / projets / devis / rapports |
 | 8 | Vue mobile / tablette (ouvriers) | janvier 2027 |
 | 9 | Widget de temps au bureau, stocks | janvier 2027 |
 
@@ -242,6 +242,26 @@ l'unité **en texte** (code) : supprimer ou désactiver une unité ne touche pas
 `components/shared/UnitSelect` (liste + valeur actuelle hors liste conservée, remonté quand la liste arrive pour
 react-hook-form) dans `PositionRow` et le formulaire d'article ; éditeur `components/settings/UnitsEditor` sur la
 page Configuration.
+
+### Reprise BauBit (phase 7)
+- Sauvegardes SQL Server dans `_construction/DataBaubit/Backup/Backup/*.bak` (SQL Server 2019, base
+  `LACHATCONSTRUCTION`). Lecture **sans rien modifier** via Docker : conteneur `baubit-sql`
+  (`mcr.microsoft.com/mssql/server:2022-latest`, dossier des sauvegardes monté sur `/backup`, mot de passe sa
+  `Baubit!2026Restore`, port 14333), `RESTORE DATABASE LACHAT … WITH MOVE`, requêtes par
+  `docker exec baubit-sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P … -C -d LACHAT -Q "…"`.
+- Tables utiles : `CostElement` + `CostElementPrices` (éléments de coûts : `CEL_SubTypeCode` = famille 1–6,
+  `CEL_Group` « 92 », `CEL_Number` stocké **sans point** « 020000 », `CEL_RegieCode` « 2.020.000 »), `RegiePosition` +
+  `RegiePricePerCategory` (tarif régie, catégorie 18 = Vente ; les **salaires 1.010.xxx n'existent que là**),
+  `FreeChapter` / `FreePosition` / `FreePricePerCategory` (catalogue libre : 5 catalogues, codes `Code_1..4`, texte
+  brut `FPO_NamePlain_F`, prix 18 Vente / 19 Achat ; le catalogue « Devis - prix H., M1, M2, M3 » = nos 19 chapitres
+  00–18), `Project` / `ProJob` (étapes de projet) / `Document` / `DocumentPosition` / `DailyReportHeader|Detail` /
+  `WorkingTime` / `RecipientAddress` / `Users` pour la suite de la reprise.
+- Export JSON (`bcp … FOR JSON PATH`) dans `_construction/DataBaubit/export/` (`elements`, `regie_positions`,
+  `catalog_chapters`, `catalog_positions`, `units`), puis **`php artisan stepbuild:import-baubit <dossier> [--dry-run]
+  [--catalog|--elements] [--root-catalog=1]`** (`App\Support\BaubitImport`) : chapitres, articles et éléments reçoivent
+  leur clé d'origine dans `baubit_id` (migration du 08.10.2026), l'import est relançable (chapitres retrouvés par code,
+  articles par chapitre + code + sous-code). Validé sur la base de test : 12 519 éléments + 21 tarifs régie,
+  1 221 positions → chapitres et articles.
 
 ## Modules et routes front
 Navigation dans `frontend/src/lib/navigation.ts` (groupes calqués sur les rubans BauBit),
