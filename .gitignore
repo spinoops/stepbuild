@@ -20,3 +20,6 @@ Thumbs.db
 
 # Documents et données client (spécification, captures BauBit, sauvegardes SQL)
 _construction/
+
+# Archives de mise en ligne de secours (release.ps1)
+release/

@@ -21,3 +21,12 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Build du front copié par le déploiement (frontend/dist → public/), jamais commité
+/public/index.html
+/public/assets/
+/public/favicon.svg
+/public/favicon-32.png
+/public/apple-touch-icon.png
+/public/icon-512.png
+/public/logo-lachat.png

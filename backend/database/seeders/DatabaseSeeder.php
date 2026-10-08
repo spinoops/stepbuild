@@ -11,24 +11,35 @@ use Spatie\Permission\Models\Role;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Rôles applicatifs du logiciel de chantier + comptes de démonstration (idempotent).
+     * Données de base, idempotentes et sans danger en production (lancé à chaque déploiement) :
+     * rôles (RolesSeeder), unités de mesure, sous-détails de prix types.
      *
-     * Rôles (cf. Plan de création, phase 0) :
-     *  - admin       : tout, y compris utilisateurs et configuration.
-     *  - responsable : gestion complète des chantiers (prix, régie, documents, contrôle).
-     *  - ouvrier     : saisie de ses rapports journaliers, sans accès aux prix ni aux marges.
-     *
-     * Identifiants : admin@chantier.test       / password
-     *                responsable@chantier.test / password
-     *                ouvrier@chantier.test     / password
+     * Hors production seulement, comptes de démonstration :
+     *   admin@chantier.test / responsable@chantier.test / ouvrier@chantier.test — mot de passe `password`.
+     * En local seulement, données d'exemple fictives (DemoDataSeeder).
      */
     public function run(): void
     {
-        $roles = [];
-        foreach (['admin', 'responsable', 'ouvrier'] as $name) {
-            $roles[$name] = Role::firstOrCreate(['name' => $name]);
+        $this->call(RolesSeeder::class);
+
+        if (! app()->environment('production')) {
+            $this->seedDemoAccounts();
         }
 
+        // Unités de mesure par défaut (tous environnements, jamais écrasées).
+        Unit::seedDefaults();
+
+        // Sous-détails de prix types du métreur (données réelles, tous environnements).
+        $this->call(BreakdownTemplateSeeder::class);
+
+        // Données d'exemple fictives : uniquement en local, jamais en production ni en test.
+        if (app()->environment('local')) {
+            $this->call(DemoDataSeeder::class);
+        }
+    }
+
+    private function seedDemoAccounts(): void
+    {
         $accounts = [
             'admin' => ['email' => 'admin@chantier.test', 'name' => 'Administrateur'],
             'responsable' => ['email' => 'responsable@chantier.test', 'name' => 'Responsable démo'],
@@ -44,18 +55,7 @@ class DatabaseSeeder extends Seeder
                     'email_verified_at' => now(),
                 ]
             );
-            $user->syncRoles([$roles[$role]]);
-        }
-
-        // Unités de mesure par défaut (tous environnements, jamais écrasées).
-        Unit::seedDefaults();
-
-        // Sous-détails de prix types du métreur (données réelles, tous environnements).
-        $this->call(BreakdownTemplateSeeder::class);
-
-        // Données d'exemple fictives : uniquement en local, jamais en production ni en test.
-        if (app()->environment('local')) {
-            $this->call(DemoDataSeeder::class);
+            $user->syncRoles([Role::findByName($role, 'web')]);
         }
     }
 }

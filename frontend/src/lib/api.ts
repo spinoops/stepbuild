@@ -1,7 +1,9 @@
 import axios from 'axios'
 import { toast } from '@/lib/toast'
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8001'
+// En développement : l'API Laravel tourne à part (VITE_API_URL, frontend/.env).
+// En production : même domaine que l'interface (doc root backend/public) → adresse relative.
+const API_BASE = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:8001' : '')
 const TOKEN_KEY = 'baseapp_token'
 
 /** Instance axios partagée, préfixée par /api. */

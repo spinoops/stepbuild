@@ -7,6 +7,7 @@ use App\Http\Controllers\CatalogArticleController;
 use App\Http\Controllers\CatalogChapterController;
 use App\Http\Controllers\CollaboratorAbsenceController;
 use App\Http\Controllers\CollaboratorController;
+use App\Http\Controllers\CronController;
 use App\Http\Controllers\DailyReportController;
 use App\Http\Controllers\DailyReportFileController;
 use App\Http\Controllers\DailyReportHourController;
@@ -27,6 +28,7 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkTypeController;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -35,12 +37,26 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// Health check public — utile pour vérifier que l'API tourne.
-Route::get('/health', fn () => response()->json([
-    'status' => 'ok',
-    'app' => config('app.name'),
-    'time' => now()->toIso8601String(),
-]));
+// Health check public — contrôlé après chaque déploiement (vérifie aussi la base).
+Route::get('/health', function () {
+    try {
+        DB::connection()->getPdo();
+        $database = 'ok';
+    } catch (Throwable) {
+        $database = 'error';
+    }
+
+    return response()->json([
+        'status' => $database === 'ok' ? 'ok' : 'degraded',
+        'app' => config('app.name'),
+        'database' => $database,
+        'time' => now()->toIso8601String(),
+    ], $database === 'ok' ? 200 : 503);
+});
+
+// Tâche planifiée par URL (planificateur Infomaniak) : sauvegarde quotidienne.
+// 404 sans le bon jeton CRON_TOKEN.
+Route::get('/cron/run/{token}', CronController::class)->middleware('throttle:10,1');
 
 // Authentification (token Sanctum). Throttle anti-brute-force.
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1');

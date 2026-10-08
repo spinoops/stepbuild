@@ -26,7 +26,7 @@ pour l'affichage : `frontend/src/lib/phases.ts`.
 | 4 | Rapports journaliers sur les étapes du devis, workflow en cours → en contrôle → facturé ; collaborateurs | **fait** (API + front) |
 | 5 | Régie (brut → régie → client sur chaque ligne de rapport), contrôle des heures, absences | **fait** (API + front) |
 | 6 | Acomptes, factures, facture finale, export PDF ; statistiques | à faire — **prochaine étape** |
-| 7 | Reprise des données BauBit, mise en production Infomaniak | à faire |
+| 7 | Reprise des données BauBit, mise en production Infomaniak | **mécanisme de déploiement prêt** (GitHub Actions → Infomaniak, `DEPLOY.md`) ; reste : mise en ligne effective et reprise BauBit |
 | 8 | Vue mobile / tablette (ouvriers) | janvier 2027 |
 | 9 | Widget de temps au bureau, stocks | janvier 2027 |
 
@@ -53,7 +53,7 @@ d'étapes » sont des gabarits réutilisables.
 - `ouvrier` : ses rapports journaliers et les projets ; **jamais de prix ni de marges**
   (côté API : ne jamais exposer les montants aux ouvriers ; côté front : `canSeePrices()`).
 
-Comptes de démo (seeder) : `admin@chantier.test`, `responsable@chantier.test`,
+Comptes de démo (seeder, **hors production seulement**) : `admin@chantier.test`, `responsable@chantier.test`,
 `ouvrier@chantier.test` — mot de passe `password`.
 
 ## Interface : logique BauBit, habillage moderne
@@ -312,5 +312,21 @@ Chrome, données d'exemple ; `FRONT_URL` / `API_URL` pour d'autres ports) puis `
 (chapitre par module, version et date en tête du script).
 
 ## Déploiement
-Voir `DEPLOY.md` (Infomaniak mutualisé du client : doc root → `backend/public`, build front en
-local, `migrate --force` en prod). Signature des documents client : « Stéphane Offreda — Step One ».
+Voir `DEPLOY.md`. Même méthode que app-planningchantier : **un seul domaine**
+`planning.lachatconstruction.ch` (doc root → `backend/public`, build Vite copié dans `public/`,
+`routes/web.php` renvoie `index.html` hors `/api`, `lib/api.ts` appelle l'API en relatif en production).
+`.github/workflows/deploy.yml` déploie à chaque push sur `master` après la CI (`ci.yml` : Pest SQLite **et**
+MySQL, Pint, ESLint, build) : maintenance, `git merge --ff-only`, Composer, **`backup:run` obligatoire**
+avant `migrate --force`, `db:seed --class=DatabaseSeeder --force`, rsync du front, `optimize`, contrôle de
+`/api/health`. Hébergement **temporaire** sur le compte Infomaniak de Step One, dossier
+`apps/planning-chantier-lachat` ; passage prévu sur le compte du client (`DEPLOY.md` § 7 : seuls les
+secrets GitHub, le `.env` et le DNS changent).
+- **Production** : `DatabaseSeeder` ne crée **aucun compte de démo** en `APP_ENV=production` (rôles via
+  `RolesSeeder`, unités, sous-détails types seulement). Premier compte : `php artisan chantier:admin <email>`
+  (mot de passe généré et affiché une fois, `--password=`, ou `--mail` pour un lien).
+- **Sauvegardes** : `App\Services\BackupService` (`backup:run`, mysqldump sinon dump PDO, rotation
+  `BACKUP_KEEP`) dans `storage/app/private/backups`. Tâche planifiée Infomaniak par URL
+  `GET /api/cron/run/{CRON_TOKEN}` → `chantier:cron` (sauvegarde si la dernière a plus de 20 h).
+- `backend/.env.production.example` = modèle du `.env` de prod ; `backend/public/.user.ini` = limites
+  d'envoi (photos) et mémoire (PDF). `release.ps1` = archive de secours sans GitHub.
+Signature des documents client : « Stéphane Offreda — Step One ».
