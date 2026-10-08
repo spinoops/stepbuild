@@ -306,7 +306,7 @@ def build_story():
             ['3', "Barre d'actions", "Les fonctions de l'onglet choisi. Le bouton rouge est la fonction principale. Les fonctions grisées arrivent plus tard."],
             ['4', 'Projet et document courants', "Le chantier sur lequel vous travaillez. Les pages s'y rattachent automatiquement."],
             ['5', 'Onglets ouverts', "Chaque page visitée reste ouverte ici. Cliquez pour y revenir, sur la croix pour la fermer."],
-            ['6', "Barre d'outils", 'Nouveau, enregistrer, annuler, supprimer, et les outils propres à la page.'],
+            ['6', "Barre d'outils", 'Nouveau, annuler, supprimer, et les outils propres à la page. Pas de bouton Enregistrer : tout est automatique.'],
             ['7', 'Panneau latéral', "Résumé, étapes ou arborescence selon la page. La punaise le masque pour gagner de la place."],
             ['8', 'Zone de travail', 'La fiche en cours et la liste.'],
             ['9', "Barre d'état", "Nombre d'entrées, totaux (brut, régie, client, heures…), et l'état de l'enregistrement."],
@@ -321,15 +321,15 @@ def build_story():
     s += chapter('4. Les gestes communs à toutes les pages')
     s += [
         Paragraph("L'enregistrement est automatique", H2),
-        p("Vous n'avez pas de bouton « Enregistrer » à ne pas oublier. Une fiche existante s'enregistre toute seule :"),
+        p("Il n'y a aucun bouton « Enregistrer » : une fiche s'enregistre toute seule :"),
         bullets([
             'un peu plus d’une seconde après votre dernière frappe ;',
             'dès que vous quittez la fiche ;',
             'ou immédiatement avec <b>Ctrl + S</b>.',
         ]),
         p("La barre d'état, en bas à droite, indique <b>Modifications non enregistrées</b>, <b>Enregistrement…</b> puis "
-          "<b>Enregistré</b>. Une <b>nouvelle</b> fiche est créée quand vous quittez le formulaire ou appuyez sur Ctrl + S, "
-          "une fois les champs obligatoires remplis."),
+          "<b>Enregistré</b>. Une <b>nouvelle</b> fiche est créée de la même façon, deux secondes après la dernière frappe, "
+          "dès que ses champs obligatoires sont remplis ; vous continuez à la compléter sans rien faire de plus."),
         tip("La flèche courbe de la barre d'outils annule les modifications qui ne sont pas encore enregistrées."),
         Paragraph('Filtrer et trier une liste', H2),
         bullets([
@@ -363,7 +363,7 @@ def build_story():
             'Cliquez sur le bouton rouge <b>Nouvelle adresse</b>.',
             "Choisissez le <b>type</b> : client, fournisseur, sous-traitant ou contact.",
             "Saisissez le <b>nom</b> (ou la raison sociale), seul champ obligatoire, puis les coordonnées.",
-            "Quittez le formulaire ou appuyez sur <b>Ctrl + S</b> : l'adresse est créée et apparaît dans la liste.",
+            "Deux secondes plus tard, l'adresse est créée et apparaît dans la liste ; complétez-la tranquillement.",
         ]),
         shot('05-adresse-nouvelle.png', "Saisie d'une nouvelle adresse.", width=15 * cm),
         Paragraph('Retrouver, modifier, supprimer', H2),
@@ -441,8 +441,7 @@ def build_story():
             "Le <b>numéro de projet</b> est proposé automatiquement : NPA du chantier, puis numéro d'ordre. "
             "Après 2854-002 vient 2854-003. Vous pouvez le modifier ; le bouton <b>Proposer</b> le recalcule.",
             'Complétez la désignation avec les travaux à réaliser, par exemple « Muller Hans - Rénovation cuisine ».',
-            "Quittez le formulaire ou appuyez sur <b>Ctrl + S</b>. Le projet devient le <b>projet courant</b>, "
-            "affiché dans la barre du haut.",
+            "Le projet est créé automatiquement et devient le <b>projet courant</b>, affiché dans la barre du haut.",
         ]),
         shot('09-projet-nouveau.png', 'Le client choisi a rempli la désignation, l’adresse et proposé le numéro 2854-003.'),
         Paragraph('Les statuts', H2),
@@ -496,7 +495,7 @@ def build_story():
           "sous-traitants, divers. Cochez <b>Modèle par défaut</b> pour qu'il s'applique à chaque nouveau devis."),
         bullets([
             "Ajoutez une étape depuis un <b>chapitre du catalogue</b>, avec ou sans ses articles, ou une <b>étape libre</b>.",
-            "Réordonnez les étapes avec la poignée. Enregistrez avec le bouton ou <b>Ctrl + S</b>.",
+            "Réordonnez les étapes avec la poignée. Le modèle s'enregistre tout seul dès qu'il a un nom.",
             "Dans un devis, <b>Appliquer un modèle de devis</b> (panneau de gauche) ajoute les étapes manquantes.",
             "Le bouton <b>Enregistrer comme modèle</b>, dans la barre d'outils du devis, crée un modèle à partir des "
             "étapes du devis ouvert.",

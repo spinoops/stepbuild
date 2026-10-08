@@ -80,31 +80,19 @@ export function ToolSep() {
 interface StandardToolsProps {
   newLabel?: string
   onNew?: () => void
-  /** Enregistre via le formulaire d'identifiant donné (bouton submit externe). */
+  /** Conservé pour les pages existantes : l'enregistrement est automatique, il n'y a plus de bouton. */
   formId?: string
   onUndo?: () => void
   onDelete?: () => void
   canDelete?: boolean
 }
 
-/** Jeu de boutons standard : nouveau, enregistrer, annuler, supprimer, colonnes, filtre, imprimer. */
-export function StandardTools({ newLabel = 'Nouveau', onNew, formId, onUndo, onDelete, canDelete = true }: StandardToolsProps) {
+/** Jeu de boutons standard : nouveau, annuler, supprimer, colonnes, filtre, imprimer (l'enregistrement est automatique). */
+export function StandardTools({ newLabel = 'Nouveau', onNew, onUndo, onDelete, canDelete = true }: StandardToolsProps) {
   return (
     <>
       <ToolPrimary label={newLabel} onClick={onNew} />
       <ToolSep />
-      {formId ? (
-        <button
-          type="submit"
-          form={formId}
-          title="Enregistrer (Ctrl+S)"
-          className="flex h-8 w-8 items-center justify-center rounded-md transition hover:bg-gray-100"
-        >
-          <Icon name="save" className="h-4 w-4 text-primary-600" />
-        </button>
-      ) : (
-        <ToolButton icon="save" title="Enregistrer" tone="primary" />
-      )}
       <ToolButton icon="undo" title="Annuler les modifications" onClick={onUndo} />
       <ToolButton icon="trash" title="Supprimer" tone="danger" onClick={onDelete} disabled={Boolean(onDelete) && !canDelete} />
       <ToolSep />

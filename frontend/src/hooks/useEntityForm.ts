@@ -24,11 +24,19 @@ interface Options<V extends FieldValues> {
 type Submit = (event?: BaseSyntheticEvent) => Promise<void>
 
 /**
- * Sauvegarde automatique d'une fiche : 1,2 s après la dernière frappe (fiche existante),
- * à la sortie du formulaire, et sur Ctrl+S. Les erreurs 422 de l'API sont reportées sur les champs.
+ * Champ qui avait le focus quand une nouvelle fiche a été créée automatiquement : la page remonte alors
+ * le formulaire avec l'identifiant créé, et le curseur est remis au même endroit.
+ */
+let pendingFocus: { name: string; at: number } | null = null
+
+/**
+ * Sauvegarde automatique d'une fiche, sans bouton : 1,2 s après la dernière modification (2 s pour
+ * créer une nouvelle fiche, dès que ses champs obligatoires sont remplis), à la sortie du formulaire,
+ * et sur Ctrl+S. Les erreurs 422 de l'API sont reportées sur les champs.
  */
 export function useEntityForm<V extends FieldValues>(form: UseFormReturn<V>, options: Options<V>) {
   const submitRef = useRef<Submit>(async () => {})
+  const autoSubmitRef = useRef<Submit>(async () => {})
   const isNewRef = useRef(options.isNew)
   const notifyRef = useRef(options.onStateChange)
   const dirtyRef = useRef(false)
@@ -37,13 +45,18 @@ export function useEntityForm<V extends FieldValues>(form: UseFormReturn<V>, opt
   useEffect(() => {
     isNewRef.current = options.isNew
     notifyRef.current = options.onStateChange
-    submitRef.current = form.handleSubmit(async (values) => {
+    const persist = async (values: V) => {
       options.onStateChange?.('saving')
+      const active = document.activeElement
+      const focused = options.isNew && active instanceof HTMLElement && active.getAttribute('name') ? active.getAttribute('name') : null
       try {
         await options.save(values)
         dirtyRef.current = false
         form.reset(values)
         options.onStateChange?.('saved')
+        if (focused) {
+          pendingFocus = { name: focused, at: Date.now() }
+        }
       } catch (error) {
         options.onStateChange?.('error')
         if (isAxiosError(error) && error.response?.status === 422) {
@@ -56,8 +69,26 @@ export function useEntityForm<V extends FieldValues>(form: UseFormReturn<V>, opt
           toast(error.response.data?.message ?? "L'enregistrement a échoué.", 'error')
         }
       }
-    })
+    }
+    submitRef.current = form.handleSubmit(persist)
+    // Déclenchement automatique : une fiche encore incomplète attend, sans afficher d'erreur.
+    autoSubmitRef.current = form.handleSubmit(persist, () => form.clearErrors())
   })
+
+  // Formulaire remonté après une création automatique : le curseur revient dans le champ en cours.
+  useEffect(() => {
+    if (pendingFocus && Date.now() - pendingFocus.at < 3000) {
+      const field = document.querySelector<HTMLInputElement>(`form [name="${pendingFocus.name}"]`)
+      pendingFocus = null
+      if (field) {
+        field.focus()
+        if (typeof field.setSelectionRange === 'function' && /^(text|search|tel|url|password)$|^$/.test(field.type ?? '')) {
+          const end = field.value.length
+          field.setSelectionRange(end, end)
+        }
+      }
+    }
+  }, [])
 
   // Sauvegarde automatique après une pause de frappe (fiche existante uniquement).
   useEffect(() => {
@@ -72,9 +103,7 @@ export function useEntityForm<V extends FieldValues>(form: UseFormReturn<V>, opt
       dirtyRef.current = true
       notifyRef.current?.('dirty')
       window.clearTimeout(timer)
-      if (!isNewRef.current) {
-        timer = window.setTimeout(() => void submitRef.current(), 1200)
-      }
+      timer = window.setTimeout(() => void autoSubmitRef.current(), isNewRef.current ? 2000 : 1200)
     })
     return () => {
       subscription.unsubscribe()

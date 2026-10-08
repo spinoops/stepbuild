@@ -72,8 +72,10 @@ travail**, contenu, **barre d'état**. Charte Lachat dans `index.css` : `primary
   filtres/tri (`GridQuery`), débouncés, traduits en `?filter[col]=…&sort=…` (trait `HandlesGridQuery`).
 - Sélection dans l'URL : `useSelection()` → `?id=12` ou `?id=new` (la recherche globale ouvre ainsi une fiche).
 - Fiche : react-hook-form + zod dans un composant **clé par id** ; `useEntityForm` assure la
-  **sauvegarde automatique** (1,2 s après la frappe pour une fiche existante, à la sortie du formulaire,
-  Ctrl+S) et reporte les erreurs 422 sur les champs. État affiché dans la barre d'état.
+  **sauvegarde automatique** (1,2 s après la frappe pour une fiche existante, 2 s pour créer une nouvelle fiche dès
+  qu'elle est valide — validation silencieuse, focus conservé au remontage —, à la sortie du formulaire, Ctrl+S) et
+  reporte les erreurs 422 sur les champs. État affiché dans la barre d'état. **Aucun bouton Enregistrer** dans les
+  barres d'outils (`StandardTools` garde `formId` sans l'utiliser).
 - Prix saisis en texte (`1'042,50` accepté) → `toNumber()`.
 
 ### Recherche instantanée (Ctrl+K)

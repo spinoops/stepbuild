@@ -7,7 +7,7 @@ import DataGrid from '@/components/baubit/DataGrid'
 import type { GridColumn } from '@/components/baubit/DataGrid'
 import GridPager from '@/components/baubit/GridPager'
 import DocumentEditor from '@/components/documents/DocumentEditor'
-import DocumentHeaderForm, { DOCUMENT_FORM_ID } from '@/components/documents/DocumentHeaderForm'
+import DocumentHeaderForm from '@/components/documents/DocumentHeaderForm'
 import DocumentPreview from '@/components/documents/DocumentPreview'
 import DocumentRecap from '@/components/documents/DocumentRecap'
 import StepsPanel from '@/components/documents/StepsPanel'
@@ -169,13 +169,6 @@ export default function DocumentsPage() {
         <>
           <ToolPrimary icon="fileplus" label="Nouveau devis" onClick={createQuote} />
           <ToolSep />
-          {activeTab === 'En-tête' && doc ? (
-            <button type="submit" form={DOCUMENT_FORM_ID} title="Enregistrer (Ctrl+S)" className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-gray-100">
-              <Icon name="save" className="h-4 w-4 text-primary-600" />
-            </button>
-          ) : (
-            <ToolButton icon="save" title="Les positions s'enregistrent automatiquement" tone="primary" disabled />
-          )}
           <ToolButton icon="trash" title="Supprimer le document" tone="danger" onClick={onDelete} disabled={!doc} />
           <ToolSep />
           {doc ? <DuplicateButton documentId={doc.id} onDone={open} /> : <ToolButton icon="fileplus" title="Nouvelle version" disabled />}

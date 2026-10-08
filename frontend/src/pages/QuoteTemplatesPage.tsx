@@ -73,9 +73,6 @@ export default function QuoteTemplatesPage() {
         <>
           <ToolPrimary label="Nouveau modèle" onClick={() => select('new')} />
           <ToolSep />
-          <button type="submit" form="quote-template-form" title="Enregistrer (Ctrl+S)" className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-gray-100">
-            <Icon name="save" className="h-4 w-4 text-primary-600" />
-          </button>
           <ToolButton icon="trash" title="Supprimer le modèle" tone="danger" onClick={onDelete} disabled={!template} />
         </>
       }
@@ -146,6 +143,8 @@ function TemplateEditor({ template, onStateChange, onSaved }: EditorProps) {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [overIndex, setOverIndex] = useState<number | null>(null)
   const dirty = useRef(false)
+  const timer = useRef<number | undefined>(undefined)
+  const submitRef = useRef<(event?: React.FormEvent, silent?: boolean) => Promise<void>>(async () => {})
 
   const chapters = useQuery({
     queryKey: ['catalog-chapters'],
@@ -156,16 +155,25 @@ function TemplateEditor({ template, onStateChange, onSaved }: EditorProps) {
     .filter((chapter) => chapter.parent_id === null)
     .flatMap((chapter) => [chapter, ...(chapters.data ?? []).filter((child) => child.parent_id === chapter.id)])
 
+  // Enregistrement automatique 1,5 s après la dernière modification (sans message tant que le nom manque).
   function change(patch: Partial<Draft>) {
     dirty.current = true
     onStateChange('dirty')
     setDraft((current) => ({ ...current, ...patch }))
+    window.clearTimeout(timer.current)
+    timer.current = window.setTimeout(() => void submitRef.current(undefined, true), 1500)
   }
 
-  async function submit(event?: React.FormEvent) {
+  async function submit(event?: React.FormEvent, silent = false) {
     event?.preventDefault()
+    window.clearTimeout(timer.current)
+    if (!dirty.current && !event) {
+      return
+    }
     if (!draft.name.trim()) {
-      toast('Donnez un nom au modèle.', 'error')
+      if (!silent) {
+        toast('Donnez un nom au modèle.', 'error')
+      }
       return
     }
     onStateChange('saving')
@@ -185,6 +193,10 @@ function TemplateEditor({ template, onStateChange, onSaved }: EditorProps) {
       toast("Le modèle n'a pas pu être enregistré.", 'error')
     }
   }
+
+  useEffect(() => {
+    submitRef.current = submit
+  })
 
   // Ctrl+S.
   useEffect(() => {
@@ -231,7 +243,16 @@ function TemplateEditor({ template, onStateChange, onSaved }: EditorProps) {
   }
 
   return (
-    <form id="quote-template-form" onSubmit={submit} className="min-h-0 flex-1 overflow-auto p-5">
+    <form
+      id="quote-template-form"
+      onSubmit={submit}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget) && dirty.current) {
+          void submit(undefined, true)
+        }
+      }}
+      className="min-h-0 flex-1 overflow-auto p-5"
+    >
       <div className="flex flex-wrap gap-x-12 gap-y-6">
         <div className="w-[460px] space-y-2">
           <SectionTitle>{template ? 'Modèle de devis' : 'Nouveau modèle de devis'}</SectionTitle>
