@@ -20,7 +20,7 @@ interface ArticleBrowserDialogProps {
 
 const COLUMNS: GridColumn<PickerArticle>[] = [
   { key: 'code', header: 'Code', value: (a) => a.code, width: 90 },
-  { key: 'description', header: 'Description', value: (a) => a.description, wrap: true, width: 520 },
+  { key: 'description', header: 'Description', value: (a) => a.description, wrap: true, width: 440 },
   { key: 'unit', header: 'Un.', value: (a) => a.unit, width: 60 },
   { key: 'sale', header: 'Prix', value: (a) => a.sale, type: 'number', width: 90 },
 ]

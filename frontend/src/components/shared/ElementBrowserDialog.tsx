@@ -49,7 +49,7 @@ function ElementBrowser({ onClose, family, onPick, showPrices = true }: ElementB
 
   const columns: GridColumn<PriceElement>[] = [
     { key: 'number', header: 'N°', value: (e) => e.number, width: 90 },
-    { key: 'description', header: 'Désignation', value: (e) => e.description, wrap: true, width: 460 },
+    { key: 'description', header: 'Désignation', value: (e) => e.description, wrap: true, width: 380 },
     { key: 'unit', header: 'Un.', value: (e) => e.unit, width: 60 },
     ...(showPrices
       ? [
