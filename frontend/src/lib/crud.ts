@@ -63,7 +63,12 @@ export function useSaveResource<T, P>(resource: string) {
         : await api.post<{ data: T }>(`/${resource}`, payload)
       return response.data.data
     },
-    onSuccess: () => {
+    onSuccess: (saved) => {
+      // La fiche enregistrée est disponible tout de suite (pas de formulaire vide le temps d'une relecture).
+      const id = (saved as { id?: number }).id
+      if (id) {
+        queryClient.setQueryData([resource, 'item', id], saved)
+      }
       void queryClient.invalidateQueries({ queryKey: [resource] })
       void queryClient.invalidateQueries({ queryKey: ['search-index'] })
     },
