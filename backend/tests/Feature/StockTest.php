@@ -119,9 +119,10 @@ it('garde le produit en stock quand son élément part à la corbeille et refuse
 
 it('trie les produits en stock par désignation', function () {
     actingAsRole('responsable');
-    StockItem::create(['price_element_id' => makeProduct(['description' => 'Zinc en plaque', 'number' => '1'])->id]);
+    StockItem::create(['price_element_id' => makeProduct(['description' => 'Zinc en plaque', 'number' => '1', 'price_updated_at' => '2025-03-15'])->id]);
     StockItem::create(['price_element_id' => makeProduct(['description' => 'Ardoise', 'number' => '2'])->id]);
 
     $this->getJson('/api/stock/items')->assertJsonPath('data.0.description', 'Ardoise')->assertJsonPath('data.1.description', 'Zinc en plaque')
-        ->assertJsonPath('data.0.status', 'a_compter'); // mis en stock sans comptage
+        ->assertJsonPath('data.0.status', 'a_compter') // mis en stock sans comptage
+        ->assertJsonPath('data.1.price_updated_at', '2025-03-15'); // date de mutation de prix, pour le filtre par année
 });

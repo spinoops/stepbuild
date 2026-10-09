@@ -26,6 +26,7 @@ class StockItemResource extends JsonResource
             'family' => $this->element?->family,
             'quantity' => $this->quantity,
             'min_quantity' => $this->min_quantity,
+            'price_updated_at' => $this->element?->price_updated_at?->toDateString(),
             'location' => $this->location,
             'note' => $this->note,
             'status' => $this->status(),

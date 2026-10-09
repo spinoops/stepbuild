@@ -129,6 +129,8 @@ export interface StockItem {
   status: 'ok' | 'bas' | 'rupture' | 'a_compter'
   counted_at: string | null
   counted_by: string | null
+  /** Date du dernier changement de prix de l'élément (AAAA-MM-JJ), pour le filtre par année. */
+  price_updated_at: string | null
   updated_at: string | null
 }
 

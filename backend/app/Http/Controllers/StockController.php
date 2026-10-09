@@ -38,6 +38,7 @@ class StockController extends Controller
             ->get([
                 's.id', 's.price_element_id', 'e.number', 'e.description', 'e.unit', 'e.group_code', 'e.family',
                 's.quantity', 's.min_quantity', 's.location', 's.note', 's.counted_at', 'u.name as counted_by', 's.updated_at',
+                'e.price_updated_at',
             ]);
 
         $data = [];
@@ -54,6 +55,7 @@ class StockController extends Controller
                 'family' => $row->family === null ? null : (int) $row->family,
                 'quantity' => $quantity,
                 'min_quantity' => $min,
+                'price_updated_at' => $row->price_updated_at ? substr((string) $row->price_updated_at, 0, 10) : null,
                 'location' => $row->location,
                 'note' => $row->note,
                 'status' => StockItem::statusFor($row->counted_at !== null, $quantity, $min),

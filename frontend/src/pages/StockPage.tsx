@@ -5,7 +5,7 @@ import type { MovementType } from '@/hooks/useStock'
 import { useDebounced } from '@/hooks/useDebounced'
 import { Icon } from '@/components/icons'
 import ElementBrowserDialog from '@/components/shared/ElementBrowserDialog'
-import { fmtAmount } from '@/lib/format'
+import { fmtAmount, fmtDate } from '@/lib/format'
 import { normalize } from '@/lib/searchIndex'
 import { toast } from '@/lib/toast'
 import type { StockItem, StockProduct } from '@/types'
@@ -68,6 +68,8 @@ export default function StockPage() {
   const { add, update, remove, move } = useStockMutations()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
+  /** Année de la dernière mutation de prix ('' = toutes, 'none' = sans date). */
+  const [year, setYear] = useState('')
   const [historyId, setHistoryId] = useState<number | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -96,9 +98,24 @@ export default function StockPage() {
             return true
         }
       })
+      .filter(({ item }) => (year === '' ? true : year === 'none' ? !item.price_updated_at : item.price_updated_at?.slice(0, 4) === year))
       .filter(({ text }) => words.every((word) => text.includes(word)))
       .map(({ item }) => item)
-  }, [indexed, search, filter])
+  }, [indexed, search, filter, year])
+
+  // Années présentes dans les dates de mutation de prix, la plus récente d'abord.
+  const years = useMemo(() => {
+    const set = new Set<string>()
+    let withoutDate = false
+    for (const item of items.data ?? []) {
+      if (item.price_updated_at) {
+        set.add(item.price_updated_at.slice(0, 4))
+      } else {
+        withoutDate = true
+      }
+    }
+    return { list: [...set].sort().reverse(), withoutDate }
+  }, [items.data])
 
   // Rendu par tranches : 10 000 lignes d'un coup figeraient le navigateur.
   const [limit, setLimit] = useState(PAGE)
@@ -206,6 +223,23 @@ export default function StockPage() {
             </button>
           ))}
         </div>
+        <select
+          value={year}
+          onChange={(e) => {
+            setYear(e.target.value)
+            setLimit(PAGE)
+          }}
+          title="Année de la dernière mutation de prix"
+          className="h-11 rounded-lg border border-gray-300 bg-white px-2 text-[13px] text-gray-700 shadow-sm outline-none focus:border-primary-500"
+        >
+          <option value="">Prix de toutes années</option>
+          {years.list.map((y) => (
+            <option key={y} value={y}>
+              Prix de {y}
+            </option>
+          ))}
+          {years.withoutDate && <option value="none">Prix sans date</option>}
+        </select>
         <AddProduct
           onPick={(product, keepOpen) =>
             add.mutate(
@@ -237,6 +271,7 @@ export default function StockPage() {
               <th className="w-36 px-3 py-2 text-left">Emplacement</th>
               <th className="w-32 px-3 py-2 text-right">Quantité</th>
               <th className="w-24 px-3 py-2 text-right">Min.</th>
+              <th className="w-24 px-3 py-2 text-left">Prix du</th>
               <th className="w-28 px-3 py-2 text-left">État</th>
               <th className="w-40 px-3 py-2 text-left">Dernier mouvement</th>
               <th className="w-20 px-2 py-2" />
@@ -261,14 +296,14 @@ export default function StockPage() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-10 text-center text-gray-400">
+                <td colSpan={8} className="px-3 py-10 text-center text-gray-400">
                   {items.isLoading ? 'Chargement…' : counts.total === 0 ? 'Aucun produit suivi. Commencez par « Ajouter un produit ».' : 'Aucun produit ne correspond.'}
                 </td>
               </tr>
             )}
             {hasMore && (
               <tr className="border-t border-gray-200 bg-gray-50">
-                <td colSpan={7} className="px-3 py-3 text-center text-[13px] text-gray-500">
+                <td colSpan={8} className="px-3 py-3 text-center text-[13px] text-gray-500">
                   {visible.length} produits affichés sur {rows.length} · la suite se charge en défilant, ou affinez la recherche.
                 </td>
               </tr>
@@ -325,6 +360,7 @@ function StockRow({ item, historyOpen, onToggleHistory, onQuantity, onMin, onLoc
             }}
           />
         </td>
+        <td className="px-3 py-2 text-[12px] text-gray-500 tabular-nums">{item.price_updated_at ? fmtDate(item.price_updated_at) : '—'}</td>
         <td className="px-3 py-2">
           <span className={`inline-block rounded-full px-2 py-0.5 text-[12px] font-medium ${status.className}`}>{status.label}</span>
         </td>
@@ -349,7 +385,7 @@ function StockRow({ item, historyOpen, onToggleHistory, onQuantity, onMin, onLoc
       </tr>
       {historyOpen && (
         <tr className="border-t border-gray-100 bg-gray-50">
-          <td colSpan={7} className="px-3 py-2">
+          <td colSpan={8} className="px-3 py-2">
             <History itemId={item.id} unit={item.unit} />
           </td>
         </tr>

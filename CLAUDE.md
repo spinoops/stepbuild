@@ -259,7 +259,8 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   pas encore suivis, **sans prix**), `POST /stock/items`, `PUT|DELETE /stock/items/{id}`, `POST
   /stock/items/{id}/movements` (renvoie `item` + `movement`), `GET /stock/items/{id}/movements`. Aucune ressource stock
   n'émet de prix.
-- Front : `pages/StockPage` (une seule page : recherche instantanée, filtres Tous / À commander / Rupture, colonne
+- Front : `pages/StockPage` (une seule page : recherche instantanée, filtres Tous / À commander / Rupture / À compter,
+  sélecteur d'année de la **date de mutation de prix** de l'élément (`price_updated_at`, colonne « Prix du »), colonne
   Quantité saisie au clavier **« 12 » = inventaire, « +5 » = entrée, « -3 » = sortie, Entrée = ligne suivante**, seuil
   et emplacement éditables en place, historique dépliable, ajout depuis le catalogue par `ProductPicker`), hooks
   `hooks/useStock.ts` (le produit renvoyé remplace celui du cache). Pour admin/responsable la page est dans la coque
