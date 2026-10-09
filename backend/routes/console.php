@@ -20,3 +20,4 @@ Artisan::command('inspire', function () {
 */
 
 Schedule::command('backup:run')->dailyAt('03:00');
+Schedule::command('sanctum:prune-expired --hours=24')->dailyAt('03:30');

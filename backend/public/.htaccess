@@ -1,3 +1,12 @@
+# En-têtes de sécurité des fichiers servis directement par Apache (assets du front, icônes).
+# Les réponses Laravel (API, index.html) les reçoivent du middleware SecurityHeaders.
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

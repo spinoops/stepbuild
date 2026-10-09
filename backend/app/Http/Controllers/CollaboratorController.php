@@ -18,7 +18,11 @@ class CollaboratorController extends Controller
 {
     use HandlesGridQuery;
 
-    private const COLUMNS = ['number', 'last_name', 'first_name', 'hourly_cost'];
+    private const COLUMNS = ['number', 'last_name', 'first_name'];
+
+    /** Colonnes de prix : filtrables et triables par la gestion seulement (sinon un ouvrier
+     * retrouverait les tarifs par ?filter[hourly_cost]=… ou ?sort=hourly_cost). */
+    private const PRICE_COLUMNS = ['hourly_cost'];
 
     /** Liste paginée. ?active=1 pour les seuls collaborateurs actifs. */
     public function index(Request $request): AnonymousResourceCollection
@@ -27,8 +31,12 @@ class CollaboratorController extends Controller
             ->with('user', 'regieElement')
             ->when($request->boolean('active'), fn ($q) => $q->where('is_active', true));
 
+        $columns = $request->user()?->canSeePrices()
+            ? [...self::COLUMNS, ...self::PRICE_COLUMNS]
+            : self::COLUMNS;
+
         return CollaboratorResource::collection(
-            $this->paginateGrid($query, $request, self::COLUMNS, self::COLUMNS, 'last_name')
+            $this->paginateGrid($query, $request, $columns, $columns, 'last_name')
         );
     }
 

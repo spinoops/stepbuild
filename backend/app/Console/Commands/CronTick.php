@@ -9,16 +9,19 @@ use Throwable;
 /**
  * Tâche périodique pour un hébergement sans crontab (Infomaniak mutualisé : le
  * planificateur appelle une URL, voir CronController). À chaque appel : sauvegarde de
- * la base si la dernière a plus de 20 h. Peu importe l'heure ou la fréquence des appels.
+ * la base si la dernière a plus de 20 h, et purge des jetons de connexion périmés.
+ * Peu importe l'heure ou la fréquence des appels.
  */
 class CronTick extends Command
 {
     protected $signature = 'stepbuild:cron';
 
-    protected $description = "Sauvegarde quotidienne de la base (appelé par le planificateur d'URL).";
+    protected $description = "Sauvegarde quotidienne de la base et purge des jetons périmés (appelé par le planificateur d'URL).";
 
     public function handle(BackupService $backups): int
     {
+        $this->call('sanctum:prune-expired', ['--hours' => 24]);
+
         try {
             $last = $backups->list()[0]['created_at'] ?? null;
             if ($last === null || now()->diffInHours($last, true) >= 20) {

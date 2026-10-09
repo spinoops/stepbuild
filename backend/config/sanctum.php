@@ -50,7 +50,13 @@ return [
     |
     */
 
-    'expiration' => null,
+    // StepBuild : un jeton meurt 30 jours après sa création (SANCTUM_TOKEN_EXPIRATION, minutes)
+    // et dès 14 jours sans utilisation (SANCTUM_TOKEN_INACTIVITY, minutes ; AppServiceProvider).
+    // Un téléphone perdu ne reste donc pas connecté indéfiniment. Les jetons périmés sont
+    // purgés par `sanctum:prune-expired` (planification et stepbuild:cron).
+    'expiration' => (int) env('SANCTUM_TOKEN_EXPIRATION', 60 * 24 * 30),
+
+    'inactivity' => (int) env('SANCTUM_TOKEN_INACTIVITY', 60 * 24 * 14),
 
     /*
     |--------------------------------------------------------------------------

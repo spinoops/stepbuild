@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureUserHasAnyRole;
 use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -28,6 +29,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
         ]);
+
+        // En-têtes de sécurité sur toutes les réponses (API, index.html de la SPA, fichiers).
+        $middleware->append(SecurityHeaders::class);
 
         // API stateless : ne pas rediriger les invités vers une route "login" inexistante.
         // On renvoie null pour /api/* afin que le handler ci-dessous produise un 401 JSON.

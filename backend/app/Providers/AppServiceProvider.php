@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Sanctum\PersonalAccessToken;
+use Laravel\Sanctum\Sanctum;
 use Laravel\Telescope\TelescopeServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -26,6 +28,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Un jeton inutilisé depuis `sanctum.inactivity` minutes n'est plus accepté (en plus de
+        // l'expiration absolue `sanctum.expiration`) : un appareil oublié se déconnecte tout seul.
+        Sanctum::authenticateAccessTokensUsing(function (PersonalAccessToken $token, bool $isValid): bool {
+            $inactivity = (int) config('sanctum.inactivity');
+            if (! $isValid || $inactivity <= 0) {
+                return $isValid;
+            }
+            $lastUsed = $token->last_used_at ?? $token->created_at;
+
+            return $lastUsed === null || $lastUsed->gt(now()->subMinutes($inactivity));
+        });
+
         // Le lien de réinitialisation de mot de passe pointe vers la SPA React.
         ResetPassword::createUrlUsing(function ($notifiable, string $token) {
             return config('app.frontend_url')

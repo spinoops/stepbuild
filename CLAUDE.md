@@ -329,6 +329,22 @@ Le `php` du PATH Windows est en **8.1** (trop vieux pour Laravel 13, qui exige *
   dans `index.css`), TanStack Query, react-hook-form + zod, axios, react-router-dom.
   Icônes inline dans `components/icons.tsx` (pas de dépendance).
 
+## Sécurité (revue du 09.10.2026)
+- **Jetons Sanctum** : expiration absolue 30 jours (`sanctum.expiration`) et **14 jours sans utilisation**
+  (`sanctum.inactivity`, contrôle dans `AppServiceProvider` via `Sanctum::authenticateAccessTokensUsing`) ;
+  `sanctum:prune-expired` tourne dans la planification et dans `stepbuild:cron`. Un nouveau mot de passe ou un
+  changement de rôles par l'admin (`UserController::update`) et la suppression d'un compte **révoquent ses
+  jetons** (sauf la connexion courante de l'admin qui modifie son propre compte). Le front écoute l'événement
+  `stepbuild:unauthenticated` (`lib/api.ts`) et revient à l'écran de connexion sur un 401.
+- **En-têtes HTTP** : middleware global `SecurityHeaders` (nosniff, `X-Frame-Options: SAMEORIGIN`, Referrer-Policy,
+  Permissions-Policy, HSTS en HTTPS, **CSP sur les réponses HTML seulement**) ; `public/.htaccess` pose les mêmes
+  en-têtes sur les fichiers servis directement par Apache. Toute nouvelle ressource externe (police, script, iframe)
+  doit être ajoutée à `SecurityHeaders::CONTENT_SECURITY_POLICY`.
+- **Pas d'énumération des comptes** : `/api/forgot-password` répond toujours `PasswordResetController::NEUTRAL_MESSAGE`,
+  `/api/reset-password` renvoie le même message pour un lien invalide et un email inconnu.
+- **Colonnes de prix dans les grilles** : les listes ouvertes aux ouvriers ne doivent accepter ni filtre ni tri sur une
+  colonne de prix (cf. `CollaboratorController::PRICE_COLUMNS`), sinon la valeur se devine par `?filter[col]=…`.
+
 ## Conventions backend
 - **Validation** → Form Requests (`app/Http/Requests`).
 - **Sorties** → API Resources (`app/Http/Resources`) ; listes **paginées**.

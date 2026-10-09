@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { api, getToken, setToken } from '@/lib/api'
+import { api, getToken, setToken, UNAUTHENTICATED_EVENT } from '@/lib/api'
+import { toast } from '@/lib/toast'
 import type { LoginResponse, User } from '@/types'
 
 interface AuthContextValue {
@@ -29,6 +30,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((response) => setUser(response.data))
       .catch(() => setToken(null))
       .finally(() => setLoading(false))
+  }, [])
+
+  // Jeton périmé ou révoqué en cours de session : retour à l'écran de connexion.
+  useEffect(() => {
+    function onUnauthenticated() {
+      setUser(null)
+      toast('Session expirée, merci de te reconnecter.', 'error')
+    }
+    window.addEventListener(UNAUTHENTICATED_EVENT, onUnauthenticated)
+    return () => window.removeEventListener(UNAUTHENTICATED_EVENT, onUnauthenticated)
   }, [])
 
   async function login(email: string, password: string): Promise<void> {

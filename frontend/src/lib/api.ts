@@ -6,6 +6,9 @@ import { toast } from '@/lib/toast'
 const API_BASE = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:8001' : '')
 const TOKEN_KEY = 'stepbuild_token'
 
+/** Événement émis quand l'API répond 401 (jeton périmé ou révoqué) : l'AuthProvider repasse à l'écran de connexion. */
+export const UNAUTHENTICATED_EVENT = 'stepbuild:unauthenticated'
+
 /** Instance axios partagée, préfixée par /api. */
 export const api = axios.create({
   baseURL: `${API_BASE}/api`,
@@ -35,13 +38,15 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Si l'API répond 401, le token n'est plus valide : on le purge.
+// Si l'API répond 401, le token n'est plus valide (périmé après 30 jours ou 14 jours sans
+// utilisation, révoqué par l'admin) : on le purge et on prévient l'AuthProvider.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status
-    if (status === 401) {
+    if (status === 401 && getToken()) {
       setToken(null)
+      window.dispatchEvent(new Event(UNAUTHENTICATED_EVENT))
     }
     // Notifie les erreurs non gérées par les formulaires (réseau / serveur).
     if (!error.response) {
