@@ -108,6 +108,9 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `components/shell/WorkspaceUrlSync` : rechargement, lien collé et bouton Retour le conservent ; sur `/projets` c'est `?id=`).
   Il est choisi dans la barre de contexte ou en
   ouvrant une fiche ; les modules suivants (devis, rapports) doivent s'y rattacher.
+- **Nouveau projet** : un écran d'entrée ne demande que le code postal et la localité du chantier, en grand (la localité
+  est proposée depuis le carnet d'adresses quand le NPA y est connu, le numéro `2800-003` dès le NPA saisi) ; « Continuer »
+  ouvre la fiche complète (`ProjectForm`, état `stage`).
 - Fiche : onglets **Général** (NPA / Lieu en premier : dès le NPA saisi, le numéro `2800-003` est proposé ; puis désignations,
   adresse du chantier, statut…), **Client** (client du carnet et ses coordonnées en lecture, lien vers la fiche ; les deux
   onglets sont le même formulaire `ProjectForm` avec `section`, gardé monté pour ne rien perdre), Adresses, Photos.
