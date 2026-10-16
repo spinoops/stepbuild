@@ -7,14 +7,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Position d'un devis : article chiffré (item), sous-titre (title) ou texte libre (text).
+ * Position d'un devis : article chiffré (item), sous-titre (title), texte libre (text)
+ * ou saut de page à l'impression (pagebreak).
  */
 class DocumentPosition extends Model
 {
-    public const KINDS = ['item', 'title', 'text'];
+    public const KINDS = ['item', 'title', 'text', 'pagebreak'];
 
     /** Valeurs par défaut connues du modèle dès la création (le montant en dépend). */
     protected $attributes = ['kind' => 'item', 'is_optional' => false, 'price_per_dimension' => false];
+
+    /** Recalcul du sous-détail en cours : ses propres enregistrements ne le relancent pas. */
+    public bool $recomputing = false;
 
     protected $fillable = [
         'document_id', 'document_step_id', 'catalog_article_id', 'kind', 'code', 'description', 'unit',
@@ -41,8 +45,19 @@ class DocumentPosition extends Model
     {
         // Montant = quantité × prix, uniquement pour une position chiffrée complète.
         static::saving(function (self $position) {
+            if ($position->kind === 'pagebreak') {
+                $position->description = '';
+            }
             $complete = $position->kind === 'item' && $position->quantity !== null && $position->unit_price !== null;
             $position->amount = $complete ? round($position->quantity * $position->unit_price, 2) : null;
+        });
+
+        // Le sous-détail chiffre la ligne entière : si la quantité change, le prix unitaire suit (total ÷ quantité).
+        static::saved(function (self $position) {
+            if ($position->wasChanged('quantity') && ! $position->recomputing && $position->costs()->exists()) {
+                $position->syncOriginal(); // l'enregistrement en cours n'a pas encore synchronisé l'original : sans cela, le montant recalculé ne serait pas vu comme modifié
+                $position->recomputeBreakdown();
+            }
         });
     }
 
@@ -67,20 +82,36 @@ class DocumentPosition extends Model
         return $this->hasMany(DocumentPositionCost::class)->orderBy('family')->orderBy('position')->orderBy('id');
     }
 
+    /** La position a un sous-détail de prix : son prix unitaire en découle. */
+    public function hasBreakdown(): bool
+    {
+        return $this->costs()->exists();
+    }
+
+    /**
+     * Quantité de référence du sous-détail = quantité de la ligne (les lignes « × Qté » y sont rapportées,
+     * le total est divisé par elle). Une ligne sans quantité compte pour 1.
+     */
+    public function breakdownQuantity(): float
+    {
+        return $this->quantity !== null && $this->quantity > 0 ? (float) $this->quantity : 1.0;
+    }
+
     /**
      * Remplace le sous-détail de prix : les lignes reçues avec un id sont mises à jour, les autres créées,
-     * celles absentes supprimées. Puis coût et prix calculé de la position sont recalculés.
+     * celles absentes supprimées. Puis coût et prix de la position sont recalculés.
      *
      * @param  array<int, array<string, mixed>>  $lines
      */
     public function syncBreakdown(array $lines): self
     {
         $keep = [];
+        $quantity = $this->breakdownQuantity();
         foreach (array_values($lines) as $index => $line) {
             $attributes = [...collect($line)->except('id')->all(), 'position' => $index + 1];
             $existing = isset($line['id']) ? $this->costs()->find($line['id']) : null;
             $cost = $existing ? $existing->fill($attributes) : $this->costs()->make($attributes);
-            $cost->compute($this->dimension)->save();
+            $cost->compute($quantity)->save();
             if (! $existing && $cost->price_element_id) {
                 PriceElement::whereKey($cost->price_element_id)->increment('usage_count'); // les plus utilisés d'abord
             }
@@ -92,29 +123,40 @@ class DocumentPosition extends Model
     }
 
     /**
-     * Totaux du sous-détail → prix de revient (`cost_price`) et prix de vente calculé (`calculated_price`),
-     * ramenés à l'unité de dimension si le prix de la position s'entend par m², par heure…
-     * Sans sous-détail, les deux champs ne sont pas touchés (prix d'achat de l'article).
+     * Le sous-détail est toujours le calcul complet de la ligne : ses totaux donnent le prix de revient
+     * (`cost_price`) et le prix de vente (`calculated_price`, reporté dans `unit_price`) **à l'unité**,
+     * c'est-à-dire divisés par la quantité de la ligne (1 000.- pour 10 m² → 100.-/m²).
+     * Sans sous-détail, les champs de prix ne sont pas touchés (prix d'achat de l'article).
      */
     public function recomputeBreakdown(): self
     {
-        $costs = $this->costs()->get();
-        if ($costs->isEmpty()) {
-            $this->forceFill(['calculated_price' => null])->save();
+        $this->recomputing = true;
+        try {
+            $costs = $this->costs()->get();
+            if ($costs->isEmpty()) {
+                $this->forceFill(['calculated_price' => null, 'dimension' => null, 'price_per_dimension' => false])->save();
+
+                return $this;
+            }
+
+            $quantity = $this->breakdownQuantity();
+            foreach ($costs as $cost) {
+                $cost->compute($quantity)->save();
+            }
+
+            $price = round($costs->sum('sale') / $quantity, 2);
+            $this->forceFill([
+                'dimension' => $quantity,
+                'dimension_unit' => $this->unit,
+                'price_per_dimension' => true,
+                'cost_price' => round($costs->sum('cost') / $quantity, 2),
+                'calculated_price' => $price,
+                'unit_price' => $price,
+            ])->save();
 
             return $this;
+        } finally {
+            $this->recomputing = false;
         }
-
-        foreach ($costs as $cost) {
-            $cost->compute($this->dimension)->save();
-        }
-
-        $divisor = $this->price_per_dimension && $this->dimension > 0 ? $this->dimension : 1.0;
-        $this->forceFill([
-            'cost_price' => round($costs->sum('cost') / $divisor, 2),
-            'calculated_price' => round($costs->sum('sale') / $divisor, 2),
-        ])->save();
-
-        return $this;
     }
 }

@@ -89,15 +89,19 @@ class DocumentController extends Controller
     }
 
     /**
-     * PDF du document (page de garde + détail). ?download=1 force le téléchargement.
+     * PDF du document (page de garde + détail). ?download=1 force le téléchargement ;
+     * ?breakdown=1 imprime les sous-détails de prix sous les positions ; ?prices=0 imprime sans prix.
      */
     public function pdf(Request $request, Document $document): Response
     {
         $name = DocumentPrint::title($document).'.pdf';
+        $options = [
+            'breakdown' => $request->boolean('breakdown'),
+            'prices' => $request->has('prices') ? $request->boolean('prices') : true,
+        ];
+        $pdf = DocumentPrint::pdf($document, $options);
 
-        return $request->boolean('download')
-            ? DocumentPrint::pdf($document)->download($name)
-            : DocumentPrint::pdf($document)->stream($name);
+        return $request->boolean('download') ? $pdf->download($name) : $pdf->stream($name);
     }
 
     /**

@@ -56,7 +56,7 @@ const COLUMNS: GridColumn<Project>[] = [
   },
 ]
 
-/** Projets : fiche (Général, Adresses, Photos) en haut, liste colorée par statut en bas. */
+/** Projets : fiche (Général, Client, Adresses, Photos) en haut, liste colorée par statut en bas. */
 export default function ProjectsPage() {
   const { user } = useAuth()
   const canManage = canSeePrices(user) // admin et responsable ; l'ouvrier consulte seulement
@@ -132,7 +132,7 @@ export default function ProjectsPage() {
     })
   }
 
-  const tabs = ['Général', `Adresses${project?.addresses?.length ? ` (${project.addresses.length})` : ''}`, `Photos${project?.photos?.length ? ` (${project.photos.length})` : ''}`]
+  const tabs = ['Général', 'Client', `Adresses${project?.addresses?.length ? ` (${project.addresses.length})` : ''}`, `Photos${project?.photos?.length ? ` (${project.photos.length})` : ''}`]
   const activeTab = tabs.find((item) => item.startsWith(tab)) ?? tabs[0]
   const chip = (active: boolean) =>
     `flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[12px] transition ${
@@ -279,11 +279,12 @@ export default function ProjectsPage() {
       <div className="flex h-full flex-col">
         <div className="shrink-0 border-b border-gray-200 bg-white px-4 pb-4 pt-1">
           <TabStrip tabs={tabs} active={activeTab} onChange={(value) => setTab(value.split(' ')[0])} />
-          {tab === 'Général' && (
+          {(tab === 'Général' || tab === 'Client') && (
             <ProjectForm
               key={`${isNew ? 'new' : (project?.id ?? 'none')}-${formVersion}`}
               project={project}
               isNew={isNew}
+              section={tab === 'Client' ? 'client' : 'general'}
               readOnly={!canManage || (!isNew && !project)}
               onStateChange={setSaveState}
               onCreated={(created) => open(created.id)}

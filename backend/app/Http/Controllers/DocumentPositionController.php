@@ -67,8 +67,8 @@ class DocumentPositionController extends Controller
         if (isset($data['document_step_id'])) {
             $document->steps()->findOrFail($data['document_step_id']); // l'étape doit appartenir au document
         }
-        if ($position->costs()->exists()) {
-            unset($data['cost_price']); // le prix de revient vient du sous-détail
+        if ($position->hasBreakdown()) {
+            unset($data['cost_price'], $data['unit_price']); // prix de revient et prix de vente viennent du sous-détail
         }
         $position->update($data);
 
@@ -76,8 +76,8 @@ class DocumentPositionController extends Controller
     }
 
     /**
-     * Sous-détail de prix de la position : dimension, lignes de coûts (remplacement complet),
-     * et report facultatif du prix calculé dans le prix de vente.
+     * Sous-détail de prix de la position : lignes de coûts (remplacement complet) et remarque interne.
+     * Le sous-détail chiffre la ligne entière ; son total, divisé par la quantité, devient le prix unitaire.
      */
     public function breakdown(SavePositionBreakdownRequest $request, Document $document, DocumentPosition $position): DocumentResource
     {
@@ -85,11 +85,8 @@ class DocumentPositionController extends Controller
         $data = $request->validated();
 
         DB::transaction(function () use ($data, $position) {
-            $position->fill(collect($data)->only(['dimension', 'dimension_unit', 'price_per_dimension', 'internal_remark'])->all())->save();
+            $position->fill(collect($data)->only(['internal_remark'])->all())->save();
             $position->syncBreakdown($data['lines']);
-            if (! empty($data['apply_price']) && $position->calculated_price !== null) {
-                $position->update(['unit_price' => $position->calculated_price]);
-            }
         });
 
         return DocumentResource::make($document->recalculate()->load(DocumentController::FULL));

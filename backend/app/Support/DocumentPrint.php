@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Models\Document;
+use App\Models\DocumentPosition;
+use App\Models\DocumentPositionCost;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Barryvdh\DomPDF\PDF as PdfWrapper;
 use Carbon\Carbon;
@@ -24,13 +26,14 @@ class DocumentPrint
     }
 
     /**
-     * Étapes et positions numérotées pour l'impression.
+     * Étapes et positions numérotées pour l'impression. Avec `$withBreakdown`, chaque position chiffrée
+     * reçoit ses lignes de sous-détail (`costs`) pour les imprimer, en compact, sous la ligne.
      *
      * @return array<int, array{number: string, label: string, total: float, rows: array<int, array<string, mixed>>}>
      */
-    public static function steps(Document $document): array
+    public static function steps(Document $document, bool $withBreakdown = false): array
     {
-        $document->loadMissing('steps.positions');
+        $document->loadMissing($withBreakdown ? 'steps.positions.costs' : 'steps.positions');
         $steps = [];
 
         foreach ($document->steps->values() as $index => $step) {
@@ -43,6 +46,12 @@ class DocumentPrint
             foreach ($step->positions as $position) {
                 if ($position->kind === 'text') {
                     $rows[] = ['kind' => 'text', 'number' => '', 'description' => $position->description];
+
+                    continue;
+                }
+
+                if ($position->kind === 'pagebreak') {
+                    $rows[] = ['kind' => 'pagebreak', 'number' => '', 'description' => ''];
 
                     continue;
                 }
@@ -64,6 +73,8 @@ class DocumentPrint
                     'unit_price' => $position->unit_price,
                     'amount' => $position->amount,
                     'is_optional' => $position->is_optional,
+                    'costs' => $withBreakdown ? self::costRows($position) : [],
+                    'breakdown_total' => $withBreakdown && $position->calculated_price !== null ? round((float) $position->costs->sum('sale'), 2) : null,
                 ];
             }
 
@@ -76,6 +87,32 @@ class DocumentPrint
         }
 
         return $steps;
+    }
+
+    /**
+     * Lignes du sous-détail d'une position, prêtes à imprimer (famille, libellé, quantité comptée, coût, vente).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private static function costRows(DocumentPosition $position): array
+    {
+        $quantity = $position->breakdownQuantity();
+
+        return $position->costs->map(fn (DocumentPositionCost $cost) => [
+            'family' => DocumentPositionCost::FAMILIES[$cost->family] ?? '',
+            'label' => $cost->label,
+            'quantity' => $cost->computedQuantity($quantity),
+            'unit' => $cost->unit,
+            'unit_cost' => $cost->unit_cost,
+            'markup_percent' => $cost->markup_percent,
+            'sale' => $cost->sale,
+        ])->all();
+    }
+
+    /** Quantité du sous-détail : 2, 2.5, 37.8 (sans zéros inutiles). */
+    public static function qty(float $value): string
+    {
+        return rtrim(rtrim(number_format($value, 3, '.', "'"), '0'), '.');
     }
 
     /** Montant au format suisse : 12'420.69. */
@@ -95,9 +132,14 @@ class DocumentPrint
     /**
      * Construit le PDF : vue Blade + en-têtes et pieds de page dessinés sur chaque page
      * (la page de garde porte le n° TVA, les suivantes le rappel du document et du projet).
+     * Options : `breakdown` (sous-détails sous les positions, en rouge), `prices` (false = sans prix).
+     *
+     * @param  array{breakdown?: bool, prices?: bool}  $options
      */
-    public static function pdf(Document $document): PdfWrapper
+    public static function pdf(Document $document, array $options = []): PdfWrapper
     {
+        $withBreakdown = (bool) ($options['breakdown'] ?? false);
+        $showPrices = (bool) ($options['prices'] ?? true);
         $document->loadMissing(['project', 'steps.positions']);
         $company = config('company');
         $logo = $company['logo'] ? resource_path($company['logo']) : null;
@@ -109,7 +151,9 @@ class DocumentPrint
             'company' => $company,
             'logo' => $logo && is_file($logo) ? $logo : null,
             'title' => $title,
-            'steps' => self::steps($document),
+            'steps' => self::steps($document, $withBreakdown),
+            'withBreakdown' => $withBreakdown,
+            'showPrices' => $showPrices,
             'dateLine' => trim($company['city'].', le '.self::longDate($document->date).($document->initials ? ' /'.$document->initials : '')),
         ])->setPaper('a4');
 

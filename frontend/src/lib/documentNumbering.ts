@@ -2,7 +2,7 @@ import type { DocumentStep } from '@/types'
 
 /**
  * Numérotation imprimée des positions, identique à celle du PDF (DocumentPrint::steps côté API) :
- * étape 5 → positions 5.1, 5.2 ; un sous-titre 6.1 ouvre un sous-groupe 6.1.1, 6.1.2 ; un texte n'a pas de numéro.
+ * étape 5 → positions 5.1, 5.2 ; un sous-titre 6.1 ouvre un sous-groupe 6.1.1, 6.1.2 ; un texte ou un saut de page n'a pas de numéro.
  * Renvoie le numéro de chaque position par identifiant.
  */
 export function printNumbers(steps: DocumentStep[]): Map<number, string> {
@@ -15,7 +15,7 @@ export function printNumbers(steps: DocumentStep[]): Map<number, string> {
     let sub = 0
 
     for (const position of step.positions) {
-      if (position.kind === 'text') {
+      if (position.kind === 'text' || position.kind === 'pagebreak') {
         numbers.set(position.id, '')
       } else if (position.kind === 'title') {
         item += 1

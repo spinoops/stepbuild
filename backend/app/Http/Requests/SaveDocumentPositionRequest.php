@@ -22,6 +22,7 @@ class SaveDocumentPositionRequest extends FormRequest
     {
         $creating = $this->isMethod('post');
         $fromArticle = $creating && $this->filled('catalog_article_id');
+        $pageBreak = $this->input('kind') === 'pagebreak'; // sans description
 
         return [
             'document_step_id' => [$creating ? 'required' : 'sometimes', 'integer'],
@@ -29,7 +30,7 @@ class SaveDocumentPositionRequest extends FormRequest
             'after_id' => ['nullable', 'integer'],
             'kind' => ['sometimes', Rule::in(DocumentPosition::KINDS)],
             'code' => ['nullable', 'string', 'max:40'],
-            'description' => [$fromArticle ? 'nullable' : 'required', 'string', 'max:5000'],
+            'description' => [...($fromArticle || $pageBreak ? ['nullable'] : ($creating ? ['required'] : ['sometimes', 'required'])), 'string', 'max:5000'],
             'unit' => ['nullable', 'string', 'max:20'],
             'quantity' => ['nullable', 'numeric', 'min:-999999999', 'max:999999999'],
             'unit_price' => ['nullable', 'numeric', 'min:-9999999999', 'max:9999999999'],
