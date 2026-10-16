@@ -271,7 +271,7 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
         <p className="font-medium text-gray-700">{external ? 'Déposez ici : l’étape sera créée.' : "Ce devis n'a pas encore d'étape."}</p>
         <p className="max-w-md text-[13px]">
           Ajoutez les étapes du chantier depuis les modèles ou le catalogue de prix, dans le panneau de gauche :
-          glissez un chapitre ou un article sur la feuille, ou double-cliquez dessus.
+          glissez un chapitre ou un article sur la feuille.
         </p>
       </div>
       </>

@@ -240,7 +240,7 @@ export default function DocumentsPage() {
             )}
           </Accordion>
           <Accordion title="Catalogue de prix" open={catalogOpen} onToggle={() => setCatalogOpen((value) => !value)}>
-            {doc ? <DocumentCatalog key={doc.id} document={doc} /> : <CatalogPanel document={null} actions={null} />}
+            <CatalogPanel document={doc} />
           </Accordion>
         </AsidePanel>
       }
@@ -297,12 +297,6 @@ export default function DocumentsPage() {
 function DocumentSteps({ document }: { document: DocumentDetail }) {
   const actions = useDocumentActions(document.id)
   return <StepsPanel document={document} actions={actions} />
-}
-
-/** Catalogue de prix branché sur le document ouvert (ajout d'articles et d'étapes). */
-function DocumentCatalog({ document }: { document: DocumentDetail }) {
-  const actions = useDocumentActions(document.id)
-  return <CatalogPanel document={document} actions={actions} />
 }
 
 interface DocumentBodyProps {

@@ -4,32 +4,31 @@ import { BB_FIELD } from '@/components/baubit/Form'
 import UnitSelect from '@/components/shared/UnitSelect'
 import { useCatalogChapters } from '@/hooks/useCatalog'
 import { useArticlePicker } from '@/hooks/useDocuments'
-import type { DocumentActions, PickerArticle } from '@/hooks/useDocuments'
+import type { PickerArticle } from '@/hooks/useDocuments'
 import { endCatalogDrag, startCatalogDrag } from '@/lib/catalogDrag'
 import { PRICE_PATTERN, nullable, toNumber, useResourceItem, useSaveResource } from '@/lib/crud'
 import { fmtAmount } from '@/lib/format'
-import { ensureStep, findStepForArticle, findStepForChapter, focusInsertedPosition, insertArticle } from '@/lib/quoteInsert'
+import { findStepForArticle, findStepForChapter } from '@/lib/quoteInsert'
 import { searchIndex } from '@/lib/searchIndex'
 import { toast } from '@/lib/toast'
 import type { CatalogArticle, CatalogChapter, DocumentDetail } from '@/types'
 
 interface CatalogPanelProps {
-  /** Devis ouvert ; sans devis, le catalogue se consulte seulement. */
+  /** Devis ouvert (marque ✓ les étapes présentes) ; sans devis, le catalogue se consulte seulement. */
   document: DocumentDetail | null
-  actions: DocumentActions | null
 }
 
 /**
  * Catalogue de prix dans le panneau du devis : chapitres (= modèles d'étapes) et leurs articles.
- * Un article s'ajoute au devis d'un double-clic ou du bouton « + » : dans l'étape de son chapitre,
- * créée au besoin (titre seul). Chapitres et articles se glissent aussi vers la feuille.
+ * On ajoute au devis **uniquement en glissant** un article ou un chapitre vers la feuille (pas de
+ * clic, pour éviter les ajouts involontaires) : sur une ligne pour choisir l'endroit, ailleurs pour
+ * l'étape de son chapitre, créée au besoin (titre seul). Le crayon modifie l'article dans le catalogue.
  */
-export default function CatalogPanel({ document: doc, actions }: CatalogPanelProps) {
+export default function CatalogPanel({ document: doc }: CatalogPanelProps) {
   const chapters = useCatalogChapters()
   const picker = useArticlePicker()
   const [term, setTerm] = useState('')
   const [expanded, setExpanded] = useState<Set<number>>(() => new Set())
-  const [busy, setBusy] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const text = term.trim()
   const list = useMemo(() => chapters.data ?? [], [chapters.data])
@@ -77,44 +76,6 @@ export default function CatalogPanel({ document: doc, actions }: CatalogPanelPro
     })
   }
 
-  async function run(task: () => Promise<void>) {
-    if (busy) {
-      return
-    }
-    setBusy(true)
-    try {
-      await task()
-    } catch {
-      toast("L'ajout au devis a échoué.", 'error')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  function addArticle(article: PickerArticle) {
-    if (!doc || !actions) {
-      toast("Ouvrez d'abord un devis pour y ajouter des articles.", 'info')
-      return
-    }
-    void run(async () => {
-      const result = await insertArticle(doc, actions, list, article)
-      toast(result.stepCreated ? `Étape « ${result.step.label} » ajoutée au devis, puis l'article.` : `Ajouté dans l'étape « ${result.step.label} ».`, 'success')
-      focusInsertedPosition(result.step.id, result.positionId)
-    })
-  }
-
-  function addChapter(chapter: CatalogChapter) {
-    if (!doc || !actions) {
-      toast("Ouvrez d'abord un devis pour y ajouter des étapes.", 'info')
-      return
-    }
-    void run(async () => {
-      const { step, created } = await ensureStep(doc, actions, chapter.id)
-      toast(created ? `Étape « ${step.label} » ajoutée au devis (titre seul).` : `L'étape « ${step.label} » est déjà dans le devis.`, created ? 'success' : 'info')
-      focusInsertedPosition(step.id, null)
-    })
-  }
-
   function dragArticle(event: React.DragEvent, article: PickerArticle) {
     event.dataTransfer.effectAllowed = 'copy'
     event.dataTransfer.setData('text/plain', article.description)
@@ -137,8 +98,7 @@ export default function CatalogPanel({ document: doc, actions }: CatalogPanelPro
         draggable
         onDragStart={(event) => dragArticle(event, article)}
         onDragEnd={endCatalogDrag}
-        onDoubleClick={() => addArticle(article)}
-        title={`${article.description}\n\nDouble-clic ou « + » : ajouter au devis${step ? ` (étape « ${step.label} »)` : ' (l’étape sera créée)'}. Glisser vers la feuille pour choisir l’endroit.`}
+        title={`${article.description}\n\nGlisser sur le devis : sur une ligne pour choisir l’endroit, ailleurs ${step ? `dans l’étape « ${step.label} »` : 'dans son étape, qui sera créée'}.`}
         className="group flex cursor-grab items-center gap-1.5 rounded-md py-0.5 pl-1 pr-0.5 text-[12px] hover:bg-primary-50 active:cursor-grabbing"
       >
         <span className="w-9 shrink-0 truncate text-[11px] text-gray-400">{article.code.split('.').slice(-2).join('.')}</span>
@@ -154,15 +114,6 @@ export default function CatalogPanel({ document: doc, actions }: CatalogPanelPro
           className="invisible flex h-5 w-5 shrink-0 items-center justify-center rounded text-gray-500 hover:bg-gray-200 hover:text-gray-800 group-hover:visible"
         >
           <Icon name="edit" className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => addArticle(article)}
-          title="Ajouter au devis"
-          className="invisible flex h-5 w-5 shrink-0 items-center justify-center rounded text-primary-700 hover:bg-primary-100 group-hover:visible disabled:opacity-40"
-        >
-          <Icon name="plus" className="h-3.5 w-3.5" />
         </button>
       </div>
     )
@@ -180,8 +131,7 @@ export default function CatalogPanel({ document: doc, actions }: CatalogPanelPro
           onDragStart={(event) => dragChapter(event, chapter)}
           onDragEnd={endCatalogDrag}
           onClick={() => toggle(chapter.id)}
-          onDoubleClick={() => addChapter(chapter)}
-          title={step ? `Étape déjà dans le devis. Glisser ou « + » : aller à l’étape.` : 'Double-clic ou « + » : ajouter l’étape au devis (titre seul). Glisser vers la feuille.'}
+          title={step ? 'Étape déjà dans le devis (clic : déplier les articles).' : 'Clic : déplier les articles. Glisser sur le devis : ajoute l’étape (titre seul).'}
           className="group flex h-7 cursor-pointer items-center gap-1 rounded-md pr-0.5 text-[13px] text-gray-700 hover:bg-gray-100"
           style={{ paddingLeft: 2 + depth * 14 }}
         >
@@ -191,18 +141,6 @@ export default function CatalogPanel({ document: doc, actions }: CatalogPanelPro
           <span className={`min-w-0 flex-1 truncate ${step ? 'font-medium text-primary-700' : ''}`}>{chapter.label}</span>
           {step && <Icon name="check" className="h-3.5 w-3.5 shrink-0 text-primary-500" />}
           {articles.length > 0 && <span className="shrink-0 text-[11px] text-gray-400">{articles.length}</span>}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={(event) => {
-              event.stopPropagation()
-              addChapter(chapter)
-            }}
-            title={step ? "Aller à l'étape" : "Ajouter l'étape au devis"}
-            className="invisible flex h-5 w-5 shrink-0 items-center justify-center rounded text-primary-700 hover:bg-primary-100 group-hover:visible disabled:opacity-40"
-          >
-            <Icon name={step ? 'arrow' : 'plus'} className="h-3.5 w-3.5" />
-          </button>
         </div>
         {open && (
           <div style={{ marginLeft: 10 + depth * 14 }} className="border-l border-gray-100 pl-1">
@@ -227,16 +165,13 @@ export default function CatalogPanel({ document: doc, actions }: CatalogPanelPro
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
               setTerm('')
-            } else if (event.key === 'Enter' && found[0]) {
-              event.preventDefault()
-              addArticle(found[0])
             }
           }}
           placeholder="Chercher un article du catalogue…"
           className="h-8 w-full rounded-md border border-gray-300 pl-8 pr-2 text-[13px] outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
         />
       </div>
-      {!doc && <p className="mb-2 shrink-0 text-[12px] text-gray-400">Ouvrez un devis pour y ajouter des articles.</p>}
+      <p className="mb-2 shrink-0 text-[12px] text-gray-400">{doc ? 'Glissez un article ou un chapitre sur le devis pour l’ajouter.' : 'Ouvrez un devis pour y glisser des articles.'}</p>
       {editingId !== null && <ArticleQuickEdit key={editingId} id={editingId} chapters={list} onClose={() => setEditingId(null)} />}
       <div className="min-h-0 flex-1 select-none">
         {text.length >= 2 ? (
