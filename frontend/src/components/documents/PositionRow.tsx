@@ -67,14 +67,17 @@ interface PositionRowProps {
  * sortie de la ligne ou 1,5 s après la dernière frappe. Entrée : quantité → prix → champ d'ajout.
  * Les outils qui n'existent pas sur le papier sont dans les marges : poignée à gauche (souris, ou
  * flèches haut et bas au clavier), option, sous-détail et suppression à droite.
- * Une ligne avec sous-détail reçoit son prix du serveur (total du sous-détail ÷ quantité) : le prix
- * n'y est pas saisi, et il se met à jour dès que la quantité change.
+ * Une ligne avec sous-détail reçoit son prix du serveur (total du sous-détail ÷ quantité) et le suit quand
+ * la quantité change ; le prix unitaire reste corrigeable à la main, et le montant aussi : un total saisi
+ * donne le prix unitaire (total ÷ quantité), le sous-détail restant affiché en rouge pour comparaison.
  */
 export default function PositionRow({
   position, printNumber, actions, onSaving, onMove, dragging, dropPlace, onDragStart, onDragEnd, onDragOver, onDrop, onOpenBreakdown,
   showBreakdown = false, hidePrices = false,
 }: PositionRowProps) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(position))
+  // Montant en cours de saisie (null = montant calculé quantité × prix).
+  const [amountEdit, setAmountEdit] = useState<string | null>(null)
   const saved = useRef(JSON.stringify(draft))
   const latest = useRef(draft)
   const timer = useRef<number | undefined>(undefined)
@@ -159,7 +162,7 @@ export default function PositionRow({
       return
     }
     event.preventDefault()
-    const selector = next === 'price' && !hasBreakdown ? `[data-price="${position.id}"]` : `[data-picker="${position.document_step_id}"]`
+    const selector = next === 'price' ? `[data-price="${position.id}"]` : `[data-picker="${position.document_step_id}"]`
     const target = document.querySelector<HTMLInputElement>(selector)
     target?.focus()
     target?.select()
@@ -183,6 +186,16 @@ export default function PositionRow({
   const quantity = toNumber(draft.quantity)
   const price = toNumber(draft.unit_price)
   const amount = isItem && quantity !== null && price !== null ? Math.round(quantity * price * 100) / 100 : null
+  const priceDiffers = hasBreakdown && price !== null && Math.abs(price - (position.calculated_price ?? 0)) >= 0.005
+
+  /** Total de la ligne saisi à la main : il donne le prix unitaire (total ÷ quantité). */
+  function changeAmount(value: string) {
+    setAmountEdit(value)
+    const total = toNumber(value)
+    if (total !== null && quantity !== null && quantity > 0) {
+      change({ unit_price: text(Math.round((total / quantity) * 100) / 100) })
+    }
+  }
   const breakdownQuantity = position.quantity !== null && position.quantity > 0 ? position.quantity : 1
   const breakdownTotal = Math.round((position.costs ?? []).reduce((sum, cost) => sum + cost.sale, 0) * 100) / 100
 
@@ -309,16 +322,6 @@ export default function PositionRow({
                 <span className="block px-1 py-0.5 text-right text-gray-300" title="Prix masqués (option en haut du devis)">
                   ···
                 </span>
-              ) : hasBreakdown ? (
-                <button
-                  type="button"
-                  data-price={position.id}
-                  onClick={onOpenBreakdown}
-                  title={`Prix issu du sous-détail : ${fmtAmount(breakdownTotal)} ÷ ${qty(breakdownQuantity)} = ${fmtAmount(position.calculated_price)}. Cliquer pour ouvrir le sous-détail.`}
-                  className={`${CELL} text-right tabular-nums text-primary-800 hover:border-primary-200`}
-                >
-                  {draft.unit_price}
-                </button>
               ) : (
                 <input
                   data-price={position.id}
@@ -326,12 +329,31 @@ export default function PositionRow({
                   onChange={(e) => change({ unit_price: e.target.value })}
                   onKeyDown={(e) => onEnter(e, 'picker')}
                   inputMode="decimal"
-                  className={`${CELL} text-right`}
+                  title={hasBreakdown ? `Sous-détail : ${fmtAmount(breakdownTotal)} ÷ ${qty(breakdownQuantity)} = ${fmtAmount(position.calculated_price)}${priceDiffers ? ' (prix corrigé à la main)' : ''}` : undefined}
+                  className={`${CELL} text-right ${hasBreakdown ? (priceDiffers ? 'text-accent-700' : 'text-primary-800') : ''}`}
                   aria-label="Prix unitaire"
                 />
               )}
             </td>
-            <td className="px-1 py-1 text-right tabular-nums">{hidePrices ? '' : amount !== null ? fmtAmount(amount) : ''}</td>
+            <td className="py-0.5">
+              {hidePrices ? (
+                ''
+              ) : (
+                <input
+                  data-amount={position.id}
+                  value={amountEdit ?? (amount !== null ? fmtAmount(amount) : '')}
+                  onChange={(e) => changeAmount(e.target.value)}
+                  onFocus={() => setAmountEdit(amount !== null ? text(amount) : '')}
+                  onBlur={() => setAmountEdit(null)}
+                  onKeyDown={(e) => onEnter(e, 'picker')}
+                  disabled={quantity === null || quantity <= 0}
+                  inputMode="decimal"
+                  title="Montant de la ligne : un total saisi donne le prix unitaire (total ÷ quantité)"
+                  className={`${CELL} text-right disabled:hover:border-transparent`}
+                  aria-label="Montant"
+                />
+              )}
+            </td>
           </>
         )}
         <td className="py-1 pl-2">
@@ -403,6 +425,12 @@ export default function PositionRow({
                 <span className="whitespace-nowrap font-semibold">
                   <span className="text-red-300"> · </span>
                   Total {fmtAmount(breakdownTotal)} ÷ {qty(breakdownQuantity)} = {fmtAmount(position.calculated_price)}
+                  {priceDiffers && price !== null && (
+                    <span className="font-normal">
+                      {' '}
+                      → corrigé à {fmtAmount(price)} (total {fmtAmount(amount)})
+                    </span>
+                  )}
                 </span>
               )}
             </button>

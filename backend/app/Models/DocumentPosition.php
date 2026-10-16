@@ -52,11 +52,12 @@ class DocumentPosition extends Model
             $position->amount = $complete ? round($position->quantity * $position->unit_price, 2) : null;
         });
 
-        // Le sous-détail chiffre la ligne entière : si la quantité change, le prix unitaire suit (total ÷ quantité).
+        // Le sous-détail chiffre la ligne entière : si la quantité change, le prix calculé suit (total ÷ quantité),
+        // et le prix unitaire avec lui tant qu'il n'a pas été corrigé à la main.
         static::saved(function (self $position) {
             if ($position->wasChanged('quantity') && ! $position->recomputing && $position->costs()->exists()) {
                 $position->syncOriginal(); // l'enregistrement en cours n'a pas encore synchronisé l'original : sans cela, le montant recalculé ne serait pas vu comme modifié
-                $position->recomputeBreakdown();
+                $position->recomputeBreakdown(false);
             }
         });
     }
@@ -124,11 +125,13 @@ class DocumentPosition extends Model
 
     /**
      * Le sous-détail est toujours le calcul complet de la ligne : ses totaux donnent le prix de revient
-     * (`cost_price`) et le prix de vente (`calculated_price`, reporté dans `unit_price`) **à l'unité**,
-     * c'est-à-dire divisés par la quantité de la ligne (1 000.- pour 10 m² → 100.-/m²).
+     * (`cost_price`) et le prix de vente calculé (`calculated_price`) **à l'unité**, c'est-à-dire divisés
+     * par la quantité de la ligne (1 000.- pour 10 m² → 100.-/m²).
+     * `$applyPrice` : le prix calculé est reporté dans `unit_price` (édition du sous-détail) ; sinon il ne
+     * l'est que si le prix suivait déjà le sous-détail — un prix ou un total corrigés à la main sont conservés.
      * Sans sous-détail, les champs de prix ne sont pas touchés (prix d'achat de l'article).
      */
-    public function recomputeBreakdown(): self
+    public function recomputeBreakdown(bool $applyPrice = true): self
     {
         $this->recomputing = true;
         try {
@@ -145,13 +148,14 @@ class DocumentPosition extends Model
             }
 
             $price = round($costs->sum('sale') / $quantity, 2);
+            $followed = $this->unit_price === null || $this->calculated_price === null || abs($this->unit_price - $this->calculated_price) < 0.005;
             $this->forceFill([
                 'dimension' => $quantity,
                 'dimension_unit' => $this->unit,
                 'price_per_dimension' => true,
                 'cost_price' => round($costs->sum('cost') / $quantity, 2),
                 'calculated_price' => $price,
-                'unit_price' => $price,
+                ...($applyPrice || $followed ? ['unit_price' => $price] : []),
             ])->save();
 
             return $this;

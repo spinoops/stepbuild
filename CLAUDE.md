@@ -143,14 +143,17 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   la ligne** si `per_dimension`, arrondie au conditionnement `pack_size`) × coût unitaire → `cost`, majorée → `sale`.
   **Le sous-détail est toujours le calcul complet de la ligne** (règle du 16.10.2026) : son total, divisé par la
   quantité de la position (`DocumentPosition::breakdownQuantity()`, 1 si vide), donne `cost_price` (alimente la marge)
-  et `calculated_price`, **reporté d'office dans `unit_price`** ; un changement de quantité recalcule le prix (hook
-  `saved`, garde `recomputing`). Ex. : 1 000.- pour 10 m² → 100.-/m². Tant qu'un sous-détail existe, `unit_price` et
-  `cost_price` envoyés par la ligne sont ignorés. Les colonnes `dimension` / `price_per_dimension` restent en base
+  et `calculated_price`, reporté dans `unit_price` à chaque édition du sous-détail ; un changement de quantité
+  recalcule le prix (hook `saved`, garde `recomputing`) et `unit_price` le suit **sauf s'il a été corrigé à la main**
+  (il différait déjà du prix calculé). Ex. : 1 000.- pour 10 m² → 100.-/m². `cost_price` envoyé par la ligne est ignoré
+  tant qu'un sous-détail existe ; `unit_price` reste corrigeable. Dans la ligne du devis, le **montant est aussi
+  saisissable** : un total entré donne le prix unitaire (total ÷ quantité), le sous-détail restant affiché en rouge
+  avec la mention « corrigé à … ». Les colonnes `dimension` / `price_per_dimension` restent en base
   (dimension = quantité de la ligne) mais ne se saisissent plus. `PUT /documents/{id}/positions/{pos}/breakdown`
   remplace tout le sous-détail (`lines`, `internal_remark`).
   Front : `CostBreakdownDialog` (autosave 1 s, sauvegardes en file, affiche « ÷ quantité ») + `BreakdownLinesTable`
   (tableau partagé, colonne « × Qté »), familles et calcul dans `lib/costFamilies.ts`, brouillons dans `lib/breakdown.ts`.
-  Dans la ligne du devis, le prix d'une position avec sous-détail est un bouton (ouvre la fenêtre), pas un champ.
+  Dans la ligne du devis, le prix d'une position avec sous-détail est en bleu (rouge s'il a été corrigé à la main).
 - **Options d'affichage du devis** (`lib/quoteView.ts`, mémorisées dans le navigateur, barre au-dessus de la feuille) :
   « Afficher les sous-détails » (lignes du sous-détail **en rouge, très compact, sous la position**) et « Masquer les
   prix » (devis descriptif). Les mêmes options pilotent l'aperçu et le PDF (`GET …/pdf?breakdown=1&prices=0`,
