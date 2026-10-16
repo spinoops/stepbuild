@@ -54,7 +54,7 @@ export interface PositionPayload {
   document_step_id?: number
   catalog_article_id?: number | null
   after_id?: number | null
-  kind?: 'item' | 'title' | 'text'
+  kind?: 'item' | 'title' | 'text' | 'pagebreak'
   code?: string | null
   description?: string
   unit?: string | null
@@ -80,14 +80,10 @@ export interface BreakdownLinePayload {
   note: string | null
 }
 
+/** Sous-détail = calcul complet de la ligne : son total, divisé par la quantité, devient le prix unitaire. */
 export interface BreakdownPayload {
-  dimension: number | null
-  dimension_unit: string | null
-  price_per_dimension: boolean
   internal_remark: string | null
   lines: BreakdownLinePayload[]
-  /** Reporte le prix calculé dans le prix de vente de la position. */
-  apply_price?: boolean
 }
 
 type DocResponse = { data: DocumentDetail; created_position_id?: number; removed?: number }

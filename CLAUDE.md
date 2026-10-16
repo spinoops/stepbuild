@@ -108,6 +108,9 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `components/shell/WorkspaceUrlSync` : rechargement, lien collé et bouton Retour le conservent ; sur `/projets` c'est `?id=`).
   Il est choisi dans la barre de contexte ou en
   ouvrant une fiche ; les modules suivants (devis, rapports) doivent s'y rattacher.
+- Fiche : onglets **Général** (NPA / Lieu en premier : dès le NPA saisi, le numéro `2800-003` est proposé ; puis désignations,
+  adresse du chantier, statut…), **Client** (client du carnet et ses coordonnées en lecture, lien vers la fiche ; les deux
+  onglets sont le même formulaire `ProjectForm` avec `section`, gardé monté pour ne rien perdre), Adresses, Photos.
 - Composants : `components/projects/` (`ProjectForm`, `ProjectAddressesTab`, `ProjectPhotosTab`), hooks `hooks/useProjects.ts`.
 
 ### Devis (phase 3)
@@ -133,13 +136,25 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `updatePosition` avec le nouveau `document_step_id` puis `reorderPositions`) ; au clavier, flèches sur la poignée.
 - **Sous-détail de prix** par position (fenêtre ouverte depuis la ligne, icône calculatrice) : remplace les formules
   notées en « remarques internes » dans BauBit. `document_position_costs` = lignes par famille (1 MO, 2 MAT, 3 MACH,
-  4 MAT EX, 5 OUT, 6 ST = familles des éléments de coûts, `price_element_id` facultatif) : quantité (× `dimension`
-  de la position si `per_dimension`, arrondie au conditionnement `pack_size`) × coût unitaire → `cost`, majorée →
-  `sale`. La position reçoit `cost_price` (coût, alimente la marge) et `calculated_price` (vente), divisés par la
-  dimension si `price_per_dimension`. `PUT /documents/{id}/positions/{pos}/breakdown` remplace tout le sous-détail ;
-  `apply_price` reporte le prix calculé dans `unit_price` (sinon le prix reste saisi à la main, écart affiché).
-  Front : `CostBreakdownDialog` (autosave 1 s, sauvegardes en file) + `BreakdownLinesTable` (tableau partagé),
-  familles et calcul dans `lib/costFamilies.ts`, brouillons de lignes dans `lib/breakdown.ts`.
+  4 MAT EX, 5 OUT, 6 ST = familles des éléments de coûts, `price_element_id` facultatif) : quantité (× **quantité de
+  la ligne** si `per_dimension`, arrondie au conditionnement `pack_size`) × coût unitaire → `cost`, majorée → `sale`.
+  **Le sous-détail est toujours le calcul complet de la ligne** (règle du 16.10.2026) : son total, divisé par la
+  quantité de la position (`DocumentPosition::breakdownQuantity()`, 1 si vide), donne `cost_price` (alimente la marge)
+  et `calculated_price`, **reporté d'office dans `unit_price`** ; un changement de quantité recalcule le prix (hook
+  `saved`, garde `recomputing`). Ex. : 1 000.- pour 10 m² → 100.-/m². Tant qu'un sous-détail existe, `unit_price` et
+  `cost_price` envoyés par la ligne sont ignorés. Les colonnes `dimension` / `price_per_dimension` restent en base
+  (dimension = quantité de la ligne) mais ne se saisissent plus. `PUT /documents/{id}/positions/{pos}/breakdown`
+  remplace tout le sous-détail (`lines`, `internal_remark`).
+  Front : `CostBreakdownDialog` (autosave 1 s, sauvegardes en file, affiche « ÷ quantité ») + `BreakdownLinesTable`
+  (tableau partagé, colonne « × Qté »), familles et calcul dans `lib/costFamilies.ts`, brouillons dans `lib/breakdown.ts`.
+  Dans la ligne du devis, le prix d'une position avec sous-détail est un bouton (ouvre la fenêtre), pas un champ.
+- **Options d'affichage du devis** (`lib/quoteView.ts`, mémorisées dans le navigateur, barre au-dessus de la feuille) :
+  « Afficher les sous-détails » (lignes du sous-détail **en rouge, très compact, sous la position**) et « Masquer les
+  prix » (devis descriptif). Les mêmes options pilotent l'aperçu et le PDF (`GET …/pdf?breakdown=1&prices=0`,
+  cases aussi dans l'onglet Aperçu) : sous-détails imprimés en rouge sous les positions ; sans prix, la page de garde
+  liste les étapes sans montants et le détail n'a ni Prix ni Montant.
+- **Saut de page** : position `kind = pagebreak` (sans description, bouton à droite du champ d'ajout de chaque étape,
+  déplaçable par sa poignée) ; dessiné en pointillé sur la feuille, le PDF ferme et rouvre le tableau de détail.
 - **Sous-détails types** (`breakdown_templates` → `breakdown_template_lines`, page `/sous-details-types`) : la
   bibliothèque d'ouvrages du métreur (110 ouvrages transcrits de « Remarques avec calculs devis », dans
   `database/data/breakdown_templates.json`, chargés par `BreakdownTemplateSeeder` dans **tous** les environnements,
@@ -166,10 +181,22 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `page_script` (n° TVA en page 1, rappel du document ensuite, « Page x de n »). **Numérotation continue à l'impression**
   (`DocumentPrint::steps`) : étape 5, positions 5.1, 5.2 ; un sous-titre 6.1 ouvre 6.1.1. Coordonnées et textes par défaut
   de l'entreprise dans `config/company.php` (surchargeables par `COMPANY_*`), logo dans `resources/images/`.
-  Remarques internes et sous-détails ne sont jamais imprimés. Pas encore d'options d'impression (sans prix, etc.).
+  Remarques internes jamais imprimées ; sous-détails et prix selon les options d'affichage du devis (ci-dessus).
 - Marge affichée dans la récapitulation (usage interne, seuil 30 %), calculée sur les positions ayant un prix de revient
   (sous-détail ou prix d'achat).
 - Tout le module est réservé à `roles:admin,responsable` (prix). `POST /documents/{id}/duplicate` crée la version suivante.
+- **Panneau de gauche du devis** (`DocumentsPage`, `AsidePanel fill` + `components/baubit/Accordion`) : deux sections
+  dépliables. **« Étapes et devis »** = documents du projet + `StepsPanel` (navigation, modèles, ajout d'étape).
+  **« Catalogue de prix »** = `components/documents/CatalogPanel` : chapitres (dossiers, ✓ si l'étape est dans le devis,
+  compteur d'articles) et articles (recherche en mémoire via `useArticlePicker`). Double-clic ou « + » sur un article :
+  `lib/quoteInsert.ts` → `insertArticle()` le place dans l'étape de son chapitre (ou du chapitre parent), **créée
+  d'abord (titre seul) si elle manque** ; sur un chapitre : `ensureStep()`. Crayon sur un article : `ArticleQuickEdit`
+  modifie le catalogue seulement (les positions du devis sont des instantanés, jamais touchées).
+  **Glisser-déposer** du catalogue vers la feuille : l'élément glissé est gardé dans `lib/catalogDrag.ts`
+  (`dataTransfer` illisible pendant le survol) ; déposé sur une ligne (au-dessus / en dessous), sur le titre d'une
+  étape (en tête) ou son champ d'ajout (en fin) → à cet endroit (`after_id`, ou ajout + `reorderPositions` en tête) ;
+  ailleurs sur la feuille ou sur l'état vide → règle automatique de l'étape. `takeCatalogDrag()` garantit un seul
+  gestionnaire par dépôt.
 - **Modèles de devis** (`quote_templates` → `quote_template_steps`, page `/modeles-devis`) : jeu d'étapes
   (chapitres, avec ou sans articles, ou libres), un seul `is_default`. `POST /projects/{id}/documents`
   applique le modèle choisi (`quote_template_id`), sinon le modèle par défaut ; `null` = devis vide.

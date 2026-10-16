@@ -22,7 +22,7 @@ const CELL =
 
 /**
  * Tableau des lignes d'un sous-détail de prix, par famille (MO, MAT, MACH, MAT EX, OUT, ST) :
- * ressource, quantité (× DIM), conditionnement, coût unitaire, majoration, vente. Partagé par la
+ * ressource, quantité (× Qté de la ligne), conditionnement, coût unitaire, majoration, vente. Partagé par la
  * fenêtre du devis et par les sous-détails types.
  */
 export default function BreakdownLinesTable({ evaluated, onUpdateLine, onAddLine, onRemoveLine, readOnly = false, className = 'max-h-[52vh]' }: BreakdownLinesTableProps) {
@@ -40,8 +40,8 @@ export default function BreakdownLinesTable({ evaluated, onUpdateLine, onAddLine
             <th className="border-b border-gray-200 px-2 py-1.5 text-left">Ressource</th>
             <th className="w-20 border-b border-gray-200 px-1 py-1.5 text-right">Quantité</th>
             <th className="w-14 border-b border-gray-200 px-1 py-1.5 text-left">Un.</th>
-            <th className="w-12 border-b border-gray-200 px-1 py-1.5 text-center" title="Quantité par unité de dimension (× DIM)">
-              × DIM
+            <th className="w-12 border-b border-gray-200 px-1 py-1.5 text-center" title="Quantité par unité de la ligne : multipliée par sa quantité (× Qté)">
+              × Qté
             </th>
             <th className="w-16 border-b border-gray-200 px-1 py-1.5 text-right" title="Conditionnement : arrondi au sac, à la pièce entière…">
               Cond.
@@ -79,7 +79,7 @@ export default function BreakdownLinesTable({ evaluated, onUpdateLine, onAddLine
                     <input value={line.unit} onChange={(e) => onUpdateLine(line.key, { unit: e.target.value })} disabled={readOnly} maxLength={20} className={CELL} aria-label="Unité" />
                   </td>
                   <td className="py-0.5 text-center">
-                    <input type="checkbox" checked={line.per_dimension} onChange={(e) => onUpdateLine(line.key, { per_dimension: e.target.checked })} disabled={readOnly} title="Quantité par unité de dimension : × DIM" className="h-4 w-4 accent-primary-600" />
+                    <input type="checkbox" checked={line.per_dimension} onChange={(e) => onUpdateLine(line.key, { per_dimension: e.target.checked })} disabled={readOnly} title="Quantité par unité de la ligne : × Qté" className="h-4 w-4 accent-primary-600" />
                   </td>
                   <td className="py-0.5">
                     <input value={line.pack_size} onChange={(e) => onUpdateLine(line.key, { pack_size: e.target.value })} disabled={readOnly} inputMode="decimal" placeholder="—" title="Conditionnement (ex. sac de 25 kg, ou 1 pour arrondir à l'unité)" className={`${CELL} text-right`} aria-label="Conditionnement" />

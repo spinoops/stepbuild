@@ -1,5 +1,6 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Link } from 'react-router-dom'
 import { z } from 'zod'
 import { BbCheckbox, BbInput, BbSelect, BbTextarea, Field, StatusSelect } from '@/components/baubit/Form'
 import { useEntityForm } from '@/hooks/useEntityForm'
@@ -8,9 +9,12 @@ import { fetchNextProjectNumber, useAddressOptions } from '@/hooks/useProjects'
 import { nullable, useSaveResource } from '@/lib/crud'
 import { PROJECT_STATUSES } from '@/lib/status'
 import { toast } from '@/lib/toast'
-import type { Project, ProjectStatus } from '@/types'
+import type { Address, Project, ProjectStatus } from '@/types'
 
 export const PROJECT_FORM_ID = 'project-form'
+
+/** Onglets de la fiche servis par ce formulaire (les deux partagent la même sauvegarde automatique). */
+export type ProjectFormSection = 'general' | 'client'
 
 const STATUS_OPTIONS = (Object.keys(PROJECT_STATUSES) as ProjectStatus[]).map((key) => ({
   value: key,
@@ -19,7 +23,7 @@ const STATUS_OPTIONS = (Object.keys(PROJECT_STATUSES) as ProjectStatus[]).map((k
 }))
 
 const schema = z.object({
-  number: z.string().trim().min(1, 'Le numéro de projet est requis.').max(30),
+  number: z.string().trim().min(1, 'Le numéro de projet est requis : saisissez le NPA du chantier.').max(30),
   designation1: z.string().trim().min(1, 'La désignation 1 est requise.').max(255),
   designation2: z.string().max(255),
   client_id: z.string(),
@@ -65,22 +69,28 @@ function toValues(project: Project | null): FormValues {
 interface ProjectFormProps {
   project: Project | null
   isNew: boolean
+  /** Onglet affiché : « Général » (chantier) ou « Client ». Les deux restent montés pour garder la saisie. */
+  section: ProjectFormSection
   /** Lecture seule (rôle ouvrier ou aucune fiche sélectionnée). */
   readOnly: boolean
   onStateChange: (state: SaveState) => void
   onCreated: (project: Project) => void
 }
 
-/** Onglet « Général » de la fiche projet, avec sauvegarde automatique. */
-export default function ProjectForm({ project, isNew, readOnly, onStateChange, onCreated }: ProjectFormProps) {
+/**
+ * Fiche projet : onglet « Général » (NPA et lieu d'abord, qui donnent le numéro 2800-002, puis le
+ * chantier) et onglet « Client » (client du carnet et ses coordonnées), avec sauvegarde automatique.
+ */
+export default function ProjectForm({ project, isNew, section, readOnly, onStateChange, onCreated }: ProjectFormProps) {
   const save = useSaveResource<Project, Record<string, unknown>>('projects')
   const clients = useAddressOptions(!readOnly)
   const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: toValues(project) })
   const { register, formState, watch, setValue, getValues } = form
   const errors = formState.errors
   const firstError = Object.values(errors)[0]?.message
-  // eslint-disable-next-line react-hooks/incompatible-library -- watch() de react-hook-form, usage voulu
   const status = watch('status')
+  // eslint-disable-next-line react-hooks/incompatible-library -- watch() de react-hook-form, usage voulu
+  const clientId = watch('client_id')
 
   const { submit, onBlur } = useEntityForm(form, {
     isNew,
@@ -126,7 +136,7 @@ export default function ProjectForm({ project, isNew, readOnly, onStateChange, o
     }
   }
 
-  /** Nouveau projet : le client choisi pré-remplit la désignation et l'adresse du chantier. */
+  /** Nouveau projet : le client choisi pré-remplit la désignation et, si rien n'est saisi, l'adresse du chantier. */
   function onClientChange(value: string) {
     const client = clients.data?.find((item) => String(item.id) === value)
     if (!isNew || !client) {
@@ -147,12 +157,42 @@ export default function ProjectForm({ project, isNew, readOnly, onStateChange, o
 
   const clientField = register('client_id')
   const zipField = register('zip')
+  const client: Address | null = clients.data?.find((item) => String(item.id) === clientId) ?? null
 
   return (
     <form id={PROJECT_FORM_ID} onSubmit={submit} onBlur={onBlur} className="mt-4">
-      <fieldset disabled={readOnly} className="grid grid-cols-[max-content_max-content] gap-x-12 gap-y-2">
+      {/* Onglet Général : le NPA et le lieu viennent en premier, le numéro de projet en découle. */}
+      <fieldset disabled={readOnly} hidden={section !== 'general'} className="grid grid-cols-[max-content_max-content] gap-x-12 gap-y-2">
+        <Field label="NPA / Lieu">
+          <BbInput
+            className="w-20"
+            autoFocus={isNew}
+            placeholder="NPA"
+            inputMode="numeric"
+            {...zipField}
+            onChange={(event) => {
+              void zipField.onChange(event)
+              // Dès que le NPA est complet, le numéro de projet est proposé sans attendre la sortie du champ.
+              if (isNew && event.target.value.trim().length >= 4) {
+                void suggestNumber(false)
+              }
+            }}
+            onBlur={(event) => {
+              void zipField.onBlur(event)
+              if (isNew) {
+                void suggestNumber(false)
+              }
+            }}
+          />
+          <BbInput className="w-[172px]" placeholder="Localité" {...register('city')} />
+        </Field>
+        <div className="flex items-center gap-8">
+          <BbCheckbox label="Actif" {...register('is_active')} />
+          <BbCheckbox label="Modèle de projet" {...register('is_template')} />
+        </div>
+
         <Field label="N° de projet">
-          <BbInput className="w-44" invalid={Boolean(errors.number)} {...register('number')} />
+          <BbInput className="w-44" placeholder="NPA-001" invalid={Boolean(errors.number)} {...register('number')} />
           {!readOnly && (
             <button
               type="button"
@@ -164,36 +204,18 @@ export default function ProjectForm({ project, isNew, readOnly, onStateChange, o
             </button>
           )}
         </Field>
-        <div className="flex items-center gap-8">
-          <BbCheckbox label="Actif" {...register('is_active')} />
-          <BbCheckbox label="Modèle de projet" {...register('is_template')} />
-        </div>
-
-        <Field label="Client" className="col-span-2">
-          <BbSelect
-            className="w-[560px]"
-            {...clientField}
-            onChange={(event) => {
-              void clientField.onChange(event)
-              onClientChange(event.target.value)
-            }}
-          >
-            <option value="">— aucun client —</option>
-            {project?.client && !clients.data?.some((item) => item.id === project.client?.id) && (
-              <option value={project.client.id}>{project.client.label}</option>
-            )}
-            {(clients.data ?? []).map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.last_name} {item.first_name}
-                {item.city ? `, ${item.city}` : ''}
-              </option>
-            ))}
-          </BbSelect>
+        <Field label="Statut" labelWidth={90}>
+          <StatusSelect
+            options={STATUS_OPTIONS}
+            value={status}
+            onChange={(value) => setValue('status', value as ProjectStatus, { shouldDirty: true, shouldTouch: true })}
+            className="w-64"
+          />
         </Field>
+
         <Field label="Désignation 1" className="col-span-2">
           <BbInput
             className="w-[560px]"
-            autoFocus={isNew}
             placeholder="Nom client - Travaux à réaliser (ex. Rénovation salle de bain)"
             invalid={Boolean(errors.designation1)}
             {...register('designation1')}
@@ -212,44 +234,105 @@ export default function ProjectForm({ project, isNew, readOnly, onStateChange, o
           <BbInput className="w-48" {...register('phone')} />
         </Field>
 
-        <Field label="NPA / Lieu">
-          <BbInput
-            className="w-20"
-            {...zipField}
-            onBlur={(event) => {
-              void zipField.onBlur(event)
-              if (isNew) {
-                void suggestNumber(false)
-              }
-            }}
-          />
-          <BbInput className="w-[172px]" {...register('city')} />
+        <Field label="N° contrat">
+          <BbInput className="w-64" {...register('contract_no')} />
         </Field>
         <Field label="Mobile" labelWidth={90}>
           <BbInput className="w-48" {...register('mobile')} />
         </Field>
 
-        <Field label="N° contrat">
-          <BbInput className="w-64" {...register('contract_no')} />
-        </Field>
-        <Field label="Unité d'imput." labelWidth={90}>
-          <BbInput className="w-48" {...register('cost_unit')} />
-        </Field>
-
-        <Field label="Statut">
-          <StatusSelect
-            options={STATUS_OPTIONS}
-            value={status}
-            onChange={(value) => setValue('status', value as ProjectStatus, { shouldDirty: true, shouldTouch: true })}
-            className="w-64"
-          />
+        <Field label="Unité d'imput.">
+          <BbInput className="w-64" {...register('cost_unit')} />
         </Field>
         <div className="row-span-2 flex items-start gap-2">
           <span className="w-[90px] shrink-0 pt-1.5 text-[13px] text-gray-500">Instructions facture</span>
           <BbTextarea rows={2} className="w-72" {...register('invoice_instructions')} />
         </div>
       </fieldset>
+
+      {/* Onglet Client : le client du carnet d'adresses et ses coordonnées (lecture seule, modifiables dans le carnet). */}
+      <fieldset disabled={readOnly} hidden={section !== 'client'} className="min-h-[196px]">
+        <Field label="Client">
+          <BbSelect
+            className="w-[560px]"
+            autoFocus={section === 'client' && !readOnly}
+            {...clientField}
+            onChange={(event) => {
+              void clientField.onChange(event)
+              onClientChange(event.target.value)
+            }}
+          >
+            <option value="">— aucun client —</option>
+            {project?.client && !clients.data?.some((item) => item.id === project.client?.id) && (
+              <option value={project.client.id}>{project.client.label}</option>
+            )}
+            {(clients.data ?? []).map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.last_name} {item.first_name}
+                {item.city ? `, ${item.city}` : ''}
+              </option>
+            ))}
+          </BbSelect>
+        </Field>
+        {client ? (
+          <ClientDetails client={client} canOpen={!readOnly} />
+        ) : project?.client && !readOnly ? (
+          <p className="mt-3 text-[13px] text-gray-500">{project.client.label}</p>
+        ) : (
+          <p className="mt-3 text-[13px] text-gray-400">
+            {readOnly ? 'Aucun client lié.' : 'Choisissez le client dans le carnet d’adresses : ses coordonnées s’affichent ici.'}
+          </p>
+        )}
+      </fieldset>
       {firstError && <p className="mt-2 text-[12px] text-red-600">{firstError}</p>}
     </form>
+  )
+}
+
+/** Coordonnées du client choisi, telles qu'elles figurent dans le carnet d'adresses. */
+function ClientDetails({ client, canOpen }: { client: Address; canOpen: boolean }) {
+  const name = [client.title, client.last_name, client.first_name].filter(Boolean).join(' ')
+  const rows: Array<[string, string | null]> = [
+    ['Adresse', [client.street, client.street_no].filter(Boolean).join(' ') || null],
+    ['NPA / Lieu', [client.zip, client.city].filter(Boolean).join(' ') || null],
+    ['Téléphone', client.phone],
+    ['Mobile', client.mobile],
+    ['E-mail', client.email],
+    ['N° débiteur', client.debtor_no],
+  ]
+  return (
+    <div className="mt-3 grid w-[560px] grid-cols-[120px_1fr] gap-x-2 gap-y-1 text-[13px]">
+      <span className="text-gray-500">Nom</span>
+      <span className="font-medium text-gray-800">
+        {name}
+        {client.designation && <span className="font-normal text-gray-500"> · {client.designation}</span>}
+      </span>
+      {rows
+        .filter(([, value]) => value)
+        .map(([label, value]) => (
+          <FieldRow key={label} label={label} value={value ?? ''} />
+        ))}
+      {canOpen && (
+        <Link to={`/clients?id=${client.id}`} className="col-start-2 mt-1 text-[12px] text-primary-700 hover:underline">
+          Ouvrir la fiche dans le carnet d'adresses
+        </Link>
+      )}
+    </div>
+  )
+}
+
+function FieldRow({ label, value }: { label: string; value: string }) {
+  const isMail = label === 'E-mail'
+  return (
+    <>
+      <span className="text-gray-500">{label}</span>
+      {isMail ? (
+        <a href={`mailto:${value}`} className="text-primary-700 hover:underline">
+          {value}
+        </a>
+      ) : (
+        <span className="text-gray-800">{value}</span>
+      )}
+    </>
   )
 }

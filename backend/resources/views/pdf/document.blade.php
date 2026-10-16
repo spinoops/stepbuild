@@ -12,6 +12,7 @@
         trim(($project?->zip ?? '').' '.($project?->city ?? '')),
     ]);
     $intro = $document->header_text ?: ($document->type === 'devis' ? $company['quote_intro'] : null);
+    $columns = $showPrices ? 6 : 4;
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -65,6 +66,10 @@
         .detail tr.text td { font-style: italic; color: #444; }
         .detail tr.item td { border-bottom: 0.2pt solid #e6e6e6; }
         .detail tr.item { page-break-inside: avoid; }
+        .detail tr.item.detailed td { border-bottom: none; padding-bottom: 0.4mm; }
+        .detail tr.cost td { color: #b91c1c; font-size: 7pt; line-height: 1.2; padding: 0 1mm; }
+        .detail tr.cost.last td { border-bottom: 0.2pt solid #e6e6e6; padding-bottom: 1.2mm; }
+        .detail tr.cost td.fam { width: 13mm; padding-left: 4mm; }
         .detail .description { white-space: pre-line; }
         .option { color: #777; }
         .grand-total td { border-top: 0.8pt solid #1f1f1f; font-weight: bold; padding: 2.5mm 1mm; }
@@ -123,56 +128,62 @@
         <div class="intro">{{ $intro }}</div>
     @endif
 
-    <h2>Récapitulation</h2>
+    <h2>{{ $showPrices ? 'Récapitulation' : 'Étapes des travaux' }}</h2>
     <table class="recap">
         @foreach ($steps as $step)
             <tr>
                 <td class="num">{{ $step['number'] }}</td>
                 <td>{{ $step['label'] }}</td>
-                <td class="cur">CHF</td>
-                <td class="amount">{{ P::money($step['total']) }}</td>
+                @if ($showPrices)
+                    <td class="cur">CHF</td>
+                    <td class="amount">{{ P::money($step['total']) }}</td>
+                @endif
             </tr>
         @endforeach
-        <tr class="total">
-            <td colspan="2">Total brut</td>
-            <td class="cur">CHF</td>
-            <td class="amount">{{ P::money($document->total_net) }}</td>
-        </tr>
-        @if ($document->discount_amount > 0)
-            <tr class="sub">
-                <td colspan="2">Rabais {{ rtrim(rtrim(number_format($document->discount_percent, 2, '.', ''), '0'), '.') }} %</td>
+        @if ($showPrices)
+            <tr class="total">
+                <td colspan="2">Total brut</td>
                 <td class="cur">CHF</td>
-                <td class="amount">- {{ P::money($document->discount_amount) }}</td>
+                <td class="amount">{{ P::money($document->total_net) }}</td>
             </tr>
+            @if ($document->discount_amount > 0)
+                <tr class="sub">
+                    <td colspan="2">Rabais {{ rtrim(rtrim(number_format($document->discount_percent, 2, '.', ''), '0'), '.') }} %</td>
+                    <td class="cur">CHF</td>
+                    <td class="amount">- {{ P::money($document->discount_amount) }}</td>
+                </tr>
+                <tr class="sub">
+                    <td colspan="2">Total net HT</td>
+                    <td class="cur">CHF</td>
+                    <td class="amount">{{ P::money($base) }}</td>
+                </tr>
+            @endif
             <tr class="sub">
-                <td colspan="2">Total net HT</td>
+                <td colspan="2">TVA {{ number_format($document->vat_rate, 2, '.', '') }} % sur CHF {{ P::money($base) }}</td>
                 <td class="cur">CHF</td>
-                <td class="amount">{{ P::money($base) }}</td>
+                <td class="amount">{{ P::money($document->total_vat) }}</td>
+            </tr>
+            @if (abs($document->rounding) >= 0.005)
+                <tr class="sub">
+                    <td colspan="2">Arrondi</td>
+                    <td class="cur">CHF</td>
+                    <td class="amount">{{ P::money($document->rounding) }}</td>
+                </tr>
+            @endif
+            <tr class="grand">
+                <td colspan="2">Total net TTC</td>
+                <td class="cur">CHF</td>
+                <td class="amount">{{ P::money($document->total_gross) }}</td>
             </tr>
         @endif
-        <tr class="sub">
-            <td colspan="2">TVA {{ number_format($document->vat_rate, 2, '.', '') }} % sur CHF {{ P::money($base) }}</td>
-            <td class="cur">CHF</td>
-            <td class="amount">{{ P::money($document->total_vat) }}</td>
-        </tr>
-        @if (abs($document->rounding) >= 0.005)
-            <tr class="sub">
-                <td colspan="2">Arrondi</td>
-                <td class="cur">CHF</td>
-                <td class="amount">{{ P::money($document->rounding) }}</td>
-            </tr>
-        @endif
-        <tr class="grand">
-            <td colspan="2">Total net TTC</td>
-            <td class="cur">CHF</td>
-            <td class="amount">{{ P::money($document->total_gross) }}</td>
-        </tr>
     </table>
 
-    <div class="terms">
-        <span class="label">Conditions de paiement</span><br>
-        {{ $company['payment_terms'] }}
-    </div>
+    @if ($showPrices)
+        <div class="terms">
+            <span class="label">Conditions de paiement</span><br>
+            {{ $company['payment_terms'] }}
+        </div>
+    @endif
 
     @if ($document->footer_text)
         <div class="intro">{{ $document->footer_text }}</div>
@@ -195,47 +206,62 @@
         </div>
     </div>
 
-    {{-- Détail des positions --}}
+    {{-- Détail des positions : un saut de page dans le devis ferme le tableau et en ouvre un sur la page suivante. --}}
+    @php
+        $head = '<thead><tr><th>Pos.</th><th>Description</th><th>Un.</th><th class="qty">Quantité</th>'
+            .($showPrices ? '<th class="price">Prix</th><th class="amount">Montant</th>' : '')
+            .'</tr></thead>';
+    @endphp
     <table class="detail">
-        <thead>
-            <tr>
-                <th>Pos.</th>
-                <th>Description</th>
-                <th>Un.</th>
-                <th class="qty">Quantité</th>
-                <th class="price">Prix</th>
-                <th class="amount">Montant</th>
-            </tr>
-        </thead>
+        {!! $head !!}
         <tbody>
             @foreach ($steps as $step)
                 <tr class="step">
                     <td class="pos">{{ $step['number'] }}</td>
-                    <td colspan="5">{{ $step['label'] }}</td>
+                    <td colspan="{{ $columns - 1 }}">{{ $step['label'] }}</td>
                 </tr>
                 @foreach ($step['rows'] as $row)
-                    @if ($row['kind'] === 'item')
-                        <tr class="item {{ $row['is_optional'] ? 'option' : '' }}">
+                    @if ($row['kind'] === 'pagebreak')
+                        </tbody></table><table class="detail">{!! $head !!}<tbody>
+                    @elseif ($row['kind'] === 'item')
+                        @php $costs = $withBreakdown ? $row['costs'] : []; @endphp
+                        <tr class="item {{ $row['is_optional'] ? 'option' : '' }} {{ $costs ? 'detailed' : '' }}">
                             <td class="pos">{{ $row['number'] }}</td>
                             <td class="description">{{ $row['description'] }}@if ($row['is_optional']) <span class="nowrap">(option, hors total)</span>@endif</td>
                             <td class="unit">{{ $row['unit'] }}</td>
                             <td class="qty">{{ $row['quantity'] !== null ? P::money($row['quantity']) : '' }}</td>
-                            <td class="price">{{ P::money($row['unit_price']) }}</td>
-                            <td class="amount">{{ P::money($row['amount']) }}</td>
+                            @if ($showPrices)
+                                <td class="price">{{ P::money($row['unit_price']) }}</td>
+                                <td class="amount">{{ P::money($row['amount']) }}</td>
+                            @endif
                         </tr>
+                        @foreach ($costs as $cost)
+                            <tr class="cost {{ $loop->last ? 'last' : '' }}">
+                                <td></td>
+                                <td>{{ $cost['family'] }} · {{ $cost['label'] }}</td>
+                                <td class="unit">{{ $cost['unit'] }}</td>
+                                <td class="qty">{{ P::qty($cost['quantity']) }}</td>
+                                @if ($showPrices)
+                                    <td class="price">{{ P::money($cost['unit_cost']) }}@if ($cost['markup_percent']) +{{ P::qty($cost['markup_percent']) }}%@endif</td>
+                                    <td class="amount">{{ P::money($cost['sale']) }}</td>
+                                @endif
+                            </tr>
+                        @endforeach
                     @else
                         <tr class="{{ $row['kind'] }}">
                             <td class="pos">{{ $row['number'] }}</td>
-                            <td colspan="5" class="description">{{ $row['description'] }}</td>
+                            <td colspan="{{ $columns - 1 }}" class="description">{{ $row['description'] }}</td>
                         </tr>
                     @endif
                 @endforeach
             @endforeach
-            <tr class="grand-total">
-                <td></td>
-                <td colspan="4">Total brut</td>
-                <td class="amount right">{{ P::money($document->total_net) }}</td>
-            </tr>
+            @if ($showPrices)
+                <tr class="grand-total">
+                    <td></td>
+                    <td colspan="4">Total brut</td>
+                    <td class="amount right">{{ P::money($document->total_net) }}</td>
+                </tr>
+            @endif
         </tbody>
     </table>
 </body>

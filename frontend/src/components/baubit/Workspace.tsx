@@ -95,10 +95,12 @@ interface AsidePanelProps {
   children?: ReactNode
   /** Entrées de navigation en bas du panneau (vues de la page). */
   nav?: AsideNavItem[]
+  /** Le contenu gère lui-même son défilement (sections dépliables) : il remplit le panneau sans marge. */
+  fill?: boolean
 }
 
 /** Panneau « Aperçu » : titre + punaise, contenu, navigation en bas. */
-export function AsidePanel({ title = 'Aperçu', children, nav }: AsidePanelProps) {
+export function AsidePanel({ title = 'Aperçu', children, nav, fill = false }: AsidePanelProps) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-11 shrink-0 items-center justify-between px-4">
@@ -112,7 +114,7 @@ export function AsidePanel({ title = 'Aperçu', children, nav }: AsidePanelProps
           <Icon name="pin" className="h-3.5 w-3.5" />
         </button>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto px-3 pb-3">{children}</div>
+      <div className={fill ? 'flex min-h-0 flex-1 flex-col' : 'min-h-0 flex-1 overflow-auto px-3 pb-3'}>{children}</div>
       {nav && nav.length > 0 && (
         <div className="shrink-0 space-y-0.5 border-t border-gray-200 p-2">
           {nav.map((item) => (

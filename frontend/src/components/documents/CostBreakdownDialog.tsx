@@ -2,11 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Modal from '@/components/ui/Modal'
 import BreakdownLinesTable from '@/components/documents/BreakdownLinesTable'
 import TemplatePicker from '@/components/documents/TemplatePicker'
-import { toNumber } from '@/lib/crud'
 import { fmtAmount } from '@/lib/format'
 import { toast } from '@/lib/toast'
 import { round2 } from '@/lib/costFamilies'
-import { evaluateLines, hasLabel, insertLine, lineFromData, numberText, toLinePayload } from '@/lib/breakdown'
+import { evaluateLines, hasLabel, insertLine, lineFromData, toLinePayload } from '@/lib/breakdown'
 import type { LineDraft } from '@/lib/breakdown'
 import type { DocumentActions } from '@/hooks/useDocuments'
 import { fetchTemplateForUse, useSaveBreakdownTemplate } from '@/hooks/useBreakdownTemplates'
@@ -14,9 +13,6 @@ import type { DocumentPosition } from '@/types'
 import { Icon } from '@/components/icons'
 
 interface BreakdownState {
-  dimension: string
-  dimension_unit: string
-  price_per_dimension: boolean
   internal_remark: string
   lines: LineDraft[]
 }
@@ -25,16 +21,13 @@ interface CostBreakdownDialogProps {
   position: DocumentPosition
   actions: DocumentActions
   onSaving: (saving: boolean) => void
-  /** Le prix calculé vient d'être reporté dans la position (la ligne du devis se resynchronise). */
+  /** Le sous-détail vient d'être enregistré : le prix de la ligne du devis en découle (la ligne se resynchronise). */
   onPriceApplied: () => void
   onClose: () => void
 }
 
 function fromPosition(position: DocumentPosition): BreakdownState {
   return {
-    dimension: numberText(position.dimension),
-    dimension_unit: position.dimension_unit ?? '',
-    price_per_dimension: position.price_per_dimension,
     internal_remark: position.internal_remark ?? '',
     lines: (position.costs ?? []).map((cost) => lineFromData(cost)),
   }
@@ -44,20 +37,20 @@ function fromPosition(position: DocumentPosition): BreakdownState {
 function serialize(state: BreakdownState) {
   const sent = state.lines.filter(hasLabel)
   const payload = {
-    dimension: toNumber(state.dimension),
-    dimension_unit: state.dimension_unit.trim() || null,
-    price_per_dimension: state.price_per_dimension,
     internal_remark: state.internal_remark.trim() || null,
     lines: sent.map(toLinePayload),
   }
   return { sent, payload, serialized: JSON.stringify({ ...payload, lines: payload.lines.map((line) => ({ ...line, id: undefined })) }) }
 }
 
+/** Quantité affichée : 10, 2.5, 37.8. */
+const qty = (value: number) => String(Math.round(value * 1000) / 1000)
+
 /**
- * Sous-détail de prix d'une position : le prix de vente se construit à partir des coûts par famille
- * (MO, MAT, MACH, MAT EX, OUT, ST) rapportés à la dimension de l'ouvrage, puis majorés. Un sous-détail
- * type (bibliothèque du métreur) se charge d'un mot ; enregistré automatiquement ; « Reporter » copie le
- * prix calculé dans la ligne du devis.
+ * Sous-détail de prix d'une position : **le calcul complet de la ligne**. Les coûts par famille
+ * (MO, MAT, MACH, MAT EX, OUT, ST), majorés, donnent le total de la ligne ; divisé par sa quantité,
+ * il devient le prix unitaire (1 000.- pour 10 m² → 100.-/m²), qui suit ensuite tout changement de
+ * quantité. Un sous-détail type (bibliothèque du métreur) se charge d'un mot ; enregistré automatiquement.
  */
 export default function CostBreakdownDialog({ position, actions, onSaving, onPriceApplied, onClose }: CostBreakdownDialogProps) {
   const [state, setState] = useState<BreakdownState>(() => fromPosition(position))
@@ -67,16 +60,15 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
   const [status, setStatus] = useState<'idle' | 'saving' | 'error'>('idle')
   const saveTemplate = useSaveBreakdownTemplate()
 
-  const dimension = toNumber(state.dimension)
-  const divisor = state.price_per_dimension && dimension !== null && dimension > 0 ? dimension : 1
-  const evaluated = useMemo(() => evaluateLines(state.lines, dimension), [state.lines, dimension])
+  // Quantité de référence = quantité de la ligne (une ligne sans quantité compte pour 1).
+  const quantity = position.quantity !== null && position.quantity > 0 ? position.quantity : 1
+  const evaluated = useMemo(() => evaluateLines(state.lines, quantity), [state.lines, quantity])
   const totalCost = round2(evaluated.reduce((sum, item) => sum + item.cost, 0))
   const totalSale = round2(evaluated.reduce((sum, item) => sum + item.sale, 0))
-  const calculatedPrice = round2(totalSale / divisor)
-  const calculatedCost = round2(totalCost / divisor)
+  const unitPrice = round2(totalSale / quantity)
+  const unitCost = round2(totalCost / quantity)
   const hasLines = state.lines.some(hasLabel)
-  const currentPrice = position.unit_price
-  const difference = currentPrice !== null && hasLines ? round2(currentPrice - calculatedPrice) : null
+  const unitLabel = position.unit?.trim() || 'unité'
 
   function update(patch: Partial<BreakdownState> | ((current: BreakdownState) => BreakdownState), delay = 1000) {
     const next = typeof patch === 'function' ? patch(latest.current) : { ...latest.current, ...patch }
@@ -91,7 +83,7 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
   const addLine = (line: LineDraft) => update((current) => ({ ...current, lines: insertLine(current.lines, line) }))
   const removeLine = (key: number) => update((current) => ({ ...current, lines: current.lines.filter((line) => line.key !== key) }), 300)
 
-  /** Charge un sous-détail type : ses lignes remplacent les lignes actuelles, la DIM saisie est conservée. */
+  /** Charge un sous-détail type : ses lignes remplacent les lignes actuelles (les lignes « × Qté » suivent la quantité de la ligne). */
   async function loadTemplate(id: number) {
     if (hasLines && !window.confirm('Remplacer les lignes actuelles par celles du modèle ?')) {
       return
@@ -100,13 +92,9 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
       const template = await fetchTemplateForUse(id)
       update((current) => ({
         ...current,
-        dimension: current.dimension.trim() || numberText(template.dimension),
-        dimension_unit: template.dimension_unit ?? current.dimension_unit,
-        price_per_dimension: template.price_per_dimension,
         internal_remark: current.internal_remark.trim() || [`Modèle : ${template.name}`, template.note].filter(Boolean).join(' — '),
         lines: (template.lines ?? []).map((line) => lineFromData(line, false)),
       }), 0)
-      window.setTimeout(() => window.document.querySelector<HTMLInputElement>('[data-dim]')?.select(), 40)
     } catch {
       toast("Le modèle n'a pas pu être chargé.", 'error')
     }
@@ -124,9 +112,9 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
         id: null,
         payload: {
           name: name.trim(),
-          dimension: toNumber(current.dimension),
-          dimension_unit: current.dimension_unit.trim() || null,
-          price_per_dimension: current.price_per_dimension,
+          dimension: position.quantity,
+          dimension_unit: position.unit,
+          price_per_dimension: true,
           lines: current.lines.filter(hasLabel).map((line) => ({ ...toLinePayload(line), id: undefined })),
         },
       },
@@ -137,26 +125,25 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
     )
   }
 
-  // Les enregistrements se suivent dans l'ordre : un clic sur « Reporter » pendant une sauvegarde
-  // automatique attend qu'elle finisse au lieu d'être ignoré ou de partir en parallèle.
+  // Les enregistrements se suivent dans l'ordre : une saisie pendant une sauvegarde attend qu'elle finisse.
   const queue = useRef<Promise<void>>(Promise.resolve())
-  function save(applyPrice = false): Promise<void> {
-    const run = queue.current.then(() => doSave(applyPrice))
+  function save(): Promise<void> {
+    const run = queue.current.then(() => doSave())
     queue.current = run.catch(() => undefined)
     return run
   }
 
-  async function doSave(applyPrice: boolean) {
+  async function doSave() {
     window.clearTimeout(timer.current)
     const { sent, payload, serialized } = serialize(latest.current)
-    if (!applyPrice && serialized === saved.current) {
+    if (serialized === saved.current) {
       return
     }
     saved.current = serialized
     setStatus('saving')
     onSaving(true)
     try {
-      const document = await actions.saveBreakdown(position.id, { ...payload, apply_price: applyPrice })
+      const document = await actions.saveBreakdown(position.id, payload)
       // Les lignes créées reçoivent leur id (même ordre que l'envoi) : pas de doublon au prochain enregistrement.
       const fresh = document.steps?.flatMap((step) => step.positions).find((item) => item.id === position.id)
       if (fresh) {
@@ -171,10 +158,7 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
         setState((value) => ({ ...value, lines: withIds(value.lines) }))
       }
       setStatus('idle')
-      if (applyPrice) {
-        onPriceApplied()
-        toast('Prix reporté dans la position.', 'success')
-      }
+      onPriceApplied() // le prix unitaire de la ligne vient du sous-détail
     } catch {
       saved.current = ''
       setStatus('error')
@@ -197,7 +181,6 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
   }
 
   const title = [position.code, position.description.split('\n')[0]].filter(Boolean).join(' · ')
-  const unitLabel = state.dimension_unit.trim() || 'unité'
 
   return (
     <Modal open onClose={close} size="xl">
@@ -220,30 +203,14 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[13px]">
-          <label className="flex items-center gap-2">
-            <span className="font-medium text-gray-600" title="Dimension de l'ouvrage : les lignes « × DIM » y sont rapportées">
-              DIM
+          <span className="text-gray-600">
+            Quantité de la ligne :{' '}
+            <span className="font-semibold text-gray-800">
+              {position.quantity !== null ? qty(position.quantity) : '—'} {position.unit ?? ''}
             </span>
-            <input
-              data-dim
-              value={state.dimension}
-              onChange={(e) => update({ dimension: e.target.value })}
-              inputMode="decimal"
-              placeholder="9"
-              className="h-7 w-20 rounded-md border border-gray-300 px-2 text-right text-[13px] outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-            />
-            <input
-              value={state.dimension_unit}
-              onChange={(e) => update({ dimension_unit: e.target.value })}
-              placeholder="m²"
-              maxLength={20}
-              className="h-7 w-16 rounded-md border border-gray-300 px-2 text-[13px] outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-            />
-          </label>
-          <label className="flex items-center gap-2 text-gray-600">
-            <input type="checkbox" checked={state.price_per_dimension} onChange={(e) => update({ price_per_dimension: e.target.checked }, 0)} className="h-4 w-4 accent-primary-600" />
-            Prix de la position par {unitLabel} (total ÷ DIM)
-          </label>
+            {position.quantity === null && <span className="text-gray-400"> (compte pour 1 tant qu'elle n'est pas saisie)</span>}
+          </span>
+          <span className="text-[12px] text-gray-400">Le sous-détail chiffre la ligne entière ; les lignes « × Qté » suivent sa quantité.</span>
           <span className="ml-auto">
             <TemplatePicker onPick={(template) => void loadTemplate(template.id)} />
           </span>
@@ -264,56 +231,34 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
               className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-[13px] text-gray-800 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
             />
           </label>
-          <dl className="grid w-[340px] grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-[13px]">
-            <dt className="text-gray-500">Coût total</dt>
+          <dl className="grid w-[360px] grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-[13px]">
+            <dt className="text-gray-500">Coût total de la ligne</dt>
             <dd className="text-right tabular-nums">{fmtAmount(totalCost)}</dd>
-            <dt className="text-gray-500">Vente calculée (coûts majorés)</dt>
+            <dt className="text-gray-500">Vente totale (coûts majorés)</dt>
             <dd className="text-right tabular-nums">{fmtAmount(totalSale)}</dd>
-            {divisor !== 1 && (
-              <>
-                <dt className="text-gray-500">Par {unitLabel} : coût / vente</dt>
-                <dd className="text-right tabular-nums">
-                  {fmtAmount(calculatedCost)} / {fmtAmount(calculatedPrice)}
-                </dd>
-              </>
-            )}
-            <dt className="font-medium text-gray-700">Prix calculé de la position</dt>
-            <dd className="text-right font-semibold tabular-nums text-primary-800">{hasLines ? fmtAmount(calculatedPrice) : '—'}</dd>
-            <dt className="text-gray-500">Prix saisi dans le devis</dt>
+            <dt className="text-gray-500">
+              ÷ {qty(quantity)} {unitLabel} : coût / vente
+            </dt>
             <dd className="text-right tabular-nums">
-              {currentPrice !== null ? fmtAmount(currentPrice) : '—'}
-              {difference !== null && difference !== 0 && (
-                <span className={`ml-2 text-[12px] ${difference < 0 ? 'text-accent-600' : 'text-green-700'}`}>
-                  ({difference > 0 ? '+' : ''}
-                  {fmtAmount(difference)})
-                </span>
-              )}
+              {fmtAmount(unitCost)} / {fmtAmount(unitPrice)}
             </dd>
+            <dt className="font-medium text-gray-700">Prix unitaire de la position</dt>
+            <dd className="text-right font-semibold tabular-nums text-primary-800">{hasLines ? `${fmtAmount(unitPrice)} / ${unitLabel}` : '—'}</dd>
           </dl>
         </div>
 
         <div className="mt-4 flex items-center justify-between">
           <span className="flex items-center gap-3 text-[12px] text-gray-400">
-            {status === 'saving' ? 'Enregistrement…' : status === 'error' ? 'Non enregistré' : 'Enregistré automatiquement'}
+            {status === 'saving' ? 'Enregistrement…' : status === 'error' ? 'Non enregistré' : 'Enregistré automatiquement, prix reporté dans la ligne'}
             {hasLines && (
               <button type="button" onClick={saveAsTemplate} disabled={saveTemplate.isPending} className="text-gray-500 hover:text-primary-700 hover:underline">
                 Enregistrer comme sous-détail type
               </button>
             )}
           </span>
-          <div className="flex gap-2">
-            <button type="button" onClick={close} className="h-8 rounded-md px-3 text-[13px] text-gray-600 hover:bg-gray-100">
-              Fermer
-            </button>
-            <button
-              type="button"
-              disabled={!hasLines || (currentPrice !== null && difference === 0)}
-              onClick={() => void save(true)}
-              className="h-8 rounded-md bg-accent-600 px-3 text-[13px] font-medium text-white hover:bg-accent-700 disabled:opacity-40"
-            >
-              Reporter {hasLines ? fmtAmount(calculatedPrice) : ''} dans le prix
-            </button>
-          </div>
+          <button type="button" onClick={close} className="h-8 rounded-md bg-anthracite-800 px-3 text-[13px] font-medium text-white hover:bg-anthracite-700">
+            Fermer
+          </button>
         </div>
       </div>
     </Modal>

@@ -279,7 +279,8 @@ export interface DocumentPosition {
   id: number
   document_step_id: number
   catalog_article_id: number | null
-  kind: 'item' | 'title' | 'text'
+  /** item = chiffrée, title = sous-titre, text = texte sans prix, pagebreak = saut de page à l'impression. */
+  kind: 'item' | 'title' | 'text' | 'pagebreak'
   code: string | null
   description: string
   unit: string | null

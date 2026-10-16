@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Workspace, { AsidePanel } from '@/components/baubit/Workspace'
+import Accordion from '@/components/baubit/Accordion'
 import { ToolButton, ToolPrimary, ToolSep } from '@/components/baubit/Toolbar'
 import TabStrip from '@/components/baubit/TabStrip'
 import DataGrid from '@/components/baubit/DataGrid'
 import type { GridColumn } from '@/components/baubit/DataGrid'
 import GridPager from '@/components/baubit/GridPager'
+import CatalogPanel from '@/components/documents/CatalogPanel'
 import DocumentEditor from '@/components/documents/DocumentEditor'
 import DocumentHeaderForm from '@/components/documents/DocumentHeaderForm'
 import DocumentPreview from '@/components/documents/DocumentPreview'
@@ -25,6 +27,8 @@ import type { GridQuery } from '@/lib/crud'
 import { fmtAmount, fmtDate } from '@/lib/format'
 import { DOCUMENT_STATUSES, DOCUMENT_TYPE_LABELS } from '@/lib/status'
 import { toast } from '@/lib/toast'
+import { loadQuoteView, saveQuoteView } from '@/lib/quoteView'
+import type { QuoteViewOptions } from '@/lib/quoteView'
 import { setDocument, setProject, useWorkspace } from '@/lib/workspaceStore'
 import type { DocumentDetail } from '@/types'
 
@@ -71,6 +75,15 @@ export default function DocumentsPage() {
   const templates = useQuoteTemplates()
   const saveAsTemplate = useSaveDocumentAsTemplate()
   const [chooserOpen, setChooserOpen] = useState(false)
+  // Panneau de gauche : « Étapes et devis » pour naviguer, « Catalogue de prix » pour ajouter des articles.
+  const [stepsOpen, setStepsOpen] = useState(true)
+  const [catalogOpen, setCatalogOpen] = useState(true)
+  // Options d'affichage du devis (sous-détails, prix masqués), reprises par l'aperçu et le PDF.
+  const [view, setView] = useState<QuoteViewOptions>(loadQuoteView)
+  function changeView(next: QuoteViewOptions) {
+    setView(next)
+    saveQuoteView(next)
+  }
 
   const activeTab = tab ?? 'Détail'
   // Sans document ouvert, la page liste tous les documents (explorateur), sans onglet dédié.
@@ -160,7 +173,7 @@ export default function DocumentsPage() {
     <>
     <TemplateChooser open={chooserOpen} onClose={() => setChooserOpen(false)} onChoose={createWithTemplate} busy={create.isPending} />
     <Workspace
-      asideWidth={320}
+      asideWidth={360}
       tabLabel={doc ? `${DOCUMENT_TYPE_LABELS[doc.type]} N° ${doc.number}` : 'Documents'}
       entries={showDocument ? positions : (explorer.data?.meta.total ?? null)}
       totals={doc && showDocument ? `Net : ${fmtAmount(doc.total_net - doc.discount_amount)} CHF   ·   TTC : ${fmtAmount(doc.total_gross)} CHF` : undefined}
@@ -195,35 +208,40 @@ export default function DocumentsPage() {
         </>
       }
       aside={
-        <AsidePanel title="Devis" nav={[{ icon: 'tree', label: 'Étapes et modèles', active: true }]}>
-          <div className="mt-1 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Documents du projet</div>
-          {!projectId && <p className="mt-1.5 text-[13px] text-gray-400">Choisissez un projet dans la barre du haut.</p>}
-          <ul className="mt-1.5 space-y-0.5">
-            {(projectDocuments.data ?? []).map((item) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  onClick={() => open(item.id)}
-                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition ${
-                    item.id === currentId ? 'bg-primary-50 font-medium text-primary-700' : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <Icon name="file" className="h-4 w-4 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate">{item.number}</span>
-                  <span className="shrink-0 text-[12px] tabular-nums text-gray-500">{fmtAmount(item.total_gross)}</span>
-                </button>
-              </li>
-            ))}
-            {projectId && projectDocuments.data?.length === 0 && (
-              <li className="text-[13px] text-gray-400">Aucun document. Créez le devis du projet.</li>
-            )}
-          </ul>
+        <AsidePanel title="Devis" fill>
+          <Accordion title="Étapes et devis" open={stepsOpen} onToggle={() => setStepsOpen((value) => !value)} badge={doc ? `${doc.steps?.length ?? 0} étape${(doc.steps?.length ?? 0) > 1 ? 's' : ''}` : undefined}>
+            <div className="mt-1 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Documents du projet</div>
+            {!projectId && <p className="mt-1.5 text-[13px] text-gray-400">Choisissez un projet dans la barre du haut.</p>}
+            <ul className="mt-1.5 space-y-0.5">
+              {(projectDocuments.data ?? []).map((item) => (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => open(item.id)}
+                    className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition ${
+                      item.id === currentId ? 'bg-primary-50 font-medium text-primary-700' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Icon name="file" className="h-4 w-4 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">{item.number}</span>
+                    <span className="shrink-0 text-[12px] tabular-nums text-gray-500">{fmtAmount(item.total_gross)}</span>
+                  </button>
+                </li>
+              ))}
+              {projectId && projectDocuments.data?.length === 0 && (
+                <li className="text-[13px] text-gray-400">Aucun document. Créez le devis du projet.</li>
+              )}
+            </ul>
 
-          {doc && (
-            <div className="mt-5">
-              <DocumentSteps key={doc.id} document={doc} />
-            </div>
-          )}
+            {doc && (
+              <div className="mt-5">
+                <DocumentSteps key={doc.id} document={doc} />
+              </div>
+            )}
+          </Accordion>
+          <Accordion title="Catalogue de prix" open={catalogOpen} onToggle={() => setCatalogOpen((value) => !value)}>
+            {doc ? <DocumentCatalog key={doc.id} document={doc} /> : <CatalogPanel document={null} actions={null} />}
+          </Accordion>
         </AsidePanel>
       }
     >
@@ -263,6 +281,8 @@ export default function DocumentsPage() {
             key={doc.id}
             document={doc}
             tab={activeTab}
+            view={view}
+            onViewChange={changeView}
             onStateChange={setSaveState}
             onSaving={(saving) => setPending((value) => Math.max(0, value + (saving ? 1 : -1)))}
           />
@@ -279,14 +299,22 @@ function DocumentSteps({ document }: { document: DocumentDetail }) {
   return <StepsPanel document={document} actions={actions} />
 }
 
+/** Catalogue de prix branché sur le document ouvert (ajout d'articles et d'étapes). */
+function DocumentCatalog({ document }: { document: DocumentDetail }) {
+  const actions = useDocumentActions(document.id)
+  return <CatalogPanel document={document} actions={actions} />
+}
+
 interface DocumentBodyProps {
   document: DocumentDetail
   tab: string
+  view: QuoteViewOptions
+  onViewChange: (view: QuoteViewOptions) => void
   onStateChange: (state: SaveState) => void
   onSaving: (saving: boolean) => void
 }
 
-function DocumentBody({ document, tab, onStateChange, onSaving }: DocumentBodyProps) {
+function DocumentBody({ document, tab, view, onViewChange, onStateChange, onSaving }: DocumentBodyProps) {
   const actions = useDocumentActions(document.id)
 
   if (tab === 'En-tête') {
@@ -296,9 +324,9 @@ function DocumentBody({ document, tab, onStateChange, onSaving }: DocumentBodyPr
     return <DocumentRecap document={document} />
   }
   if (tab === 'Aperçu') {
-    return <DocumentPreview document={document} />
+    return <DocumentPreview document={document} options={view} onOptionsChange={onViewChange} />
   }
-  return <DocumentEditor document={document} actions={actions} onSaving={onSaving} />
+  return <DocumentEditor document={document} actions={actions} onSaving={onSaving} view={view} onViewChange={onViewChange} />
 }
 
 /** Retire d'un coup toutes les lignes du devis restées sans quantité (articles du modèle non retenus). */

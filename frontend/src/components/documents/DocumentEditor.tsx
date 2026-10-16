@@ -4,9 +4,15 @@ import ArticlePicker from '@/components/documents/ArticlePicker'
 import CostBreakdownDialog from '@/components/documents/CostBreakdownDialog'
 import PositionRow from '@/components/documents/PositionRow'
 import type { DropPlace } from '@/components/documents/PositionRow'
+import { useCatalogChapters } from '@/hooks/useCatalog'
 import { useCreateArticleOnTheFly } from '@/hooks/useDocuments'
 import type { DocumentActions, PositionPayload } from '@/hooks/useDocuments'
+import { getCatalogDrag, takeCatalogDrag, useCatalogDrag } from '@/lib/catalogDrag'
+import type { CatalogDrag } from '@/lib/catalogDrag'
 import { printNumbers } from '@/lib/documentNumbering'
+import { ensureStep, focusInsertedPosition, insertArticle } from '@/lib/quoteInsert'
+import type { QuoteViewOptions } from '@/lib/quoteView'
+import type { InsertTarget } from '@/lib/quoteInsert'
 import { fmtAmount, fmtDate } from '@/lib/format'
 import { toast } from '@/lib/toast'
 import type { DocumentDetail, DocumentPosition, DocumentStep } from '@/types'
@@ -16,6 +22,9 @@ interface DocumentEditorProps {
   document: DocumentDetail
   actions: DocumentActions
   onSaving: (saving: boolean) => void
+  /** Options d'affichage (sous-détails en rouge, prix masqués), partagées avec l'aperçu et le PDF. */
+  view: QuoteViewOptions
+  onViewChange: (view: QuoteViewOptions) => void
 }
 
 interface DragState {
@@ -41,7 +50,7 @@ const PRINT_TITLES: Record<DocumentDetail['type'], string> = { devis: 'Devis est
  * numérotation (5, 5.1, sous-titre 6.1 → 6.1.1), même hiérarchie, total brut en bas. Une section par
  * étape, positions éditables en place, champ d'ajout rapide. Les outils restent dans les marges.
  */
-export default function DocumentEditor({ document: doc, actions, onSaving }: DocumentEditorProps) {
+export default function DocumentEditor({ document: doc, actions, onSaving, view, onViewChange }: DocumentEditorProps) {
   const createArticle = useCreateArticleOnTheFly()
   const [busyStep, setBusyStep] = useState<number | null>(null)
   const [drag, setDragState] = useState<DragState | null>(null)
@@ -52,6 +61,10 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
     setDragState(value)
   }
   const [target, setTarget] = useState<DropTarget | null>(null)
+  // Article ou chapitre glissé depuis le catalogue (panneau de gauche). Les repères de dépôt ne
+  // s'affichent que pendant un glissement (`dragging`) : une cible restée en mémoire est sans effet.
+  const external = useCatalogDrag()
+  const chapters = useCatalogChapters()
   const steps = useMemo(() => doc.steps ?? [], [doc.steps])
   const numbers = useMemo(() => printNumbers(steps), [steps])
   // Sous-détail de prix ouvert, et nombre de reports de prix par position : la ligne du devis est
@@ -119,7 +132,7 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
   }
 
   function hover(stepId: number, positionId: number | null, place: DropPlace) {
-    if (!dragRef.current) {
+    if (!dragRef.current && !getCatalogDrag()) {
       return
     }
     setTarget((current) =>
@@ -144,8 +157,39 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
     }
   }
 
+  /**
+   * Dépose un article ou un chapitre venu du catalogue. Sur une ligne : à cet endroit. Ailleurs sur la
+   * feuille : dans l'étape de son chapitre, créée au besoin (titre seul).
+   */
+  async function dropFromCatalog(dragged: CatalogDrag, dropTarget: InsertTarget | null) {
+    onSaving(true)
+    try {
+      if (dragged.kind === 'article') {
+        const result = await insertArticle(doc, actions, chapters.data ?? [], dragged.article, dropTarget)
+        if (result.stepCreated) {
+          toast(`Étape « ${result.step.label} » ajoutée au devis, puis l'article.`, 'success')
+        }
+        focusInsertedPosition(result.step.id, result.positionId)
+      } else {
+        const { step, created } = await ensureStep(doc, actions, dragged.chapter.id)
+        toast(created ? `Étape « ${step.label} » ajoutée au devis (titre seul).` : `L'étape « ${step.label} » est déjà dans le devis.`, created ? 'success' : 'info')
+        focusInsertedPosition(step.id, null)
+      }
+    } catch (error) {
+      toast(isAxiosError(error) ? (error.response?.data?.message ?? "L'ajout a échoué.") : "L'ajout a échoué.", 'error')
+    } finally {
+      onSaving(false)
+    }
+  }
+
   /** Dépose la ligne saisie : réordonne dans l'étape, ou la déplace vers une autre étape. */
   async function drop(dropTarget: DropTarget) {
+    const fromCatalog = takeCatalogDrag()
+    if (fromCatalog) {
+      setTarget(null)
+      await dropFromCatalog(fromCatalog, dropTarget)
+      return
+    }
     const current = dragRef.current
     setDrag(null)
     setTarget(null)
@@ -181,23 +225,70 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
     }
   }
 
+  /** Dépôt hors d'une ligne (feuille, état vide) : règle automatique de l'étape. */
+  const sheetDropHandlers = {
+    onDragOver: (event: React.DragEvent) => {
+      if (getCatalogDrag()) {
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'copy'
+      }
+    },
+    onDrop: (event: React.DragEvent) => {
+      const fromCatalog = takeCatalogDrag() // déjà pris par une ligne si le dépôt a eu lieu dessus
+      if (fromCatalog) {
+        event.preventDefault()
+        setTarget(null)
+        void dropFromCatalog(fromCatalog, null)
+      }
+    },
+  }
+
+  const optionsBar = (
+    <div className="flex h-9 shrink-0 items-center gap-5 border-b border-gray-200 bg-white px-4 text-[13px] text-gray-700">
+      <label className="flex items-center gap-1.5" title="Affiche les lignes du sous-détail de prix, en rouge, sous chaque position qui en a un ; imprimées aussi">
+        <input type="checkbox" checked={view.showBreakdown} onChange={(e) => onViewChange({ ...view, showBreakdown: e.target.checked })} className="h-4 w-4 accent-primary-600" />
+        Afficher les sous-détails
+      </label>
+      <label className="flex items-center gap-1.5" title="Devis descriptif : quantités sans prix ni montants, à l'écran comme à l'impression">
+        <input type="checkbox" checked={view.hidePrices} onChange={(e) => onViewChange({ ...view, hidePrices: e.target.checked })} className="h-4 w-4 accent-primary-600" />
+        Masquer les prix
+      </label>
+      <span className="text-[12px] text-gray-400">Ces options valent aussi pour l'aperçu et le PDF.</span>
+    </div>
+  )
+
   if (steps.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-gray-500">
+      <>
+      {optionsBar}
+      <div
+        {...sheetDropHandlers}
+        className={`m-4 flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed text-center text-gray-500 transition ${
+          external ? 'border-primary-400 bg-primary-50' : 'border-transparent'
+        }`}
+      >
         <Icon name="tree" className="h-8 w-8 text-gray-300" />
-        <p className="font-medium text-gray-700">Ce devis n'a pas encore d'étape.</p>
+        <p className="font-medium text-gray-700">{external ? 'Déposez ici : l’étape sera créée.' : "Ce devis n'a pas encore d'étape."}</p>
         <p className="max-w-md text-[13px]">
-          Ajoutez les étapes du chantier depuis les modèles, dans le panneau de gauche. Chaque modèle apporte ses
-          articles et leurs prix ; il ne reste qu'à saisir les quantités.
+          Ajoutez les étapes du chantier depuis les modèles ou le catalogue de prix, dans le panneau de gauche :
+          glissez un chapitre ou un article sur la feuille, ou double-cliquez dessus.
         </p>
       </div>
+      </>
     )
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto bg-gray-100 px-4 py-5">
+    <>
+    {optionsBar}
+    <div className="min-h-0 flex-1 overflow-auto bg-gray-100 px-4 py-5" {...sheetDropHandlers}>
       {/* La feuille : 717 px de zone imprimée (172 mm du PDF), une marge d'outils de chaque côté. */}
-      <div className="mx-auto w-[869px] rounded-sm border border-gray-200 bg-white pb-12 pl-9 pr-3 pt-8 text-[14px] text-gray-900 shadow-sm" style={{ fontFamily: 'Helvetica, Arial, sans-serif' }}>
+      <div
+        className={`mx-auto w-[869px] rounded-sm border bg-white pb-12 pl-9 pr-3 pt-8 text-[14px] text-gray-900 shadow-sm transition ${
+          external ? 'border-primary-400 ring-4 ring-primary-100' : 'border-gray-200'
+        }`}
+        style={{ fontFamily: 'Helvetica, Arial, sans-serif' }}
+      >
         <div className="ml-7 mr-[76px] flex items-start justify-between border-b border-gray-300 pb-2">
           <div className="min-w-0">
             <div className="font-bold">
@@ -234,11 +325,26 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
             </tr>
           </thead>
           {steps.map((step, stepIndex) => {
-            const endTargeted = drag !== null && target?.stepId === step.id && target.positionId === null
+            const dragging = drag !== null || external !== null
+            const endTargeted = dragging && target?.stepId === step.id && target.positionId === null
+            const headTarget: DropTarget = { stepId: step.id, positionId: step.positions[0]?.id ?? null, place: 'above' }
+            const headTargeted = dragging && step.positions.length > 0 && target?.stepId === step.id && target.positionId === headTarget.positionId && target.place === 'above'
             const empty = step.positions.filter(isEmptyItem).length
             return (
               <tbody key={step.id} id={`step-${step.id}`} className="scroll-mt-10">
-                <tr className="font-bold">
+                <tr
+                  className={`font-bold ${headTargeted ? 'shadow-[inset_0_-3px_0_0_#1d3f9c]' : ''}`}
+                  onDragOver={(event) => {
+                    if (dragRef.current || getCatalogDrag()) {
+                      event.preventDefault()
+                      hover(headTarget.stepId, headTarget.positionId, headTarget.place)
+                    }
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault()
+                    void drop(headTarget)
+                  }}
+                >
                   <td />
                   <td className="border-b border-gray-400 px-1 pb-1 pt-5">{stepIndex + 1}</td>
                   <td colSpan={4} className="border-b border-gray-400 px-1 pb-1 pt-5">
@@ -248,7 +354,7 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
                     className="border-b border-gray-400 px-1 pb-1 pt-5 text-right text-[12px] font-normal tabular-nums text-gray-400"
                     title="Total de l'étape : imprimé dans la récapitulation, pas dans le détail"
                   >
-                    {fmtAmount(step.total)}
+                    {view.hidePrices ? '' : fmtAmount(step.total)}
                   </td>
                   <td className="pb-0.5 pl-2 pt-5 text-right align-bottom">
                     {empty > 0 && (
@@ -274,7 +380,7 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
                     onSaving={onSaving}
                     onMove={(direction) => move(step, index, direction)}
                     dragging={drag?.positionId === position.id}
-                    dropPlace={drag && target?.positionId === position.id ? target.place : null}
+                    dropPlace={dragging && target?.positionId === position.id ? target.place : null}
                     onDragStart={() => setDrag({ stepId: step.id, positionId: position.id })}
                     onDragEnd={() => {
                       setDrag(null)
@@ -283,11 +389,13 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
                     onDragOver={(place) => hover(step.id, position.id, place)}
                     onDrop={(place) => void drop({ stepId: step.id, positionId: position.id, place })}
                     onOpenBreakdown={() => setBreakdownId(position.id)}
+                    showBreakdown={view.showBreakdown}
+                    hidePrices={view.hidePrices}
                   />
                 ))}
                 <tr
                   onDragOver={(event) => {
-                    if (dragRef.current) {
+                    if (dragRef.current || getCatalogDrag()) {
                       event.preventDefault()
                       hover(step.id, null, 'above')
                     }
@@ -310,7 +418,17 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
                       onCreateArticle={(description) => void createAndAdd(step, description)}
                     />
                   </td>
-                  <td />
+                  <td className="pl-2 align-middle">
+                    <button
+                      type="button"
+                      disabled={busyStep === step.id}
+                      onClick={() => void add(step, { kind: 'pagebreak', description: 'Saut de page' }, false)}
+                      title="Insérer un saut de page à la fin de l'étape (déplaçable ensuite par sa poignée)"
+                      className="flex h-7 w-7 items-center justify-center rounded text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40"
+                    >
+                      <Icon name="pagebreak" className="h-4 w-4" />
+                    </button>
+                  </td>
                 </tr>
               </tbody>
             )
@@ -322,7 +440,7 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
               <td colSpan={4} className="border-t border-gray-900 px-1 py-2">
                 Total brut
               </td>
-              <td className="border-t border-gray-900 px-1 py-2 text-right tabular-nums">{fmtAmount(doc.total_net)}</td>
+              <td className="border-t border-gray-900 px-1 py-2 text-right tabular-nums">{view.hidePrices ? '' : fmtAmount(doc.total_net)}</td>
               <td />
             </tr>
           </tfoot>
@@ -339,5 +457,6 @@ export default function DocumentEditor({ document: doc, actions, onSaving }: Doc
         />
       )}
     </div>
+    </>
   )
 }
