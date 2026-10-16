@@ -10,7 +10,7 @@ import type { DocumentActions, PositionPayload } from '@/hooks/useDocuments'
 import { getCatalogDrag, takeCatalogDrag, useCatalogDrag } from '@/lib/catalogDrag'
 import type { CatalogDrag } from '@/lib/catalogDrag'
 import { printNumbers } from '@/lib/documentNumbering'
-import { ensureStep, focusInsertedPosition, insertArticle } from '@/lib/quoteInsert'
+import { ensureStep, focusInsertedPosition, insertArticle, stepAcceptsArticle } from '@/lib/quoteInsert'
 import type { QuoteViewOptions } from '@/lib/quoteView'
 import type { InsertTarget } from '@/lib/quoteInsert'
 import { fmtAmount, fmtDate } from '@/lib/format'
@@ -131,8 +131,21 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
       .catch(() => toast('Le déplacement a échoué.', 'error'))
   }
 
+  /** Un article du catalogue ne se dépose que dans l'étape de son chapitre ; ailleurs, il y va de lui-même. */
+  function acceptsDrag(stepId: number, dragged: CatalogDrag | null): boolean {
+    if (!dragged) {
+      return true // ligne du devis déplacée : toutes les étapes
+    }
+    const step = steps.find((item) => item.id === stepId)
+    return dragged.kind === 'article' && step !== undefined && stepAcceptsArticle(step, chapters.data ?? [], dragged.article)
+  }
+
   function hover(stepId: number, positionId: number | null, place: DropPlace) {
     if (!dragRef.current && !getCatalogDrag()) {
+      return
+    }
+    if (!acceptsDrag(stepId, getCatalogDrag())) {
+      setTarget(null) // pas de repère : le dépôt suivra la règle de l'étape du chapitre
       return
     }
     setTarget((current) =>
@@ -165,9 +178,13 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
     onSaving(true)
     try {
       if (dragged.kind === 'article') {
-        const result = await insertArticle(doc, actions, chapters.data ?? [], dragged.article, dropTarget)
+        // Déposé dans l'étape d'un autre chapitre : l'article rejoint l'étape de son propre chapitre.
+        const placed = dropTarget !== null && acceptsDrag(dropTarget.stepId, dragged)
+        const result = await insertArticle(doc, actions, chapters.data ?? [], dragged.article, placed ? dropTarget : null)
         if (result.stepCreated) {
           toast(`Étape « ${result.step.label} » ajoutée au devis, puis l'article.`, 'success')
+        } else if (dropTarget && !placed) {
+          toast(`Article ajouté dans son étape « ${result.step.label} » (déplaçable ensuite par sa poignée).`, 'info')
         }
         focusInsertedPosition(result.step.id, result.positionId)
       } else {

@@ -108,6 +108,9 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `components/shell/WorkspaceUrlSync` : rechargement, lien collé et bouton Retour le conservent ; sur `/projets` c'est `?id=`).
   Il est choisi dans la barre de contexte ou en
   ouvrant une fiche ; les modules suivants (devis, rapports) doivent s'y rattacher.
+- **Nouveau projet** : un écran d'entrée ne demande que le code postal et la localité du chantier, en grand (la localité
+  est proposée depuis le carnet d'adresses quand le NPA y est connu, le numéro `2800-003` dès le NPA saisi) ; « Continuer »
+  ouvre la fiche complète (`ProjectForm`, état `stage`).
 - Fiche : onglets **Général** (NPA / Lieu en premier : dès le NPA saisi, le numéro `2800-003` est proposé ; puis désignations,
   adresse du chantier, statut…), **Client** (client du carnet et ses coordonnées en lecture, lien vers la fiche ; les deux
   onglets sont le même formulaire `ProjectForm` avec `section`, gardé monté pour ne rien perdre), Adresses, Photos.
@@ -190,11 +193,13 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   **« Catalogue de prix »** = `components/documents/CatalogPanel` : chapitres (dossiers, ✓ si l'étape est dans le devis,
   compteur d'articles) et articles (recherche en mémoire via `useArticlePicker`). **On ajoute uniquement en
   glissant** (aucun ajout au clic, demande du client du 16.10.2026) : l'élément glissé est gardé dans
-  `lib/catalogDrag.ts` (`dataTransfer` illisible pendant le survol) ; déposé sur une ligne (au-dessus / en dessous),
-  sur le titre d'une étape (en tête) ou son champ d'ajout (en fin) → à cet endroit (`after_id`, ou ajout +
-  `reorderPositions` en tête) ; ailleurs sur la feuille ou sur l'état vide → `lib/quoteInsert.ts` `insertArticle()`
-  le place dans l'étape de son chapitre (ou du chapitre parent), **créée d'abord (titre seul) si elle manque** ; un
-  chapitre glissé → `ensureStep()`. `takeCatalogDrag()` garantit un seul gestionnaire par dépôt. Clic sur un chapitre :
+  `lib/catalogDrag.ts` (`dataTransfer` illisible pendant le survol). **Un article va toujours dans l'étape de son
+  chapitre** (ou du chapitre parent, `stepAcceptsArticle()`), jamais dans celle d'un autre corps de métier : déposé
+  sur une ligne de *cette* étape (au-dessus / en dessous), sur son titre (en tête) ou son champ d'ajout (en fin) → à cet
+  endroit (`after_id`, ou ajout + `reorderPositions` en tête) ; déposé n'importe où ailleurs (autre étape, feuille, état
+  vide) → `lib/quoteInsert.ts` `insertArticle()` le place dans son étape, **créée d'abord (titre seul) si elle
+  manque** (toast). Une fois dans le devis, la position se déplace librement par sa poignée. Un chapitre glissé →
+  `ensureStep()`. `takeCatalogDrag()` garantit un seul gestionnaire par dépôt. Clic sur un chapitre :
   déplie ses articles. Crayon sur un article : `ArticleQuickEdit` modifie le catalogue seulement (les positions du
   devis sont des instantanés, jamais touchées).
 - **Modèles de devis** (`quote_templates` → `quote_template_steps`, page `/modeles-devis`) : jeu d'étapes

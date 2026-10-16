@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
@@ -80,6 +81,8 @@ interface ProjectFormProps {
 /**
  * Fiche projet : onglet « Général » (NPA et lieu d'abord, qui donnent le numéro 2800-002, puis le
  * chantier) et onglet « Client » (client du carnet et ses coordonnées), avec sauvegarde automatique.
+ * Un **nouveau projet** commence par un écran qui ne demande que le code postal et la localité du
+ * chantier, en grand ; le numéro est proposé aussitôt, puis le reste de la fiche apparaît.
  */
 export default function ProjectForm({ project, isNew, section, readOnly, onStateChange, onCreated }: ProjectFormProps) {
   const save = useSaveResource<Project, Record<string, unknown>>('projects')
@@ -91,6 +94,12 @@ export default function ProjectForm({ project, isNew, section, readOnly, onState
   // eslint-disable-next-line react-hooks/incompatible-library -- watch() de react-hook-form, usage voulu
   const status = watch('status')
   const clientId = watch('client_id')
+  const zipValue = watch('zip')
+  const cityValue = watch('city')
+  const numberValue = watch('number')
+  // Nouveau projet : d'abord la localité (écran dédié), ensuite toute la fiche.
+  const [stage, setStage] = useState<'locality' | 'form'>(isNew ? 'locality' : 'form')
+  const localityReady = zipValue.trim().length >= 4 && cityValue.trim() !== ''
 
   const { submit, onBlur } = useEntityForm(form, {
     isNew,
@@ -155,9 +164,93 @@ export default function ProjectForm({ project, isNew, section, readOnly, onState
     }
   }
 
+  /** Le NPA saisi est connu du carnet d'adresses : sa localité est proposée. */
+  function suggestCity(zip: string) {
+    if (getValues('city').trim()) {
+      return
+    }
+    const known = clients.data?.find((item) => item.zip === zip && item.city)
+    if (known?.city) {
+      setValue('city', known.city, { shouldDirty: true })
+    }
+  }
+
+  /** Écran d'entrée validé : numéro proposé, puis la fiche complète avec le curseur sur la désignation. */
+  async function continueToForm() {
+    if (!localityReady) {
+      return
+    }
+    await suggestNumber(false)
+    setStage('form')
+    window.setTimeout(() => window.document.querySelector<HTMLInputElement>('#project-form [name="designation1"]')?.focus(), 40)
+  }
+
   const clientField = register('client_id')
   const zipField = register('zip')
   const client: Address | null = clients.data?.find((item) => String(item.id) === clientId) ?? null
+  const bigField = 'h-14 rounded-lg border border-gray-300 px-4 text-[22px] font-medium text-gray-900 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-100'
+
+  if (stage === 'locality') {
+    return (
+      <form
+        id={PROJECT_FORM_ID}
+        onSubmit={(event) => {
+          event.preventDefault()
+          void continueToForm()
+        }}
+        className="mt-4 flex min-h-[300px] items-start justify-center"
+      >
+        <div className="w-[560px] rounded-xl border border-gray-200 bg-gray-50 px-8 py-6">
+          <div className="text-[12px] font-semibold uppercase tracking-wider text-primary-700">Nouveau projet</div>
+          <h2 className="mt-1 text-[20px] font-semibold text-gray-900">Où se trouve le chantier ?</h2>
+          <p className="mt-1 text-[13px] text-gray-500">Le code postal et la localité donnent le numéro du projet. Le reste de la fiche vient ensuite.</p>
+          <div className="mt-5 grid grid-cols-[150px_1fr] gap-3">
+            <label className="flex flex-col gap-1 text-[12px] font-medium text-gray-600">
+              Code postal
+              <input
+                autoFocus
+                placeholder="2800"
+                inputMode="numeric"
+                maxLength={10}
+                className={bigField}
+                {...zipField}
+                onChange={(event) => {
+                  void zipField.onChange(event)
+                  const zip = event.target.value.trim()
+                  if (zip.length >= 4) {
+                    suggestCity(zip)
+                    void suggestNumber(false)
+                  }
+                }}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-[12px] font-medium text-gray-600">
+              Localité
+              <input placeholder="Delémont" maxLength={255} className={bigField} {...register('city')} />
+            </label>
+          </div>
+          <div className="mt-5 flex items-center justify-between">
+            <span className="text-[13px] text-gray-500">
+              {numberValue.trim() ? (
+                <>
+                  N° de projet proposé : <span className="font-semibold text-gray-900">{numberValue}</span>
+                </>
+              ) : (
+                'Le numéro sera proposé dès le code postal saisi.'
+              )}
+            </span>
+            <button
+              type="submit"
+              disabled={!localityReady}
+              className="h-10 rounded-md bg-accent-600 px-5 text-[14px] font-medium text-white hover:bg-accent-700 disabled:opacity-40"
+            >
+              Continuer
+            </button>
+          </div>
+        </div>
+      </form>
+    )
+  }
 
   return (
     <form id={PROJECT_FORM_ID} onSubmit={submit} onBlur={onBlur} className="mt-4">
