@@ -188,15 +188,15 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
 - **Panneau de gauche du devis** (`DocumentsPage`, `AsidePanel fill` + `components/baubit/Accordion`) : deux sections
   dépliables. **« Étapes et devis »** = documents du projet + `StepsPanel` (navigation, modèles, ajout d'étape).
   **« Catalogue de prix »** = `components/documents/CatalogPanel` : chapitres (dossiers, ✓ si l'étape est dans le devis,
-  compteur d'articles) et articles (recherche en mémoire via `useArticlePicker`). Double-clic ou « + » sur un article :
-  `lib/quoteInsert.ts` → `insertArticle()` le place dans l'étape de son chapitre (ou du chapitre parent), **créée
-  d'abord (titre seul) si elle manque** ; sur un chapitre : `ensureStep()`. Crayon sur un article : `ArticleQuickEdit`
-  modifie le catalogue seulement (les positions du devis sont des instantanés, jamais touchées).
-  **Glisser-déposer** du catalogue vers la feuille : l'élément glissé est gardé dans `lib/catalogDrag.ts`
-  (`dataTransfer` illisible pendant le survol) ; déposé sur une ligne (au-dessus / en dessous), sur le titre d'une
-  étape (en tête) ou son champ d'ajout (en fin) → à cet endroit (`after_id`, ou ajout + `reorderPositions` en tête) ;
-  ailleurs sur la feuille ou sur l'état vide → règle automatique de l'étape. `takeCatalogDrag()` garantit un seul
-  gestionnaire par dépôt.
+  compteur d'articles) et articles (recherche en mémoire via `useArticlePicker`). **On ajoute uniquement en
+  glissant** (aucun ajout au clic, demande du client du 16.10.2026) : l'élément glissé est gardé dans
+  `lib/catalogDrag.ts` (`dataTransfer` illisible pendant le survol) ; déposé sur une ligne (au-dessus / en dessous),
+  sur le titre d'une étape (en tête) ou son champ d'ajout (en fin) → à cet endroit (`after_id`, ou ajout +
+  `reorderPositions` en tête) ; ailleurs sur la feuille ou sur l'état vide → `lib/quoteInsert.ts` `insertArticle()`
+  le place dans l'étape de son chapitre (ou du chapitre parent), **créée d'abord (titre seul) si elle manque** ; un
+  chapitre glissé → `ensureStep()`. `takeCatalogDrag()` garantit un seul gestionnaire par dépôt. Clic sur un chapitre :
+  déplie ses articles. Crayon sur un article : `ArticleQuickEdit` modifie le catalogue seulement (les positions du
+  devis sont des instantanés, jamais touchées).
 - **Modèles de devis** (`quote_templates` → `quote_template_steps`, page `/modeles-devis`) : jeu d'étapes
   (chapitres, avec ou sans articles, ou libres), un seul `is_default`. `POST /projects/{id}/documents`
   applique le modèle choisi (`quote_template_id`), sinon le modèle par défaut ; `null` = devis vide.

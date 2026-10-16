@@ -88,8 +88,8 @@ export default function ProjectForm({ project, isNew, section, readOnly, onState
   const { register, formState, watch, setValue, getValues } = form
   const errors = formState.errors
   const firstError = Object.values(errors)[0]?.message
-  const status = watch('status')
   // eslint-disable-next-line react-hooks/incompatible-library -- watch() de react-hook-form, usage voulu
+  const status = watch('status')
   const clientId = watch('client_id')
 
   const { submit, onBlur } = useEntityForm(form, {
