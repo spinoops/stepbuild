@@ -31,6 +31,19 @@ export function findStepForArticle(doc: DocumentDetail, chapters: CatalogChapter
   return null
 }
 
+/**
+ * L'étape peut recevoir cet article : elle vient de son chapitre ou du chapitre parent. Un article ne
+ * s'ajoute jamais dans l'étape d'un autre corps de métier (TERRASSEMENT ne va pas dans SOUS-TRAITANTS) ;
+ * une fois dans le devis, la position peut ensuite être déplacée librement.
+ */
+export function stepAcceptsArticle(step: DocumentStep, chapters: CatalogChapter[], article: PickerArticle): boolean {
+  if (step.catalog_chapter_id === null) {
+    return false
+  }
+  const parentId = chapters.find((chapter) => chapter.id === article.chapterId)?.parent_id ?? null
+  return step.catalog_chapter_id === article.chapterId || step.catalog_chapter_id === parentId
+}
+
 /** Étape du devis créée depuis ce chapitre, s'il y en a une. */
 export function findStepForChapter(doc: DocumentDetail, chapterId: number): DocumentStep | null {
   return (doc.steps ?? []).find((step) => step.catalog_chapter_id === chapterId) ?? null
@@ -54,8 +67,9 @@ export async function ensureStep(doc: DocumentDetail, actions: DocumentActions, 
 
 /**
  * Insère un article du catalogue dans le devis.
- * Avec une cible (dépôt sur une ligne) : à cet endroit. Sans cible (clic ou dépôt hors ligne) :
- * dans l'étape de son chapitre, créée au besoin (titre seul) à la fin du devis.
+ * Avec une cible (dépôt sur une ligne de l'étape de son chapitre) : à cet endroit. Sans cible (dépôt
+ * ailleurs) : dans l'étape de son chapitre, créée au besoin (titre seul) à la fin du devis.
+ * L'appelant vérifie la cible avec `stepAcceptsArticle()`.
  */
 export async function insertArticle(
   doc: DocumentDetail,
