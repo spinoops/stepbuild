@@ -68,7 +68,7 @@ class DocumentPositionController extends Controller
             $document->steps()->findOrFail($data['document_step_id']); // l'étape doit appartenir au document
         }
         if ($position->hasBreakdown()) {
-            unset($data['cost_price'], $data['unit_price']); // prix de revient et prix de vente viennent du sous-détail
+            unset($data['cost_price']); // le prix de revient vient du sous-détail ; le prix de vente, lui, reste corrigeable à la main
         }
         $position->update($data);
 

@@ -63,12 +63,21 @@ it('divise le total du sous-détail par la quantité de la ligne, et suit un cha
         ->and($first['unit_price'])->toEqual(100)
         ->and($first['amount'])->toEqual(1000);
 
-    // La quantité passe à 4 : le même forfait vaut 250.-/m² ; le prix saisi par la ligne est ignoré.
-    $changed = $this->putJson("/api/documents/{$document->id}/positions/{$position->id}", ['quantity' => 4, 'unit_price' => 1])
+    // La quantité passe à 4 : le même forfait vaut 250.-/m², le prix suit le sous-détail.
+    $changed = $this->putJson("/api/documents/{$document->id}/positions/{$position->id}", ['quantity' => 4, 'unit_price' => 100])
         ->assertOk()->json('data.steps.0.positions.0');
     expect($changed['unit_price'])->toEqual(250)
         ->and($changed['calculated_price'])->toEqual(250)
         ->and($changed['amount'])->toEqual(1000);
+
+    // Prix corrigé à la main (total voulu 1 200.- → 300.-/m²) : conservé, même si la quantité change ensuite.
+    $manual = $this->putJson("/api/documents/{$document->id}/positions/{$position->id}", ['unit_price' => 300])
+        ->assertOk()->json('data.steps.0.positions.0');
+    expect($manual['unit_price'])->toEqual(300)->and($manual['calculated_price'])->toEqual(250);
+    $moved = $this->putJson("/api/documents/{$document->id}/positions/{$position->id}", ['quantity' => 5])
+        ->assertOk()->json('data.steps.0.positions.0');
+    expect($moved['unit_price'])->toEqual(300)->and($moved['calculated_price'])->toEqual(200)->and($moved['amount'])->toEqual(1500);
+    $this->putJson("/api/documents/{$document->id}/positions/{$position->id}", ['quantity' => 4])->assertOk();
 
     // Une ligne « × Qté » suit aussi la quantité : 40.- + 30 % par m² → 52.-/m² quelle que soit la quantité.
     $keptId = $first['costs'][0]['id'];
@@ -84,11 +93,12 @@ it('divise le total du sous-détail par la quantité de la ligne, et suit un cha
         ->and($second['calculated_price'])->toEqual(302)   // (1000 + 208) / 4
         ->and($position->costs()->count())->toBe(2);
 
-    // La ligne du devis ne peut plus écraser le prix de revient ni le prix de vente issus du sous-détail.
+    // L'édition du sous-détail reporte toujours son prix (302) ; la ligne ne peut pas écraser le prix de revient.
+    expect($second['unit_price'])->toEqual(302);
     $this->putJson("/api/documents/{$document->id}/positions/{$position->id}", ['description' => 'Carrelage sol', 'cost_price' => 1, 'unit_price' => 2])
         ->assertOk()
         ->assertJsonPath('data.steps.0.positions.0.cost_price', 290)
-        ->assertJsonPath('data.steps.0.positions.0.unit_price', 302);
+        ->assertJsonPath('data.steps.0.positions.0.unit_price', 2);
 
     // Sans ligne : le prix calculé disparaît, le prix redevient libre.
     $this->putJson($url, ['lines' => []])->assertOk()->assertJsonPath('data.steps.0.positions.0.calculated_price', null);
