@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Icon } from '@/components/icons'
 import { BB_FIELD } from '@/components/baubit/Form'
 import UnitSelect from '@/components/shared/UnitSelect'
+import Modal from '@/components/ui/Modal'
 import { useCatalogChapters } from '@/hooks/useCatalog'
 import { useArticlePicker } from '@/hooks/useDocuments'
 import type { PickerArticle } from '@/hooks/useDocuments'
@@ -110,7 +111,7 @@ export default function CatalogPanel({ document: doc }: CatalogPanelProps) {
         <button
           type="button"
           onClick={() => setEditingId(article.id)}
-          title="Modifier l'article dans le catalogue (les lignes déjà dans le devis ne changent pas)"
+          title="Modifier l'article dans le catalogue (fenêtre ; les lignes déjà dans le devis ne changent pas)"
           className="invisible flex h-5 w-5 shrink-0 items-center justify-center rounded text-gray-500 hover:bg-gray-200 hover:text-gray-800 group-hover:visible"
         >
           <Icon name="edit" className="h-3.5 w-3.5" />
@@ -197,8 +198,8 @@ interface ArticleQuickEditProps {
 }
 
 /**
- * Modification rapide d'un article du catalogue depuis le panneau du devis. Seul le catalogue change :
- * les positions déjà dans le devis sont des instantanés et gardent leur description et leur prix.
+ * Fenêtre de modification d'un article du catalogue, ouverte depuis le panneau du devis. Seul le catalogue
+ * change : les positions déjà dans le devis sont des instantanés et gardent leur description et leur prix.
  */
 function ArticleQuickEdit({ id, chapters, onClose }: ArticleQuickEditProps) {
   const article = useResourceItem<CatalogArticle>('catalog-articles', id)
@@ -210,6 +211,7 @@ function ArticleQuickEdit({ id, chapters, onClose }: ArticleQuickEditProps) {
     : null)
   const valid = current !== null && current.description.trim() !== '' && PRICE_PATTERN.test(current.purchase) && PRICE_PATTERN.test(current.sale)
   const chapter = data ? chapters.find((item) => item.id === data.catalog_chapter_id) : null
+  const label = 'flex flex-col gap-1 text-[12px] font-medium text-gray-600'
 
   function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -240,39 +242,89 @@ function ArticleQuickEdit({ id, chapters, onClose }: ArticleQuickEditProps) {
   }
 
   return (
-    <form onSubmit={submit} onKeyDown={(event) => event.key === 'Escape' && onClose()} className="mb-2 shrink-0 rounded-lg border border-primary-200 bg-primary-50/60 p-2 text-[12px]">
-      <div className="mb-1.5 flex items-center justify-between">
-        <span className="font-semibold text-gray-800">Modifier l'article {chapter ? `· ${chapter.code} ${chapter.label}` : ''}</span>
-        <button type="button" onClick={onClose} title="Fermer" className="rounded p-0.5 text-gray-400 hover:bg-white hover:text-gray-700">
-          <Icon name="close" className="h-3.5 w-3.5" />
-        </button>
-      </div>
-      {!current ? (
-        <p className="text-gray-400">{article.isError ? 'Article introuvable.' : 'Chargement…'}</p>
-      ) : (
-        <>
-          <textarea
-            autoFocus
-            value={current.description}
-            onChange={(e) => setDraft({ ...current, description: e.target.value })}
-            rows={2}
-            className={`${BB_FIELD} h-auto w-full py-1 text-[12px]`}
-            aria-label="Description"
-          />
-          <div className="mt-1.5 grid grid-cols-[56px_1fr_1fr_1fr] gap-1">
-            <input value={current.code} onChange={(e) => setDraft({ ...current, code: e.target.value })} placeholder="Code" maxLength={20} className={`${BB_FIELD} w-full px-1.5 text-[12px]`} aria-label="Code" />
-            <UnitSelect value={current.unit} onChange={(e) => setDraft({ ...current, unit: e.target.value })} className={`${BB_FIELD} w-full px-1 text-[12px]`} aria-label="Unité" />
-            <input value={current.purchase} onChange={(e) => setDraft({ ...current, purchase: e.target.value })} placeholder="Achat" inputMode="decimal" title="Prix d'achat" className={`${BB_FIELD} w-full px-1.5 text-right text-[12px] ${PRICE_PATTERN.test(current.purchase) ? '' : 'border-red-400'}`} aria-label="Prix d'achat" />
-            <input value={current.sale} onChange={(e) => setDraft({ ...current, sale: e.target.value })} placeholder="Vente" inputMode="decimal" title="Prix de vente" className={`${BB_FIELD} w-full px-1.5 text-right text-[12px] ${PRICE_PATTERN.test(current.sale) ? '' : 'border-red-400'}`} aria-label="Prix de vente" />
+    <Modal open onClose={onClose}>
+      <form
+        onSubmit={submit}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.stopPropagation()
+            onClose()
+          }
+        }}
+        className="bb"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Catalogue de prix</div>
+            <h3 className="text-[16px] font-semibold text-gray-900">Modifier l'article</h3>
+            {chapter && (
+              <div className="truncate text-[12px] text-gray-500">
+                Chapitre {chapter.code} - {chapter.label}
+              </div>
+            )}
           </div>
-          <div className="mt-1.5 flex items-center justify-between">
-            <span className="text-[11px] text-gray-400">Les lignes déjà dans le devis ne changent pas.</span>
-            <button type="submit" disabled={!valid || save.isPending} className="h-7 rounded-md bg-accent-600 px-2.5 text-[12px] font-medium text-white hover:bg-accent-700 disabled:opacity-40">
-              Enregistrer
-            </button>
+          <button type="button" onClick={onClose} title="Fermer" className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+            <Icon name="close" className="h-4 w-4" />
+          </button>
+        </div>
+
+        {!current ? (
+          <p className="mt-6 text-[13px] text-gray-400">{article.isError ? 'Article introuvable.' : 'Chargement…'}</p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            <label className={label}>
+              Description
+              <textarea
+                autoFocus
+                value={current.description}
+                onChange={(e) => setDraft({ ...current, description: e.target.value })}
+                rows={4}
+                className={`${BB_FIELD} h-auto w-full py-1.5 text-[13px] font-normal`}
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className={label}>
+                Code
+                <input value={current.code} onChange={(e) => setDraft({ ...current, code: e.target.value })} maxLength={20} className={`${BB_FIELD} w-full font-normal`} />
+              </label>
+              <label className={label}>
+                Unité
+                <UnitSelect value={current.unit} onChange={(e) => setDraft({ ...current, unit: e.target.value })} className={`${BB_FIELD} w-full font-normal`} />
+              </label>
+              <label className={label}>
+                Prix d'achat
+                <input
+                  value={current.purchase}
+                  onChange={(e) => setDraft({ ...current, purchase: e.target.value })}
+                  inputMode="decimal"
+                  className={`${BB_FIELD} w-full text-right font-normal ${PRICE_PATTERN.test(current.purchase) ? '' : 'border-red-400'}`}
+                />
+              </label>
+              <label className={label}>
+                Prix de vente
+                <input
+                  value={current.sale}
+                  onChange={(e) => setDraft({ ...current, sale: e.target.value })}
+                  inputMode="decimal"
+                  className={`${BB_FIELD} w-full text-right font-normal ${PRICE_PATTERN.test(current.sale) ? '' : 'border-red-400'}`}
+                />
+              </label>
+            </div>
+            <p className="rounded-md bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+              Seul le catalogue est modifié : les lignes déjà insérées dans les devis gardent leur description et leur prix.
+            </p>
           </div>
-        </>
-      )}
-    </form>
+        )}
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="h-8 rounded-md px-3 text-[13px] text-gray-600 hover:bg-gray-100">
+            Annuler
+          </button>
+          <button type="submit" disabled={!valid || save.isPending} className="h-8 rounded-md bg-accent-600 px-4 text-[13px] font-medium text-white hover:bg-accent-700 disabled:opacity-40">
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }

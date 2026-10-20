@@ -58,6 +58,37 @@ it('crée un devis numéroté avec le client du projet comme destinataire', func
     $this->postJson("/api/projects/{$project->id}/documents", ['type' => 'bon'])->assertStatus(422);
 });
 
+it('imprime l’adresse du destinataire dans l’ordre suisse (entreprise, mention, case postale)', function () {
+    actingAsRole('responsable');
+    $document = Document::createForProject(quoteProject(), 'devis');
+    $url = "/api/documents/{$document->id}";
+    $base = ['date' => '2026-10-20', 'status' => 'en_cours', 'vat_rate' => 8.1];
+
+    // Entreprise + « À l'attention de » sans texte : la mention vise la personne saisie.
+    $this->putJson($url, [...$base, 'recipient_company' => 'Dupont SA', 'recipient_extra_label' => "À l'attention de"])
+        ->assertOk()->assertJsonPath('data.recipient_company', 'Dupont SA');
+    expect($document->fresh()->recipientLines())->toBe([
+        'Dupont SA', "À l'attention de Madame Marie Dupont", 'Rue de la Gare 12', '2800 Delémont',
+    ]);
+
+    // « p.a. » : ligne complémentaire après la personne, avant la rue.
+    $this->putJson($url, [...$base, 'recipient_company' => null, 'recipient_extra_label' => 'p.a.', 'recipient_extra' => 'Fiduciaire Jura SA'])->assertOk();
+    expect($document->fresh()->recipientLines())->toBe([
+        'Madame', 'Marie Dupont', 'p.a. Fiduciaire Jura SA', 'Rue de la Gare 12', '2800 Delémont',
+    ]);
+
+    // « Case postale » : après la rue, avant le NPA.
+    $this->putJson($url, [...$base, 'recipient_extra_label' => 'Case postale', 'recipient_extra' => '123'])->assertOk();
+    expect($document->fresh()->recipientLines())->toBe([
+        'Madame', 'Marie Dupont', 'Rue de la Gare 12', 'Case postale 123', '2800 Delémont',
+    ]);
+
+    // Mention hors liste refusée ; la mention et l'entreprise suivent la nouvelle version du devis.
+    $this->putJson($url, [...$base, 'recipient_extra_label' => 'Chez'])->assertStatus(422);
+    $copy = $this->postJson("{$url}/duplicate")->assertCreated()->json('data');
+    expect($copy['recipient_extra_label'])->toBe('Case postale')->and($copy['recipient_extra'])->toBe('123');
+});
+
 it('ajoute une étape depuis un modèle avec ses articles, ou une étape libre', function () {
     actingAsRole('responsable');
     $document = Document::createForProject(quoteProject(), 'devis');

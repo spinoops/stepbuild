@@ -323,9 +323,13 @@ export interface DocumentDetail {
   date: string
   status: DocumentStatus
   address_id: number | null
+  recipient_company: string | null
   recipient_title: string | null
   recipient_name: string | null
   recipient_first_name: string | null
+  /** Mention de la ligne complémentaire (« À l'attention de », « p.a. », « c/o », « Case postale ») et son texte. */
+  recipient_extra_label: string | null
+  recipient_extra: string | null
   recipient_street: string | null
   recipient_street_no: string | null
   recipient_zip: string | null

@@ -1,12 +1,7 @@
 @php
     use App\Support\DocumentPrint as P;
     $base = $document->total_net - $document->discount_amount;
-    $recipient = array_filter([
-        $document->recipient_title,
-        trim(($document->recipient_first_name ?? '').' '.($document->recipient_name ?? '')),
-        trim(($document->recipient_street ?? '').' '.($document->recipient_street_no ?? '')),
-        trim(($document->recipient_zip ?? '').' '.($document->recipient_city ?? '')),
-    ]);
+    $recipient = $document->recipientLines();
     $projectAddress = array_filter([
         trim(($project?->street ?? '').' '.($project?->street_no ?? '')),
         trim(($project?->zip ?? '').' '.($project?->city ?? '')),

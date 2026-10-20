@@ -119,7 +119,12 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
 ### Devis (phase 3)
 - `documents` (type `devis` | `acompte` | `facture`, même base pour la phase 6) → `document_steps` →
   `document_positions`. Numéro automatique par projet et par type : `2853-055-DE.1` (`Document::createForProject`).
-  Destinataire = **instantané** du client du projet, modifiable sans toucher au carnet.
+  Destinataire = **instantané** du client du projet, modifiable sans toucher au carnet. Champs **Entreprise**
+  (`recipient_company`) et **ligne complémentaire** : mention `recipient_extra_label` (`Document::EXTRA_LABELS` :
+  « À l'attention de », « p.a. », « c/o », « Case postale ») + texte `recipient_extra`. Ordre imprimé
+  (`Document::recipientLines()`, recopié dans `DocumentHeaderForm` pour l'aperçu) : entreprise, titre, prénom nom,
+  ligne complémentaire, rue, case postale, NPA lieu ; « À l'attention de » sans texte → « À l'attention de Monsieur
+  Jean Dupont » à la place des lignes de la personne.
 - **Étape** = étape du chantier. Créée depuis un **modèle** (chapitre du catalogue, `catalog_chapter_id`, avec ou
   sans ses articles) ou libre. Les rapports journaliers (phase 4) devront référencer `document_steps.id`.
 - **Position** : `item` (chiffrée), `title`, `text`. Depuis un article du catalogue (prix repris, `usage_count`

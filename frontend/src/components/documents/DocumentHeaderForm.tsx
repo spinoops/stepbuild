@@ -19,14 +19,25 @@ const STATUS_OPTIONS = (Object.keys(DOCUMENT_STATUSES) as DocumentStatus[]).map(
   rowClass: DOCUMENT_STATUSES[key].rowClass,
 }))
 
+/** Mentions de la ligne complémentaire (cf. Document::EXTRA_LABELS côté API). */
+const EXTRA_LABELS: Array<{ value: string; hint: string }> = [
+  { value: "À l'attention de", hint: 'vise une personne dans l’entreprise ; sans texte, la personne saisie ci-dessus' },
+  { value: 'p.a.', hint: 'par adresse : courrier reçu chez un tiers (usage romand)' },
+  { value: 'c/o', hint: 'care of : même sens que p.a., admis par La Poste' },
+  { value: 'Case postale', hint: 'imprimée après la rue, avant le NPA' },
+]
+
 const schema = z.object({
   title: z.string().max(255),
   date: z.string().min(1, 'La date est requise.'),
   status: z.enum(['en_cours', 'envoye', 'accepte', 'refuse']),
   address_id: z.string(),
+  recipient_company: z.string().max(255),
   recipient_title: z.string().max(30),
   recipient_name: z.string().max(255),
   recipient_first_name: z.string().max(255),
+  recipient_extra_label: z.string().max(30),
+  recipient_extra: z.string().max(255),
   recipient_street: z.string().max(255),
   recipient_street_no: z.string().max(20),
   recipient_zip: z.string().max(10),
@@ -57,9 +68,12 @@ export default function DocumentHeaderForm({ document: doc, actions, onStateChan
       date: doc.date,
       status: doc.status,
       address_id: doc.address_id ? String(doc.address_id) : '',
+      recipient_company: doc.recipient_company ?? '',
       recipient_title: doc.recipient_title ?? '',
       recipient_name: doc.recipient_name ?? '',
       recipient_first_name: doc.recipient_first_name ?? '',
+      recipient_extra_label: doc.recipient_extra_label ?? '',
+      recipient_extra: doc.recipient_extra ?? '',
       recipient_street: doc.recipient_street ?? '',
       recipient_street_no: doc.recipient_street_no ?? '',
       recipient_zip: doc.recipient_zip ?? '',
@@ -76,6 +90,7 @@ export default function DocumentHeaderForm({ document: doc, actions, onStateChan
   const firstError = Object.values(formState.errors)[0]?.message
   // eslint-disable-next-line react-hooks/incompatible-library -- watch() de react-hook-form, usage voulu
   const status = watch('status')
+  const extraLabel = watch('recipient_extra_label')
 
   const { submit, onBlur } = useEntityForm(form, {
     isNew: false,
@@ -85,9 +100,12 @@ export default function DocumentHeaderForm({ document: doc, actions, onStateChan
         ...values,
         title: nullable(values.title),
         address_id: values.address_id ? Number(values.address_id) : null,
+        recipient_company: nullable(values.recipient_company),
         recipient_title: nullable(values.recipient_title),
         recipient_name: nullable(values.recipient_name),
         recipient_first_name: nullable(values.recipient_first_name),
+        recipient_extra_label: nullable(values.recipient_extra_label),
+        recipient_extra: nullable(values.recipient_extra),
         recipient_street: nullable(values.recipient_street),
         recipient_street_no: nullable(values.recipient_street_no),
         recipient_zip: nullable(values.recipient_zip),
@@ -182,14 +200,33 @@ export default function DocumentHeaderForm({ document: doc, actions, onStateChan
               ))}
             </BbSelect>
           </Field>
+          <Field label="Entreprise">
+            <BbInput className="w-72" placeholder="Raison sociale (facultatif)" {...register('recipient_company')} />
+          </Field>
           <Field label="Titre">
-            <BbInput className="w-32" {...register('recipient_title')} />
+            <BbInput className="w-32" placeholder="Monsieur, Madame…" {...register('recipient_title')} />
           </Field>
           <Field label="Nom">
             <BbInput className="w-72" {...register('recipient_name')} />
           </Field>
           <Field label="Prénom">
             <BbInput className="w-72" {...register('recipient_first_name')} />
+          </Field>
+          <Field label="Complément">
+            <BbSelect className="w-36" title={EXTRA_LABELS.find((item) => item.value === extraLabel)?.hint} {...register('recipient_extra_label')}>
+              <option value="">— aucun —</option>
+              {EXTRA_LABELS.map((item) => (
+                <option key={item.value} value={item.value} title={item.hint}>
+                  {item.value}
+                </option>
+              ))}
+            </BbSelect>
+            <BbInput
+              className="w-[132px]"
+              disabled={!extraLabel}
+              placeholder={extraLabel === "À l'attention de" ? 'vide = personne' : extraLabel === 'Case postale' ? 'n° (ex. 123)' : extraLabel ? 'nom, entreprise…' : ''}
+              {...register('recipient_extra')}
+            />
           </Field>
           <Field label="Rue / N°">
             <BbInput className="w-56" {...register('recipient_street')} />
@@ -202,6 +239,7 @@ export default function DocumentHeaderForm({ document: doc, actions, onStateChan
           <Field label="eMail">
             <BbInput className="w-72" {...register('recipient_email')} />
           </Field>
+          <RecipientPreview lines={recipientLines(watch())} />
         </div>
 
         <div className="w-[560px] space-y-2">
@@ -218,5 +256,37 @@ export default function DocumentHeaderForm({ document: doc, actions, onStateChan
       </div>
       {firstError && <p className="mt-3 text-[12px] text-red-600">{firstError}</p>}
     </form>
+  )
+}
+
+/** Lignes imprimées de l'adresse : même règle que Document::recipientLines() côté API. */
+function recipientLines(values: FormValues): string[] {
+  const person = `${values.recipient_first_name} ${values.recipient_name}`.trim()
+  const label = values.recipient_extra_label
+  const extra = values.recipient_extra.trim()
+  const lines: string[] = [values.recipient_company]
+  if (label === EXTRA_LABELS[0].value && extra === '') {
+    lines.push(person ? `${label} ${`${values.recipient_title} ${person}`.trim()}` : '')
+  } else {
+    lines.push(values.recipient_title, person)
+    if (extra && label !== EXTRA_LABELS[3].value) {
+      lines.push(`${label} ${extra}`.trim())
+    }
+  }
+  lines.push(`${values.recipient_street} ${values.recipient_street_no}`)
+  if (label === EXTRA_LABELS[3].value) {
+    lines.push(`${label} ${extra}`.trim())
+  }
+  lines.push(`${values.recipient_zip} ${values.recipient_city}`)
+  return lines.map((line) => line.trim()).filter(Boolean)
+}
+
+/** Aperçu de l'adresse telle qu'elle s'imprime dans la fenêtre de l'enveloppe. */
+function RecipientPreview({ lines }: { lines: string[] }) {
+  return (
+    <div className="ml-[128px] mt-3 w-72 rounded-md border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-[13px] leading-snug text-gray-800">
+      <div className="mb-1 text-[11px] uppercase tracking-wider text-gray-400">Adresse imprimée</div>
+      {lines.length ? lines.map((line, index) => <div key={index}>{line}</div>) : <div className="text-gray-400">—</div>}
+    </div>
   )
 }

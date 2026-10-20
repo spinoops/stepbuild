@@ -24,9 +24,13 @@ class Document extends Model
 
     public const STATUSES = ['en_cours', 'envoye', 'accepte', 'refuse'];
 
+    /** Mentions de la ligne complémentaire de l'adresse (usage suisse romand). L'ordre compte : cf. recipientLines(). */
+    public const EXTRA_LABELS = ["À l'attention de", 'p.a.', 'c/o', 'Case postale'];
+
     protected $fillable = [
         'project_id', 'type', 'sequence', 'number', 'title', 'date', 'status',
-        'address_id', 'recipient_title', 'recipient_name', 'recipient_first_name', 'recipient_street',
+        'address_id', 'recipient_company', 'recipient_title', 'recipient_name', 'recipient_first_name',
+        'recipient_extra_label', 'recipient_extra', 'recipient_street',
         'recipient_street_no', 'recipient_zip', 'recipient_city', 'recipient_email',
         'user_id', 'initials', 'header_text', 'footer_text', 'vat_rate', 'discount_percent',
     ];
@@ -73,7 +77,7 @@ class Document extends Model
 
     public function searchableFields(): array
     {
-        return ['number', 'title', 'project_label', 'recipient_name', 'recipient_first_name', 'recipient_city'];
+        return ['number', 'title', 'project_label', 'recipient_company', 'recipient_name', 'recipient_first_name', 'recipient_city'];
     }
 
     /**
@@ -104,6 +108,41 @@ class Document extends Model
             'initials' => $user ? self::initialsOf($user->name) : null,
             'vat_rate' => 8.10,
         ], $attributes));
+    }
+
+    /**
+     * Lignes de l'adresse du destinataire telles qu'imprimées, dans l'ordre suisse (directives de La Poste) :
+     * entreprise ; titre ; prénom et nom ; ligne complémentaire (« À l'attention de … », « p.a. … », « c/o … ») ;
+     * rue et numéro ; case postale ; NPA et localité.
+     * « À l'attention de » sans texte vise la personne saisie : « À l'attention de Monsieur Jean Dupont ».
+     *
+     * @return array<int, string>
+     */
+    public function recipientLines(): array
+    {
+        $person = trim(($this->recipient_first_name ?? '').' '.($this->recipient_name ?? ''));
+        $label = $this->recipient_extra_label;
+        $extra = trim((string) $this->recipient_extra);
+        $attention = $label === self::EXTRA_LABELS[0];
+
+        $lines = [$this->recipient_company];
+        if ($attention && $extra === '') {
+            // La mention remplace les lignes de la personne : « À l'attention de Monsieur Jean Dupont ».
+            $lines[] = $person !== '' ? trim($label.' '.trim(($this->recipient_title ?? '').' '.$person)) : null;
+        } else {
+            $lines[] = $this->recipient_title;
+            $lines[] = $person;
+            if ($extra !== '' && $label !== self::EXTRA_LABELS[3]) {
+                $lines[] = trim(($label ?? '').' '.$extra);
+            }
+        }
+        $lines[] = trim(($this->recipient_street ?? '').' '.($this->recipient_street_no ?? ''));
+        if ($label === self::EXTRA_LABELS[3]) {
+            $lines[] = trim($label.' '.$extra); // « Case postale 123 » se place après la rue, avant le NPA
+        }
+        $lines[] = trim(($this->recipient_zip ?? '').' '.($this->recipient_city ?? ''));
+
+        return array_values(array_filter($lines, fn ($line) => $line !== null && trim($line) !== ''));
     }
 
     public static function initialsOf(string $name): string
@@ -141,7 +180,8 @@ class Document extends Model
     {
         return DB::transaction(function () use ($user) {
             $copy = self::createForProject($this->project, $this->type, $user, $this->only([
-                'title', 'address_id', 'recipient_title', 'recipient_name', 'recipient_first_name', 'recipient_street',
+                'title', 'address_id', 'recipient_company', 'recipient_title', 'recipient_name', 'recipient_first_name',
+                'recipient_extra_label', 'recipient_extra', 'recipient_street',
                 'recipient_street_no', 'recipient_zip', 'recipient_city', 'recipient_email',
                 'header_text', 'footer_text', 'vat_rate', 'discount_percent',
             ]));
