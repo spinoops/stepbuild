@@ -53,6 +53,18 @@ const PRINT_TITLES: Record<DocumentDetail['type'], string> = { devis: 'Devis est
 export default function DocumentEditor({ document: doc, actions, onSaving, view, onViewChange }: DocumentEditorProps) {
   const createArticle = useCreateArticleOnTheFly()
   const [busyStep, setBusyStep] = useState<number | null>(null)
+  // Étapes de la feuille : déplacées par leur poignée (glisser ou flèches), renommées en place, supprimées.
+  const stepDragRef = useRef<number | null>(null)
+  const [stepDrag, setStepDragState] = useState<number | null>(null)
+  const [stepTarget, setStepTarget] = useState<{ stepId: number; place: DropPlace } | null>(null)
+  const [renaming, setRenaming] = useState<{ id: number; label: string } | null>(null)
+  function setStepDrag(value: number | null) {
+    stepDragRef.current = value
+    setStepDragState(value)
+    if (value === null) {
+      setStepTarget(null)
+    }
+  }
   const [drag, setDragState] = useState<DragState | null>(null)
   // Lu dans les gestionnaires d'événements : les survols peuvent précéder le rendu suivant.
   const dragRef = useRef<DragState | null>(null)
@@ -103,6 +115,80 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
   }
 
   /** Retire les lignes de l'étape restées sans quantité (articles du modèle non retenus). */
+  /** Applique un nouvel ordre d'étapes (ids), sans appel si rien ne change. */
+  async function reorderSteps(ids: number[]) {
+    if (ids.join() === steps.map((step) => step.id).join()) {
+      return
+    }
+    onSaving(true)
+    try {
+      await actions.reorderSteps(ids)
+    } catch {
+      toast("L'étape n'a pas pu être déplacée.", 'error')
+    } finally {
+      onSaving(false)
+    }
+  }
+
+  /** Dépose l'étape glissée au-dessus ou en dessous de l'étape visée. */
+  function dropStep(targetId: number, place: DropPlace) {
+    const dragged = stepDragRef.current
+    setStepDrag(null)
+    if (dragged === null || dragged === targetId) {
+      return
+    }
+    const ids = steps.map((step) => step.id).filter((id) => id !== dragged)
+    ids.splice(ids.indexOf(targetId) + (place === 'below' ? 1 : 0), 0, dragged)
+    void reorderSteps(ids)
+  }
+
+  /** Au clavier, flèches haut / bas sur la poignée de l'étape. */
+  function moveStep(index: number, direction: -1 | 1) {
+    const next = index + direction
+    if (next < 0 || next >= steps.length) {
+      return
+    }
+    const ids = steps.map((step) => step.id)
+    ;[ids[index], ids[next]] = [ids[next], ids[index]]
+    const id = ids[next]
+    void reorderSteps(ids).then(() => window.setTimeout(() => window.document.querySelector<HTMLButtonElement>(`[data-step-handle="${id}"]`)?.focus(), 40))
+  }
+
+  async function renameStep(step: DocumentStep, label: string) {
+    setRenaming(null)
+    const clean = label.trim()
+    if (!clean || clean === step.label) {
+      return
+    }
+    onSaving(true)
+    try {
+      await actions.updateStep(step.id, { code: step.code, label: clean })
+    } catch {
+      toast("L'étape n'a pas pu être renommée.", 'error')
+    } finally {
+      onSaving(false)
+    }
+  }
+
+  async function deleteStep(step: DocumentStep) {
+    const count = step.positions.length
+    const message = count
+      ? `Supprimer l'étape « ${step.label} » et ses ${count} position${count > 1 ? 's' : ''} ?\n\nLes rapports journaliers saisis sur cette étape la perdraient.`
+      : `Supprimer l'étape « ${step.label} » ?`
+    if (!window.confirm(message)) {
+      return
+    }
+    onSaving(true)
+    try {
+      await actions.deleteStep(step.id)
+      toast(`Étape « ${step.label} » supprimée.`, 'success')
+    } catch {
+      toast("L'étape n'a pas pu être supprimée.", 'error')
+    } finally {
+      onSaving(false)
+    }
+  }
+
   async function prune(step: DocumentStep) {
     const count = step.positions.filter(isEmptyItem).length
     if (!window.confirm(`Retirer les ${count} ligne${count > 1 ? 's' : ''} sans quantité de l'étape « ${step.label} » ?`)) {
@@ -348,9 +434,31 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
             const headTargeted = dragging && step.positions.length > 0 && target?.stepId === step.id && target.positionId === headTarget.positionId && target.place === 'above'
             const empty = step.positions.filter(isEmptyItem).length
             return (
-              <tbody key={step.id} id={`step-${step.id}`} className="scroll-mt-10">
+              <tbody
+                key={step.id}
+                id={`step-${step.id}`}
+                className={`scroll-mt-10 ${stepDrag === step.id ? 'opacity-40' : ''}`}
+                onDragOver={(event) => {
+                  if (stepDragRef.current === null) {
+                    return
+                  }
+                  event.preventDefault()
+                  const rect = event.currentTarget.getBoundingClientRect()
+                  const place: DropPlace = event.clientY < rect.top + rect.height / 2 ? 'above' : 'below'
+                  setStepTarget((current) => (current?.stepId === step.id && current.place === place ? current : { stepId: step.id, place }))
+                }}
+                onDrop={(event) => {
+                  if (stepDragRef.current === null) {
+                    return
+                  }
+                  event.preventDefault()
+                  dropStep(step.id, stepTarget?.stepId === step.id ? stepTarget.place : 'above')
+                }}
+              >
                 <tr
-                  className={`font-bold ${headTargeted ? 'shadow-[inset_0_-3px_0_0_#1d3f9c]' : ''}`}
+                  className={`group/step font-bold ${headTargeted ? 'shadow-[inset_0_-3px_0_0_#1d3f9c]' : ''} ${
+                    stepDrag !== null && stepTarget?.stepId === step.id && stepTarget.place === 'above' ? 'shadow-[inset_0_3px_0_0_#1d3f9c]' : ''
+                  }`}
                   onDragOver={(event) => {
                     if (dragRef.current || getCatalogDrag()) {
                       event.preventDefault()
@@ -358,14 +466,64 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
                     }
                   }}
                   onDrop={(event) => {
+                    if (stepDragRef.current !== null) {
+                      return // déplacement d'étape : géré par le tbody
+                    }
                     event.preventDefault()
                     void drop(headTarget)
                   }}
                 >
-                  <td />
+                  <td className="pb-0.5 pt-5 align-bottom">
+                    <button
+                      type="button"
+                      draggable
+                      data-step-handle={step.id}
+                      onDragStart={(event) => {
+                        event.dataTransfer.effectAllowed = 'move'
+                        event.dataTransfer.setData('text/plain', step.label)
+                        const head = event.currentTarget.closest('tr')
+                        if (head) {
+                          event.dataTransfer.setDragImage(head, 24, 18)
+                        }
+                        setStepDrag(step.id)
+                      }}
+                      onDragEnd={() => setStepDrag(null)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+                          event.preventDefault()
+                          moveStep(stepIndex, event.key === 'ArrowUp' ? -1 : 1)
+                        }
+                      }}
+                      title="Glisser pour déplacer l'étape avec ses positions (au clavier : flèches haut et bas)"
+                      aria-label="Déplacer l'étape"
+                      className="flex h-6 w-5 cursor-grab items-center justify-center rounded text-gray-300 transition hover:bg-gray-100 hover:text-gray-600 focus:text-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-100 active:cursor-grabbing group-hover/step:text-gray-500"
+                    >
+                      <Icon name="grip" className="h-4 w-4" />
+                    </button>
+                  </td>
                   <td className="border-b border-gray-400 px-1 pb-1 pt-5">{stepIndex + 1}</td>
-                  <td colSpan={4} className="border-b border-gray-400 px-1 pb-1 pt-5">
-                    {step.label}
+                  <td colSpan={4} className="border-b border-gray-400 px-1 pb-1 pt-5" onDoubleClick={() => setRenaming({ id: step.id, label: step.label })}>
+                    {renaming?.id === step.id ? (
+                      <input
+                        autoFocus
+                        value={renaming.label}
+                        onChange={(event) => setRenaming({ id: step.id, label: event.target.value })}
+                        onBlur={() => void renameStep(step, renaming.label)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault()
+                            void renameStep(step, renaming.label)
+                          } else if (event.key === 'Escape') {
+                            setRenaming(null)
+                          }
+                        }}
+                        maxLength={255}
+                        aria-label="Titre de l'étape"
+                        className="w-full rounded border border-primary-400 bg-white px-1 py-0.5 outline-none ring-2 ring-primary-100"
+                      />
+                    ) : (
+                      <span title="Double-clic pour renommer l'étape">{step.label}</span>
+                    )}
                   </td>
                   <td
                     className="border-b border-gray-400 px-1 pb-1 pt-5 text-right text-[12px] font-normal tabular-nums text-gray-400"
@@ -373,7 +531,23 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
                   >
                     {view.hidePrices ? '' : fmtAmount(step.total)}
                   </td>
-                  <td className="pb-0.5 pl-2 pt-5 text-right align-bottom">
+                  <td className="whitespace-nowrap pb-0.5 pl-2 pt-5 text-right align-bottom">
+                    <button
+                      type="button"
+                      onClick={() => setRenaming({ id: step.id, label: step.label })}
+                      title="Renommer l'étape"
+                      className="rounded p-1 font-normal text-gray-400 opacity-0 transition hover:bg-gray-100 hover:text-gray-700 focus:opacity-100 group-hover/step:opacity-100"
+                    >
+                      <Icon name="edit" className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void deleteStep(step)}
+                      title="Supprimer l'étape et ses positions"
+                      className="rounded p-1 font-normal text-gray-400 opacity-0 transition hover:bg-red-50 hover:text-red-600 focus:opacity-100 group-hover/step:opacity-100"
+                    >
+                      <Icon name="trash" className="h-3.5 w-3.5" />
+                    </button>
                     {empty > 0 && (
                       <button
                         type="button"
@@ -421,7 +595,9 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
                     event.preventDefault()
                     void drop({ stepId: step.id, positionId: null, place: 'above' })
                   }}
-                  className={endTargeted ? 'shadow-[inset_0_3px_0_0_#1d3f9c]' : ''}
+                  className={`${endTargeted ? 'shadow-[inset_0_3px_0_0_#1d3f9c]' : ''} ${
+                    stepDrag !== null && stepTarget?.stepId === step.id && stepTarget.place === 'below' ? 'shadow-[inset_0_-3px_0_0_#1d3f9c]' : ''
+                  }`}
                 >
                   <td />
                   <td colSpan={6} className="py-1.5" style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
