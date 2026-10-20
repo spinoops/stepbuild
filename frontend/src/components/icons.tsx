@@ -53,6 +53,7 @@ export type IconName =
   | 'grip'
   | 'box'
   | 'pagebreak'
+  | 'shield'
 
 const PATHS: Record<IconName, React.ReactNode> = {
   dashboard: (
@@ -378,6 +379,12 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
       <path d="m3.3 7 8.7 5 8.7-5" />
       <path d="M12 22V12" />
+    </>
+  ),
+  shield: (
+    <>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="m9 12 2 2 4-4" />
     </>
   ),
   pagebreak: (

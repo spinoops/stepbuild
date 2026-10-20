@@ -16,6 +16,7 @@ import QuoteTemplatesPage from '@/pages/QuoteTemplatesPage'
 import CollaboratorsPage from '@/pages/CollaboratorsPage'
 import BreakdownTemplatesPage from '@/pages/BreakdownTemplatesPage'
 import UsersPage from '@/pages/UsersPage'
+import LoginLogsPage from '@/pages/LoginLogsPage'
 import SettingsPage from '@/pages/SettingsPage'
 import StockPage from '@/pages/StockPage'
 import StockShell from '@/components/stock/StockShell'
@@ -75,6 +76,7 @@ export default function App() {
           {/* Administration : admin uniquement */}
           <Route element={<RoleRoute roles={['admin']} />}>
             <Route path="/users" element={<PagePane><UsersPage /></PagePane>} />
+            <Route path="/connexions" element={<PagePane><LoginLogsPage /></PagePane>} />
             <Route path="/settings" element={<PagePane><SettingsPage /></PagePane>} />
           </Route>
         </Route>

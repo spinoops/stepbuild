@@ -142,6 +142,9 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   ses champs depuis le serveur pendant la saisie.
   Réordonnancement par **glisser-déposer** natif (poignée `data-handle`, dépose dans l'étape ou vers une autre étape :
   `updatePosition` avec le nouveau `document_step_id` puis `reorderPositions`) ; au clavier, flèches sur la poignée.
+  **Les étapes se gèrent aussi sur la feuille** (20.10.2026) : poignée `data-step-handle` sur le titre (glisser l'étape
+  entière au-dessus / en dessous d'une autre, `stepDragRef` distinct du glissement de position, ou flèches au clavier →
+  `reorderSteps`), renommage par double-clic ou crayon (`updateStep`), corbeille (`deleteStep`, confirmation).
 - **Sous-détail de prix** par position (fenêtre ouverte depuis la ligne, icône calculatrice) : remplace les formules
   notées en « remarques internes » dans BauBit. `document_position_costs` = lignes par famille (1 MO, 2 MAT, 3 MACH,
   4 MAT EX, 5 OUT, 6 ST = familles des éléments de coûts, `price_element_id` facultatif) : quantité (× **quantité de
@@ -345,7 +348,15 @@ Navigation dans `frontend/src/lib/navigation.ts` (groupes calqués sur les ruban
 filtrée par rôle. Pages dans `frontend/src/pages/` :
 `/dashboard`, `/projets`, `/clients`, `/rapports`, `/regie`, `/controle-heures`,
 `/documents`, `/statistiques`, `/catalogue`, `/listes-prix`, `/modeles-devis`, `/sous-details-types`,
-`/collaborateurs`, `/stock`, `/users`, `/settings`.
+`/collaborateurs`, `/stock`, `/users`, `/connexions`, `/settings`.
+
+### Journal des connexions (administration, 20.10.2026)
+Table `login_logs` (sans clé étrangère : survit aux suppressions de comptes et aux reprises ; hors `DataTransfer`) :
+`event` login | failed (`reason` unknown_email | bad_password) | throttled (refus du limiteur 6/min, tracé dans le
+rendu de `ThrottleRequestsException` de `bootstrap/app.php`) | logout | password_reset, avec e-mail saisi, IP et
+navigateur. `LoginLog::record()` ne bloque jamais la connexion. `GET /api/login-logs` (middleware `admin`,
+`LoginLogController`, filtres `event`, `user_id`, `from`, `to` + grille, résumé 24 h dans `summary`). Purge au-delà de
+`LoginLog::RETENTION_DAYS` (365) par `stepbuild:cron`. Front : `pages/LoginLogsPage` (`/connexions`, Administration).
 Les modules non développés utilisent `components/ModulePlaceholder.tsx` : **remplacer**
 le placeholder par la vraie page lors de la phase concernée.
 

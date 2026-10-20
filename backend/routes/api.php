@@ -16,6 +16,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentPositionController;
 use App\Http\Controllers\DocumentStepController;
 use App\Http\Controllers\HoursControlController;
+use App\Http\Controllers\LoginLogController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PriceElementController;
 use App\Http\Controllers\ProjectAddressController;
@@ -197,6 +198,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Administration : réservé aux utilisateurs de rôle 'admin'.
     Route::middleware('admin')->group(function () {
         Route::apiResource('users', UserController::class)->except(['show']);
+        Route::get('/login-logs', [LoginLogController::class, 'index']);
         Route::put('/settings', [SettingController::class, 'update']);
     });
 });

@@ -151,6 +151,7 @@ export const RIBBON_TABS: RibbonTab[] = [
         items: [
           { label: 'Utilisateurs', icon: 'users', to: '/users', big: true, roles: ['admin'] },
           { label: 'Configuration', icon: 'settings', to: '/settings', big: true, roles: ['admin'] },
+          { label: 'Journal des connexions', icon: 'shield', to: '/connexions', big: true, roles: ['admin'] },
           { label: "Journal d'activité", icon: 'clipboard', roles: ['admin'] },
         ],
       },

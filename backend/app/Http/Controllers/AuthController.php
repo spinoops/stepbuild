@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\UserResource;
+use App\Models\LoginLog;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,6 +26,9 @@ class AuthController extends Controller
         $user = User::where('email', $credentials['email'])->first();
 
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
+            // Le journal distingue l'e-mail inconnu du mauvais mot de passe ; la réponse, elle, reste la même.
+            LoginLog::record($request, 'failed', $user, $credentials['email'], $user ? 'bad_password' : 'unknown_email');
+
             throw ValidationException::withMessages([
                 'email' => [__('auth.failed')],
             ]);
@@ -32,6 +36,7 @@ class AuthController extends Controller
 
         $deviceName = $credentials['device_name'] ?? 'spa';
         $token = $user->createToken($deviceName)->plainTextToken;
+        LoginLog::record($request, 'login', $user);
 
         return response()->json([
             'token' => $token,
@@ -44,6 +49,7 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
+        LoginLog::record($request, 'logout', $request->user());
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Déconnecté.']);
