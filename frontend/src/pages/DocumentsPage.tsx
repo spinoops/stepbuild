@@ -209,6 +209,9 @@ export default function DocumentsPage() {
       }
       aside={
         <AsidePanel title="Devis" fill>
+          <Accordion title="Catalogue de prix" open={catalogOpen} onToggle={() => setCatalogOpen((value) => !value)}>
+            <CatalogPanel document={doc} />
+          </Accordion>
           <Accordion title="Étapes et devis" open={stepsOpen} onToggle={() => setStepsOpen((value) => !value)} badge={doc ? `${doc.steps?.length ?? 0} étape${(doc.steps?.length ?? 0) > 1 ? 's' : ''}` : undefined}>
             <div className="mt-1 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Documents du projet</div>
             {!projectId && <p className="mt-1.5 text-[13px] text-gray-400">Choisissez un projet dans la barre du haut.</p>}
@@ -238,9 +241,6 @@ export default function DocumentsPage() {
                 <DocumentSteps key={doc.id} document={doc} />
               </div>
             )}
-          </Accordion>
-          <Accordion title="Catalogue de prix" open={catalogOpen} onToggle={() => setCatalogOpen((value) => !value)}>
-            <CatalogPanel document={doc} />
           </Accordion>
         </AsidePanel>
       }

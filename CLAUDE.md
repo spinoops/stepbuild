@@ -192,7 +192,7 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   (sous-détail ou prix d'achat).
 - Tout le module est réservé à `roles:admin,responsable` (prix). `POST /documents/{id}/duplicate` crée la version suivante.
 - **Panneau de gauche du devis** (`DocumentsPage`, `AsidePanel fill` + `components/baubit/Accordion`) : deux sections
-  dépliables. **« Étapes et devis »** = documents du projet + `StepsPanel` (navigation, modèles, ajout d'étape).
+  dépliables, le catalogue en haut (demande du 20.10.2026). **« Étapes et devis »** (en dessous) = documents du projet + `StepsPanel` (navigation, modèles, ajout d'étape).
   **« Catalogue de prix »** = `components/documents/CatalogPanel` : chapitres (dossiers, ✓ si l'étape est dans le devis,
   compteur d'articles) et articles (recherche en mémoire via `useArticlePicker`). **On ajoute uniquement en
   glissant** (aucun ajout au clic, demande du client du 16.10.2026) : l'élément glissé est gardé dans
