@@ -370,8 +370,14 @@ Le `php` du PATH Windows est en **8.1** (trop vieux pour Laravel 13, qui exige *
 - Composer/tests : `$env:Path = 'D:\wamp64\bin\php\php8.4.24;' + $env:Path`.
 
 ## Démarrer
-- **`dev.bat`** (racine) lance le backend (`:8001`) + le frontend (`:5174`). **WAMP (MySQL) doit tourner.**
-- Base MySQL : `app_chantier`. Plusieurs projets dérivés de baseapp partagent les ports → **un seul lancé à la fois**.
+- **`dev.bat`** (racine) lance le backend (`:8020`) + le frontend (`:5190`). **WAMP (MySQL) doit tourner.**
+- **Ports réservés à StepBuild : 8020 (API) et 5190 (front)** (21.10.2026). Les autres projets de `D:\wamp64\www`
+  dérivés de baseapp utilisent 5173–5176 et 8000–8003 (stepone-worktime, systeme-reservation… sur 8001/5174) :
+  StepBuild peut donc tourner en même temps qu'eux. Ports écrits dans `.claude/launch.json`, `dev.ps1`,
+  `frontend/vite.config.ts` (`strictPort`), `lib/api.ts`, `config/app.php`, `config/cors.php`, les deux `.env.example`
+  et `docs/manuel/capture.cjs` ; les `.env` locaux (non versionnés) doivent suivre (APP_URL, FRONTEND_URL,
+  SANCTUM_STATEFUL_DOMAINS, VITE_API_URL).
+- Base MySQL : `app_chantier`.
 
 ## Stack
 - **Backend** : Laravel 13, PHP 8.4, Sanctum (token), spatie/laravel-permission (rôles),
