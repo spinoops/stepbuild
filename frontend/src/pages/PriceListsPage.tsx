@@ -43,7 +43,7 @@ const COLUMNS: GridColumn<PriceElement>[] = [
   { key: 'supplier_price', header: 'Prix fourn.', value: (e) => e.supplier_price, type: 'number', width: 100 },
   { key: 'net_price', header: 'Net', value: (e) => e.net_price, type: 'number', width: 100 },
   { key: 'regie_price', header: 'Prix régie', value: (e) => e.regie_price, type: 'number', width: 100 },
-  { key: 'regie_code', header: 'Tarif régie', value: (e) => e.regie_code, width: 110 },
+  { key: 'regie_code', header: 'Code régie', value: (e) => e.regie_code, width: 110 },
   {
     key: 'price_updated_at',
     header: 'Prix du',
@@ -313,7 +313,7 @@ function ElementForm({ element, isNew, defaultFamily, defaultGroup, disabled, on
           <BbInput className="w-20" {...register('group_code')} />
           <BbInput className="w-[136px]" autoFocus={isNew} invalid={Boolean(errors.number)} {...register('number')} />
         </Field>
-        <Field label="Tarif régie" labelWidth={90}>
+        <Field label="Code régie" labelWidth={90}>
           <BbInput className="w-56" {...register('regie_code')} />
         </Field>
         <Field label="Prix net" labelWidth={110}>
