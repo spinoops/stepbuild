@@ -270,6 +270,16 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `POST /collaborators/{id}/absences` `{from, to?, type, hours?, note?}` (période → jours ouvrés ; 0 h efface).
 - **Types de travail** : `apiResource('work-types')` store/update/destroy (gestion) ; un type utilisé est désactivé
   au lieu d'être supprimé ; `GET /work-types?all=1` inclut les inactifs.
+- **Rapport de régie** (contrôle des coûts, 22.10.2026, onglet du ruban « Rapport de régie » après Exécution) :
+  `GET /api/cost-control?project_id=&document_id=&status=&from=&to=` (`CostControlController`, `App\Support\CostControl`,
+  gestion seulement). Pour chaque étape du devis (accepté, sinon le dernier, ou `document_id`) : **prévu** (vente hors
+  options, prix de revient = Σ quantité × `cost_price`, heures = positions en heures + lignes MO en heures des
+  sous-détails) contre **réalisé** par les rapports journaliers du projet (heures productives, coût brut, régie, client),
+  avec le détail par rapport. **Budget** = prix de revient s'il existe, sinon vente ; `status` ok | over (coût brut >
+  budget, ou dépense sans rien de prévu) | none. Les heures sur types de travail et les lignes sans étape (ou d'une autre
+  version du devis) sont regroupées dans `others`. Front : `pages/CostControlPage` (`/rapport-regie`, projet courant,
+  lignes vertes / rouges, barre de consommation, étape dépliable sur ses rapports, filtres statut / période / devis),
+  hook `hooks/useCostControl.ts`.
 - Front : `pages/RegiePage` (lignes du projet courant groupées par rapport, `components/regie/PriceCell` éditable en
   place, onglet Récapitulation par famille et par rapport, marge affichée ; hooks `hooks/useRegie.ts` : la ligne
   renvoyée remplace celle du cache et les totaux sont recalculés localement), `pages/HoursControlPage` (mois et
@@ -347,7 +357,7 @@ page Configuration.
 Navigation dans `frontend/src/lib/navigation.ts` (groupes calqués sur les rubans BauBit),
 filtrée par rôle. Pages dans `frontend/src/pages/` :
 `/dashboard`, `/projets`, `/clients`, `/rapports`, `/regie`, `/controle-heures`,
-`/documents`, `/statistiques`, `/catalogue`, `/listes-prix`, `/modeles-devis`, `/sous-details-types`,
+`/documents`, `/rapport-regie`, `/statistiques`, `/catalogue`, `/listes-prix`, `/modeles-devis`, `/sous-details-types`,
 `/collaborateurs`, `/stock`, `/users`, `/connexions`, `/settings`.
 
 ### Journal des connexions (administration, 20.10.2026)

@@ -104,6 +104,21 @@ export const RIBBON_TABS: RibbonTab[] = [
     ],
   },
   {
+    id: 'controle',
+    label: 'Rapport de régie',
+    groups: [
+      {
+        title: 'Suivi du chantier',
+        items: [
+          { label: 'Rapport de régie', icon: 'chart', to: '/rapport-regie', big: true, roles: GESTION },
+          { label: 'Lignes de régie', icon: 'calculator', to: '/regie', roles: GESTION },
+          { label: 'Contrôle des heures', icon: 'clock', to: '/controle-heures', roles: GESTION },
+          { label: 'Rapports journaliers', icon: 'clipboard', to: '/rapports' },
+        ],
+      },
+    ],
+  },
+  {
     id: 'services',
     label: 'Services centraux',
     groups: [

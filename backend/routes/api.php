@@ -7,6 +7,7 @@ use App\Http\Controllers\CatalogArticleController;
 use App\Http\Controllers\CatalogChapterController;
 use App\Http\Controllers\CollaboratorAbsenceController;
 use App\Http\Controllers\CollaboratorController;
+use App\Http\Controllers\CostControlController;
 use App\Http\Controllers\CronController;
 use App\Http\Controllers\DailyReportController;
 use App\Http\Controllers\DailyReportFileController;
@@ -181,6 +182,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('units', UnitController::class)->only(['store', 'update', 'destroy']);
 
         // Régie : trois niveaux de prix (brut, régie, client) sur les lignes des rapports.
+        Route::get('/cost-control', [CostControlController::class, 'show']);
         Route::get('/regie/lines', [RegieController::class, 'index']);
         Route::put('/regie/lines/{kind}/{id}', [RegieController::class, 'update'])->whereIn('kind', ['hour', 'item'])->whereNumber('id');
         Route::post('/regie/apply-tariffs', [RegieController::class, 'applyTariffs']);

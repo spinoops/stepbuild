@@ -17,6 +17,7 @@ import CollaboratorsPage from '@/pages/CollaboratorsPage'
 import BreakdownTemplatesPage from '@/pages/BreakdownTemplatesPage'
 import UsersPage from '@/pages/UsersPage'
 import LoginLogsPage from '@/pages/LoginLogsPage'
+import CostControlPage from '@/pages/CostControlPage'
 import SettingsPage from '@/pages/SettingsPage'
 import StockPage from '@/pages/StockPage'
 import StockShell from '@/components/stock/StockShell'
@@ -62,6 +63,7 @@ export default function App() {
           <Route element={<RoleRoute roles={['admin', 'responsable']} />}>
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/regie" element={<RegiePage />} />
+            <Route path="/rapport-regie" element={<CostControlPage />} />
             <Route path="/controle-heures" element={<HoursControlPage />} />
             <Route path="/documents" element={<DocumentsPage />} />
             <Route path="/statistiques" element={<StatsPage />} />
