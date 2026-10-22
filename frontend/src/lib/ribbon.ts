@@ -69,6 +69,13 @@ export const RIBBON_TABS: RibbonTab[] = [
           { label: 'Export', icon: 'export', roles: GESTION },
         ],
       },
+      {
+        title: 'Modèles',
+        items: [
+          { label: 'Modèles de devis', icon: 'tree', to: '/modeles-devis', roles: GESTION },
+          { label: 'Sous-détails types', icon: 'calculator', to: '/sous-details-types', roles: GESTION },
+        ],
+      },
     ],
   },
   {
@@ -138,20 +145,11 @@ export const RIBBON_TABS: RibbonTab[] = [
     label: 'Données de base',
     groups: [
       { title: 'Catalogue', items: [{ label: "Catalogue d'articles", icon: 'book', to: '/catalogue', big: true, roles: GESTION }] },
-      { title: 'Stocks', items: [{ label: 'Stocks', icon: 'box', to: '/stock', big: true, roles: GESTION }] },
-      {
-        title: 'Devis',
-        items: [
-          { label: 'Modèles de devis', icon: 'tree', to: '/modeles-devis', roles: GESTION },
-          { label: 'Sous-détails types', icon: 'calculator', to: '/sous-details-types', roles: GESTION },
-        ],
-      },
+      { title: 'Stocks', items: [{ label: 'Stocks', icon: 'box', to: '/stock', roles: GESTION }] },
       {
         title: 'Listes de prix',
         items: [
           { label: 'Eléments de coûts', icon: 'tag', to: '/listes-prix', roles: GESTION },
-          { label: 'Tarifs régie', icon: 'calculator', to: '/listes-prix', roles: GESTION },
-          { label: 'Types de travail', icon: 'table', roles: GESTION },
           { label: 'Collaborateurs', icon: 'users', to: '/collaborateurs', roles: GESTION },
         ],
       },
