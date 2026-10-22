@@ -389,7 +389,9 @@ page Configuration.
 
 ## Modules et routes front
 Navigation dans `frontend/src/lib/navigation.ts` (groupes calqués sur les rubans BauBit),
-filtrée par rôle. Pages dans `frontend/src/pages/` :
+filtrée par rôle. Ruban `lib/ribbon.ts` (22.10.2026) : Accueil, Offre facturation, Exécution, Rapport de régie,
+**Statistiques** (ex-Services centraux), **Données de base** (Clients = carnet d'adresses `/clients`, Catalogue
+d'articles, Stocks, Éléments de coûts, Collaborateurs), Administration. Pages dans `frontend/src/pages/` :
 `/dashboard`, `/projets`, `/clients`, `/rapports`, `/regie`, `/controle-heures`,
 `/documents`, `/rapport-regie`, `/statistiques`, `/catalogue`, `/listes-prix`, `/modeles-devis`, `/sous-details-types`,
 `/collaborateurs`, `/stock`, `/users`, `/connexions`, `/settings`.
@@ -469,7 +471,9 @@ Le `php` du PATH Windows est en **8.1** (trop vieux pour Laravel 13, qui exige *
 `docs/Mode d'emploi - StepBuild.pdf`, généré par `docs/manuel/` : `npm run captures` (puppeteer sur
 Chrome, données d'exemple ; `FRONT_URL` / `API_URL` pour d'autres ports) puis `npm run pdf` (reportlab,
 `build_manual.py`, police Helvetica → caractères WinAnsi seulement). **À compléter à chaque phase livrée**
-(chapitre par module, version et date en tête du script).
+(chapitre par module, version et date en tête du script). `npm run changelog` (`build_changelog.py`, mêmes styles)
+produit le PDF des nouveautés d'une livraison (`docs/Nouveautés - StepBuild - <période>.pdf`) : mettre à jour
+`PERIOD`, `OUTPUT` et la liste à chaque livraison.
 
 ## Déploiement
 Voir `DEPLOY.md`. Même méthode que app-planningchantier : **un seul domaine**

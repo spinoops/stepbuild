@@ -25,7 +25,7 @@ export interface RibbonTab {
 const GESTION: Role[] = ['admin', 'responsable']
 
 /**
- * Ruban calqué sur BauBit PRO : Offre facturation / Exécution / Services centraux /
+ * Ruban calqué sur BauBit PRO : Offre facturation / Exécution / Rapport de régie / Statistiques (ex-Services centraux) /
  * Données de base / Administration. Les boutons sans `to` correspondent à des
  * fonctions prévues dans une phase ultérieure.
  */
@@ -127,9 +127,8 @@ export const RIBBON_TABS: RibbonTab[] = [
   },
   {
     id: 'services',
-    label: 'Services centraux',
+    label: 'Statistiques',
     groups: [
-      { title: 'Adresses', items: [{ label: 'Adresses', icon: 'contacts', to: '/clients', big: true, roles: GESTION }] },
       {
         title: 'Evaluations',
         items: [
@@ -144,6 +143,7 @@ export const RIBBON_TABS: RibbonTab[] = [
     id: 'donnees',
     label: 'Données de base',
     groups: [
+      { title: 'Clients', items: [{ label: 'Clients', icon: 'contacts', to: '/clients', big: true, roles: GESTION }] },
       { title: 'Catalogue', items: [{ label: "Catalogue d'articles", icon: 'book', to: '/catalogue', big: true, roles: GESTION }] },
       { title: 'Stocks', items: [{ label: 'Stocks', icon: 'box', to: '/stock', roles: GESTION }] },
       {

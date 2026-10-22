@@ -124,7 +124,7 @@ export default function ClientsPage() {
     <Workspace
       entries={list.data?.meta.total ?? null}
       statusRight={SAVE_LABELS[saveState]}
-      tabLabel={onlyActive ? 'Adresses - Seulement actifs' : 'Adresses'}
+      tabLabel={onlyActive ? 'Clients - Seulement actifs' : 'Clients'}
       toolbar={
         <>
           <StandardTools
@@ -171,7 +171,7 @@ export default function ClientsPage() {
         </>
       }
       aside={
-        <AsidePanel nav={[{ icon: 'contacts', label: 'Adresses', active: true }, { icon: 'users', label: 'Personnes de contact' }]}>
+        <AsidePanel nav={[{ icon: 'contacts', label: 'Clients', active: true }, { icon: 'users', label: 'Personnes de contact' }]}>
           <div className="mt-1 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Fiche</div>
           {address ? (
             <div className="mt-2 space-y-0.5 rounded-lg border border-gray-200 bg-gray-50 p-3 text-[13px]">
