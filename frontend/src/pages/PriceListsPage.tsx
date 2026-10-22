@@ -43,7 +43,6 @@ const COLUMNS: GridColumn<PriceElement>[] = [
   { key: 'supplier_price', header: 'Prix fourn.', value: (e) => e.supplier_price, type: 'number', width: 100 },
   { key: 'net_price', header: 'Net', value: (e) => e.net_price, type: 'number', width: 100 },
   { key: 'regie_price', header: 'Prix régie', value: (e) => e.regie_price, type: 'number', width: 100 },
-  { key: 'regie_code', header: 'Code régie', value: (e) => e.regie_code, width: 110 },
   {
     key: 'price_updated_at',
     header: 'Prix du',
