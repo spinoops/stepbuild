@@ -183,6 +183,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Régie : trois niveaux de prix (brut, régie, client) sur les lignes des rapports.
         Route::get('/cost-control', [CostControlController::class, 'show']);
+        Route::post('/cost-control/margin', [CostControlController::class, 'applyMargin']);
         Route::get('/regie/lines', [RegieController::class, 'index']);
         Route::put('/regie/lines/{kind}/{id}', [RegieController::class, 'update'])->whereIn('kind', ['hour', 'item'])->whereNumber('id');
         Route::post('/regie/apply-tariffs', [RegieController::class, 'applyTariffs']);

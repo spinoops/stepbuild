@@ -52,15 +52,16 @@ class CostControl
             ->filter(fn (DailyReportHour $line) => $line->isHours());
         $items = DailyReportItem::query()->whereIn('daily_report_id', $reportIds)->get();
 
+        $stepIds = $document?->steps->pluck('id')->all() ?? [];
         $byStep = [];
         foreach ($hours as $line) {
-            $key = $line->document_step_id ?? 0;
+            $key = self::bucketKey($line->document_step_id, $stepIds);
             $bucket = &$byStep[$key][$line->daily_report_id];
             $bucket = self::add($bucket ?? null, (float) $line->quantity, (float) $line->amount, (float) $line->regie_amount, (float) $line->client_amount);
             unset($bucket);
         }
         foreach ($items as $line) {
-            $key = $line->document_step_id ?? 0;
+            $key = self::bucketKey($line->document_step_id, $stepIds);
             $bucket = &$byStep[$key][$line->daily_report_id];
             $bucket = self::add($bucket ?? null, 0.0, (float) $line->amount, (float) $line->regie_amount, (float) $line->client_amount);
             unset($bucket);
@@ -79,18 +80,17 @@ class CostControl
             $totals['actual'] = self::merge($totals['actual'], $row['actual']);
         }
 
-        // Lignes hors devis : types de travail en heures (samedi, formation…), ressources sans étape, ou étapes
-        // d'une autre version du devis.
+        // Lignes hors devis : types de travail en heures (samedi, formation…), ressources sans étape, et étapes
+        // d'une autre version du devis (regroupées ensemble : la marge s'y applique d'un bloc).
         $others = [];
-        foreach ($byStep as $stepId => $perReport) {
-            $label = $stepId === 0 ? 'Hors devis (types de travail, ressources sans étape)' : (DocumentStep::withTrashed()->find($stepId)?->label ?? "Étape #{$stepId}");
-            $code = $stepId === 0 ? '—' : (DocumentStep::withTrashed()->find($stepId)?->code ?? '');
-            $row = self::row($stepId === 0 ? null : (int) $stepId, $code, $label, null, $perReport, $reports);
+        if (isset($byStep[0])) {
+            $row = self::row(null, '—', 'Hors devis (types de travail, lignes sans étape ou d’une autre version)', null, $byStep[0], $reports);
             $others[] = $row;
             $totals['actual'] = self::merge($totals['actual'], $row['actual']);
         }
 
         $budget = $totals['planned']['budget'];
+        $totals['margin_percent'] = self::marginPercent($totals['actual']['cost'], $totals['actual']['client']);
         $totals['budget_basis'] = $totals['planned']['cost'] > 0 ? 'cost' : ($totals['planned']['sale'] > 0 ? 'sale' : null);
         $totals['variance'] = round($budget - $totals['actual']['cost'], 2);
         $totals['percent'] = $budget > 0 ? round($totals['actual']['cost'] / $budget * 100, 1) : null;
@@ -112,6 +112,81 @@ class CostControl
             'others' => $others,
             'totals' => $totals,
         ];
+    }
+
+    /**
+     * Applique une marge sur le coût brut aux lignes de rapports du projet (rapports non facturés, filtres de
+     * statut / période respectés) : prix client = coût brut × (1 + marge %), arrondi à 5 centimes. Le prix
+     * régie (tarif de l'entreprise) n'est pas touché. Portée : une étape (`document_step_id`), « hors devis »
+     * (lignes sans étape ou d'une autre version du devis) ou tout le chantier. Renvoie le nombre de lignes
+     * modifiées et le nombre de lignes verrouillées par la facturation.
+     *
+     * @param  array{document_id?: int|null, status?: string|null, from?: string|null, to?: string|null}  $filters
+     * @return array{updated: int, locked: int}
+     */
+    public static function applyMargin(Project $project, string $scope, ?int $stepId, float $percent, array $filters = []): array
+    {
+        $documentId = ! empty($filters['document_id']) ? (int) $filters['document_id'] : DailyReport::defaultDocumentId($project);
+        $stepIds = $documentId ? DocumentStep::where('document_id', $documentId)->pluck('id')->all() : [];
+
+        $reports = DailyReport::query()
+            ->where('project_id', $project->id)
+            ->when(! empty($filters['status']), fn ($q) => $q->where('status', $filters['status']))
+            ->when(! empty($filters['from']), fn ($q) => $q->whereDate('date', '>=', $filters['from']))
+            ->when(! empty($filters['to']), fn ($q) => $q->whereDate('date', '<=', $filters['to']))
+            ->get(['id', 'status'])
+            ->keyBy('id');
+        $ids = $reports->keys()->all();
+
+        $inScope = function (?int $lineStepId) use ($scope, $stepId, $stepIds): bool {
+            return match ($scope) {
+                'step' => $lineStepId === $stepId,
+                'other' => $lineStepId === null || ! in_array($lineStepId, $stepIds, true),
+                default => true,
+            };
+        };
+        $factor = 1 + $percent / 100;
+        $updated = 0;
+        $locked = 0;
+        $touched = [];
+
+        $hours = DailyReportHour::query()->whereIn('daily_report_id', $ids)->where('quantity', '>', 0)->with('workType')->get()
+            ->filter(fn (DailyReportHour $line) => $line->isHours() && $inScope($line->document_step_id));
+        $items = DailyReportItem::query()->whereIn('daily_report_id', $ids)->get()
+            ->filter(fn (DailyReportItem $line) => $inScope($line->document_step_id));
+
+        foreach ([$hours, $items] as $lines) {
+            foreach ($lines as $line) {
+                $cost = $line instanceof DailyReportHour ? $line->hourly_cost : $line->unit_cost;
+                if ($cost === null) {
+                    continue;
+                }
+                if ($reports[$line->daily_report_id]->status === 'facture') {
+                    $locked++;
+
+                    continue;
+                }
+                $line->client_price = round((float) $cost * $factor * 20) / 20;
+                $line->save();
+                $touched[$line->daily_report_id] = true;
+                $updated++;
+            }
+        }
+        DailyReport::whereIn('id', array_keys($touched))->get()->each->recalculate();
+
+        return ['updated' => $updated, 'locked' => $locked];
+    }
+
+    /** Clé de regroupement d'une ligne : son étape si elle appartient au devis comparé, sinon 0 (hors devis). */
+    private static function bucketKey(?int $lineStepId, array $stepIds): int
+    {
+        return $lineStepId !== null && in_array($lineStepId, $stepIds, true) ? $lineStepId : 0;
+    }
+
+    /** Marge réalisée : prix client par rapport au coût brut, en pour-cent (null sans coût). */
+    private static function marginPercent(float $cost, float $client): ?float
+    {
+        return $cost > 0.005 ? round(($client - $cost) / $cost * 100, 1) : null;
     }
 
     /**
@@ -174,9 +249,13 @@ class CostControl
     {
         $actual = self::empty();
         $lines = [];
+        $lockedCost = 0.0;
         foreach ($perReport as $reportId => $sums) {
             $actual = self::merge($actual, $sums);
             $report = $reports[$reportId];
+            if ($report->status === 'facture') {
+                $lockedCost += $sums['cost'];
+            }
             $lines[] = [
                 'id' => $report->id,
                 'number' => $report->number,
@@ -199,6 +278,8 @@ class CostControl
             'label' => $label,
             'planned' => $planned,
             'actual' => array_map(fn ($v) => round($v, 2), $actual),
+            'margin_percent' => self::marginPercent($actual['cost'], $actual['client']),
+            'locked_cost' => round($lockedCost, 2),
             'variance' => $planned ? round($budget - $actual['cost'], 2) : null,
             'percent' => $budget > 0 ? round($actual['cost'] / $budget * 100, 1) : null,
             'status' => self::status($budget, $actual['cost'], $basis),

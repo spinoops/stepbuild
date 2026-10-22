@@ -5,8 +5,9 @@ import { ToolButton, ToolSep } from '@/components/baubit/Toolbar'
 import { BbInput, BbSelect } from '@/components/baubit/Form'
 import { Icon } from '@/components/icons'
 import Badge from '@/components/ui/Badge'
-import { useCostControl } from '@/hooks/useCostControl'
-import type { ControlStatus, ControlStep, CostControlFilters } from '@/hooks/useCostControl'
+import { useApplyMargin, useCostControl } from '@/hooks/useCostControl'
+import type { ApplyMarginInput, ControlStatus, ControlStep, CostControlFilters } from '@/hooks/useCostControl'
+import { toast } from '@/lib/toast'
 import { useProjectOptions } from '@/hooks/useProjects'
 import { fmtAmount, fmtDate } from '@/lib/format'
 import { DOCUMENT_STATUSES, REPORT_STATUSES } from '@/lib/status'
@@ -40,6 +41,7 @@ export default function CostControlPage() {
 
   const filters = useMemo<CostControlFilters>(() => ({ project_id: projectId, document_id: documentId, status, from, to }), [projectId, documentId, status, from, to])
   const query = useCostControl(filters)
+  const applyMargin = useApplyMargin(filters)
   const data = query.data ?? null
   const projects = useProjectOptions()
   const project = projects.data?.find((item) => item.id === projectId) ?? null
@@ -60,6 +62,18 @@ export default function CostControlPage() {
 
   function openReport(id: number) {
     navigate(`/rapports?id=${id}`)
+  }
+
+  /** Marge sur le coût brut → prix client des lignes concernées (rapports facturés exclus). */
+  function changeMargin(input: ApplyMarginInput) {
+    applyMargin.mutate(input, {
+      onSuccess: ({ updated, locked }) =>
+        toast(
+          `${updated} ligne${updated > 1 ? 's' : ''} au prix client coût + ${input.markup_percent} %` + (locked ? ` · ${locked} ligne${locked > 1 ? 's' : ''} facturée${locked > 1 ? 's' : ''} inchangée${locked > 1 ? 's' : ''}` : '') + '.',
+          'success',
+        ),
+      onError: () => toast("La marge n'a pas pu être appliquée.", 'error'),
+    })
   }
 
   const chip = (active: boolean) =>
@@ -152,6 +166,19 @@ export default function CostControlPage() {
                 </dl>
                 {data.totals.percent !== null && <Bar percent={data.totals.percent} status={data.totals.status} />}
               </div>
+
+              <div className="mt-4 text-[12px] font-semibold uppercase tracking-wider text-gray-400">Marge client sur tout le chantier</div>
+              <div className="mt-2 rounded-lg border border-gray-200 p-3">
+                <MarginControl
+                  value={data.totals.margin_percent}
+                  cost={data.totals.actual.cost}
+                  busy={applyMargin.isPending}
+                  onApply={(percent) => changeMargin({ scope: 'all', markup_percent: percent })}
+                />
+                <p className="mt-2 text-[11px] leading-relaxed text-gray-400">
+                  Fixe le prix client de toutes les lignes des rapports non facturés à coût brut + marge. Le tarif régie de l'entreprise reste tel quel.
+                </p>
+              </div>
               <p className="mt-3 text-[12px] text-gray-500">
                 {over > 0 ? `${over} étape${over > 1 ? 's' : ''} en dépassement.` : 'Aucune étape en dépassement.'}
               </p>
@@ -215,6 +242,9 @@ export default function CostControlPage() {
                   <th className={`${HEAD} w-28 text-right`} title="Montant client des rapports (facturable)">
                     Client
                   </th>
+                  <th className={`${HEAD} w-52 text-left`} title="Marge du prix client sur le coût brut ; la tirette l'applique à toutes les lignes de l'étape (rapports non facturés)">
+                    Marge client
+                  </th>
                   <th className={`${HEAD} w-32 text-left`}>État</th>
                 </tr>
               </thead>
@@ -224,7 +254,16 @@ export default function CostControlPage() {
                   const expanded = open.has(key)
                   const isOther = index >= data.steps.length
                   return (
-                    <StepRows key={key} row={row} isOther={isOther} expanded={expanded} onToggle={() => toggle(key)} onOpenReport={openReport} />
+                    <StepRows
+                      key={key}
+                      row={row}
+                      isOther={isOther}
+                      expanded={expanded}
+                      busy={applyMargin.isPending}
+                      onToggle={() => toggle(key)}
+                      onOpenReport={openReport}
+                      onMargin={(percent) => changeMargin(isOther ? { scope: 'other', markup_percent: percent } : { scope: 'step', document_step_id: row.id, markup_percent: percent })}
+                    />
                   )
                 })}
               </tbody>
@@ -244,6 +283,7 @@ export default function CostControlPage() {
                   <td className="px-2 py-2">{data.totals.percent !== null && <Bar percent={data.totals.percent} status={data.totals.status} />}</td>
                   <td className={NUM}>{fmtAmount(data.totals.actual.regie)}</td>
                   <td className={NUM}>{fmtAmount(data.totals.actual.client)}</td>
+                  <td className="px-2 py-2 text-[12px] font-normal text-gray-500">{data.totals.margin_percent !== null ? `${data.totals.margin_percent} % sur le coût` : ''}</td>
                   <td className="px-2 py-2">
                     <Badge className={STATUS[data.totals.status].badge}>{STATUS[data.totals.status].label}</Badge>
                   </td>
@@ -261,12 +301,14 @@ interface StepRowsProps {
   row: ControlStep
   isOther: boolean
   expanded: boolean
+  busy: boolean
   onToggle: () => void
   onOpenReport: (id: number) => void
+  onMargin: (percent: number) => void
 }
 
 /** Une étape (ligne colorée) et, dépliés, les rapports journaliers qui l'ont alimentée. */
-function StepRows({ row, isOther, expanded, onToggle, onOpenReport }: StepRowsProps) {
+function StepRows({ row, isOther, expanded, busy, onToggle, onOpenReport, onMargin }: StepRowsProps) {
   const meta = STATUS[row.status]
   const hasReports = row.reports.length > 0
   return (
@@ -292,6 +334,9 @@ function StepRows({ row, isOther, expanded, onToggle, onOpenReport }: StepRowsPr
         <td className="px-2 py-1.5">{row.percent !== null && <Bar percent={row.percent} status={row.status} />}</td>
         <td className={NUM}>{fmtAmount(row.actual.regie)}</td>
         <td className={NUM}>{fmtAmount(row.actual.client)}</td>
+        <td className="px-2 py-1" onClick={(event) => event.stopPropagation()}>
+          {row.actual.cost > 0 && <MarginControl value={row.margin_percent} cost={row.actual.cost} lockedCost={row.locked_cost} busy={busy} onApply={onMargin} compact />}
+        </td>
         <td className="px-2 py-1.5">
           <Badge className={meta.badge}>{meta.label}</Badge>
         </td>
@@ -315,6 +360,7 @@ function StepRows({ row, isOther, expanded, onToggle, onOpenReport }: StepRowsPr
             <td />
             <td className={NUM}>{fmtAmount(report.regie)}</td>
             <td className={NUM}>{fmtAmount(report.client)}</td>
+            <td />
             <td />
           </tr>
         ))}
@@ -340,6 +386,82 @@ function Empty({ text }: { text: string }) {
     <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-gray-500">
       <Icon name="chart" className="h-8 w-8 text-gray-300" />
       <p className="max-w-md text-[13px]">{text}</p>
+    </div>
+  )
+}
+
+interface MarginControlProps {
+  /** Marge réalisée aujourd'hui (prix client / coût brut), null sans coût. */
+  value: number | null
+  cost: number
+  lockedCost?: number
+  busy: boolean
+  compact?: boolean
+  onApply: (percent: number) => void
+}
+
+/**
+ * Tirette de marge : on la déplace (ou on tape le pourcentage), le prix client prévu s'affiche, et la
+ * marge s'applique aux lignes quand on relâche la tirette ou qu'on valide le champ (Entrée, sortie).
+ */
+function MarginControl({ value, cost, lockedCost = 0, busy, compact = false, onApply }: MarginControlProps) {
+  const current = value ?? 0
+  const [draft, setDraft] = useState<number | null>(null)
+  const shown = draft ?? current
+  const dirty = draft !== null && Math.abs(draft - current) >= 0.05
+  const projected = Math.round(cost * (1 + shown / 100) * 20) / 20
+  const allLocked = lockedCost > 0 && lockedCost >= cost - 0.005
+
+  function commit() {
+    if (dirty && !allLocked) {
+      onApply(Math.round(shown * 10) / 10)
+    }
+    setDraft(null)
+  }
+
+  return (
+    <div className={`flex items-center gap-2 ${compact ? '' : 'flex-wrap'}`} title={allLocked ? 'Tous les rapports de cette étape sont facturés : prix client figés' : undefined}>
+      <input
+        type="range"
+        min={-20}
+        max={100}
+        step={1}
+        value={Math.min(100, Math.max(-20, shown))}
+        disabled={busy || allLocked}
+        onChange={(event) => setDraft(Number(event.target.value))}
+        onPointerUp={commit}
+        onKeyUp={(event) => (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'Enter') && commit()}
+        onBlur={commit}
+        aria-label="Marge client en pour-cent du coût brut"
+        className={`${compact ? 'w-24' : 'flex-1'} accent-primary-600 disabled:opacity-40`}
+      />
+      <span className="flex items-center gap-0.5">
+        <input
+          type="number"
+          min={-100}
+          max={500}
+          step={1}
+          value={Math.round(shown * 10) / 10}
+          disabled={busy || allLocked}
+          onChange={(event) => setDraft(event.target.value === '' ? 0 : Number(event.target.value))}
+          onKeyDown={(event) => event.key === 'Enter' && commit()}
+          onBlur={commit}
+          aria-label="Marge client"
+          className={`h-7 w-14 rounded-md border border-gray-300 px-1 text-right text-[12px] tabular-nums outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 disabled:opacity-40 ${
+            dirty ? 'border-primary-400 bg-primary-50' : ''
+          }`}
+        />
+        <span className="text-[11px] text-gray-500">%</span>
+      </span>
+      {!compact && (
+        <span className="text-[12px] text-gray-600">
+          → client <span className={`font-semibold tabular-nums ${dirty ? 'text-primary-800' : 'text-gray-800'}`}>{fmtAmount(projected)}</span>
+        </span>
+      )}
+      {compact && dirty && <span className="text-[11px] tabular-nums text-primary-800">→ {fmtAmount(projected)}</span>}
+      {lockedCost > 0 && !allLocked && compact && (
+        <Icon name="clock" className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-label="Une partie des rapports est facturée : ces lignes ne bougent pas" />
+      )}
     </div>
   )
 }

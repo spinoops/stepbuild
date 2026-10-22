@@ -277,9 +277,14 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   sous-détails) contre **réalisé** par les rapports journaliers du projet (heures productives, coût brut, régie, client),
   avec le détail par rapport. **Budget** = prix de revient s'il existe, sinon vente ; `status` ok | over (coût brut >
   budget, ou dépense sans rien de prévu) | none. Les heures sur types de travail et les lignes sans étape (ou d'une autre
-  version du devis) sont regroupées dans `others`. Front : `pages/CostControlPage` (`/rapport-regie`, projet courant,
-  lignes vertes / rouges, barre de consommation, étape dépliable sur ses rapports, filtres statut / période / devis),
-  hook `hooks/useCostControl.ts`.
+  version du devis) sont regroupées dans `others` (une seule ligne). Chaque ligne porte `margin_percent` (prix client
+  sur coût brut) et `locked_cost` (coût des rapports facturés). **Marge** : `POST /api/cost-control/margin`
+  `{project_id, scope: step|other|all, document_step_id?, markup_percent, …filtres}` → `CostControl::applyMargin()`
+  fixe le **prix client** des lignes (heures et ressources) à coût brut × (1 + marge), arrondi à 5 ct, rapports facturés
+  exclus (`locked`), tarif régie inchangé ; renvoie `updated`, `locked` et le rapport recalculé. Front :
+  `pages/CostControlPage` (`/rapport-regie`, projet courant, lignes vertes / rouges, barre de consommation, étape
+  dépliable sur ses rapports, filtres statut / période / devis, **tirette de marge** `MarginControl` par étape et pour
+  tout le chantier, appliquée au relâchement), hook `hooks/useCostControl.ts` (`useApplyMargin` remplace le cache).
 - Front : `pages/RegiePage` (lignes du projet courant groupées par rapport, `components/regie/PriceCell` éditable en
   place, onglet Récapitulation par famille et par rapport, marge affichée ; hooks `hooks/useRegie.ts` : la ligne
   renvoyée remplace celle du cache et les totaux sont recalculés localement), `pages/HoursControlPage` (mois et

@@ -20,7 +20,7 @@ it('compare le devis aux rapports journaliers étape par étape, en vert ou en r
     $tiling->positions()->create(['document_id' => $quote->id, 'description' => 'Option', 'unit' => 'm²', 'quantity' => 1, 'unit_price' => 300, 'is_optional' => true, 'position' => 2]);
     $pose->syncBreakdown([['family' => 1, 'label' => 'Carreleur', 'unit' => 'h', 'quantity' => 1, 'per_dimension' => true, 'unit_cost' => 60]]);
     $quote->recalculate();
-    $pierre = Collaborator::create(['number' => '101', 'last_name' => 'Martin', 'first_name' => 'Pierre', 'hourly_cost' => 50]);
+    $pierre = Collaborator::create(['number' => '101', 'last_name' => 'Martin', 'first_name' => 'Pierre', 'hourly_cost' => 50, 'regie_price' => 50]);
     $saturday = WorkType::create(['code' => '1100', 'label' => 'Samedi', 'unit' => 'h']);
 
     $first = DailyReport::createForProject($project, null, ['date' => '2026-08-10']);
@@ -69,8 +69,26 @@ it('compare le devis aux rapports journaliers étape par étape, en vert ou en r
     $filtered = $this->getJson("/api/cost-control?project_id={$project->id}&status=en_controle")->assertOk()->json();
     expect($filtered['steps'][0]['actual']['hours'])->toEqual(4)->and($filtered['steps'][0]['status'])->toBe('ok');
 
+    // Marge sur une étape : prix client = coût brut + 40 %, arrondi à 5 ct ; le rapport facturé reste verrouillé.
+    expect($data['steps'][0]['margin_percent'])->toEqual(0.0);   // tarif régie = coût brut : client = brut tant que rien n'est fixé
+    $second->update(['status' => 'facture']);
+    $applied = $this->postJson('/api/cost-control/margin', ['project_id' => $project->id, 'scope' => 'step', 'document_step_id' => $demolition->id, 'markup_percent' => 40])
+        ->assertOk()->json();
+    expect($applied['updated'])->toBe(1)->and($applied['locked'])->toBe(1)
+        ->and($first->hours()->where('document_step_id', $demolition->id)->value('client_price'))->toEqual(70)   // 50 × 1.4
+        ->and($applied['report']['steps'][0]['actual']['client'])->toEqual(8 * 70 + 4 * 50)
+        ->and($applied['report']['steps'][0]['locked_cost'])->toEqual(200)
+        ->and($applied['report']['steps'][0]['margin_percent'])->toEqual(26.7);  // (760 − 600) / 600
+    // Sur tout le chantier (hors devis compris) : la colle passe à 10 × 1.3 = 13.-, le samedi à 65.-.
+    $all = $this->postJson('/api/cost-control/margin', ['project_id' => $project->id, 'scope' => 'all', 'markup_percent' => 30])->assertOk()->json();
+    expect($all['updated'])->toBe(3)
+        ->and($first->items()->first()->client_price)->toEqual(13)
+        ->and($all['report']['others'][0]['actual']['client'])->toEqual(130);
+    $this->postJson('/api/cost-control/margin', ['project_id' => $project->id, 'scope' => 'step', 'markup_percent' => 10])->assertStatus(422);
+
     // Réservé à la gestion ; projet obligatoire.
     $this->getJson('/api/cost-control')->assertStatus(422);
     actingAsRole('ouvrier');
     $this->getJson("/api/cost-control?project_id={$project->id}")->assertForbidden();
+    $this->postJson('/api/cost-control/margin', ['project_id' => $project->id, 'scope' => 'all', 'markup_percent' => 10])->assertForbidden();
 });

@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { DocumentStatus, ReportStatus } from '@/types'
 
@@ -37,6 +37,10 @@ export interface ControlStep {
   label: string
   planned: ControlPlanned | null
   actual: ControlActual
+  /** Marge réalisée : prix client par rapport au coût brut, en % (null sans coût). */
+  margin_percent: number | null
+  /** Coût brut des rapports facturés : leur prix client ne bouge plus. */
+  locked_cost: number
   variance: number | null
   percent: number | null
   status: ControlStatus
@@ -53,6 +57,7 @@ export interface CostControlData {
   totals: {
     planned: { sale: number; cost: number; hours: number; budget: number }
     actual: ControlActual
+    margin_percent: number | null
     budget_basis: 'cost' | 'sale' | null
     variance: number
     percent: number | null
@@ -86,5 +91,37 @@ export function useCostControl(filters: CostControlFilters) {
       ).data,
     enabled: filters.project_id !== null,
     placeholderData: keepPreviousData,
+  })
+}
+
+export interface ApplyMarginInput {
+  scope: 'step' | 'other' | 'all'
+  document_step_id?: number | null
+  markup_percent: number
+}
+
+/**
+ * Applique une marge sur le coût brut (prix client) aux lignes d'une étape, du « hors devis » ou de tout le
+ * chantier, dans les rapports non facturés. Le rapport renvoyé remplace celui du cache.
+ */
+export function useApplyMargin(filters: CostControlFilters) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: ApplyMarginInput) =>
+      (
+        await api.post<{ updated: number; locked: number; report: CostControlData }>('/cost-control/margin', {
+          project_id: filters.project_id,
+          ...input,
+          ...(filters.document_id ? { document_id: filters.document_id } : {}),
+          ...(filters.status ? { status: filters.status } : {}),
+          ...(filters.from ? { from: filters.from } : {}),
+          ...(filters.to ? { to: filters.to } : {}),
+        })
+      ).data,
+    onSuccess: (result) => {
+      queryClient.setQueryData(['cost-control', filters], result.report)
+      void queryClient.invalidateQueries({ queryKey: ['regie'] })
+      void queryClient.invalidateQueries({ queryKey: ['daily-reports'] })
+    },
   })
 }
