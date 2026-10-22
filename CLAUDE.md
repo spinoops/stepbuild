@@ -333,6 +333,12 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `hooks/useStock.ts` (le produit renvoyé remplace celui du cache). Pour admin/responsable la page est dans la coque
   normale (Données de base → Stocks).
 
+### Éléments de coûts : majoration par tirette
+Dans la liste des éléments de coûts, la colonne **Majoration** (prix régie sur prix net, en %) est une cellule
+`MarkupCell` : un clic ouvre une tirette (0–200 %, champ et raccourcis 0 / 10 / 20 / 30 / 50 %) ; au relâchement, le
+**prix régie** est réécrit = prix net × (1 + majoration), arrondi à 5 ct (`PUT /price-elements/{id}` avec la fiche
+complète). La colonne « Code régie » a quitté la liste (le champ reste dans la fiche pour les reprises).
+
 ### Éléments de coûts : unité régie
 `price_elements.unit_regie` (unité du tarif régie BauBit) est reprise par les imports mais **plus affichée ni saisie**
 dans la page Listes de prix (retirée le 22.10.2026 à la demande du client) ; le formulaire ne l'envoie plus, la valeur
