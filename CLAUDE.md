@@ -69,7 +69,10 @@ Coque : en-tête anthracite (logo, onglets du **ruban** `lib/ribbon.ts`, recherc
 travail**, contenu, **barre d'état**. Charte Lachat dans `index.css` : `primary` (bleu), `accent`
 (rouge, actions principales), `anthracite`. Composants dans `components/shell/` et `components/baubit/` :
 - `Workspace` (barre d'outils + `AsidePanel` + contenu ; alimente barre d'état et libellé d'onglet),
-- `DataGrid` (filtre par colonne, tri, lignes par statut ; **mode serveur** via `query` / `onQueryChange`), `GridPager`,
+- `DataGrid` (filtre par colonne, tri, lignes par statut ; **mode serveur** via `query` / `onQueryChange` ; **colonnes
+  redimensionnables** en tirant le bord droit de l'en-tête, double-clic = largeur d'origine, mémorisées dans
+  `localStorage` si `storageKey` est donné — en mode serveur, chaque colonne triable doit figurer dans la liste
+  `sortable` du contrôleur, cf. `sort=margin` calculé dans `PriceElementController`), `GridPager`,
 - `Form` (`Field`, `BbInput`, `BbSelect`, `BbTextarea`, `BbCheckbox`, `StatusSelect`, `SectionTitle`),
 - `TabStrip`, `Toolbar` (`StandardTools` branchable : `onNew`, `formId`, `onUndo`, `onDelete`), `Tree`.
 

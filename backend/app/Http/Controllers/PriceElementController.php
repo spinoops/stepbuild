@@ -16,7 +16,7 @@ class PriceElementController extends Controller
 
     private const COLUMNS = [
         'group_code', 'number', 'description', 'unit', 'unit_regie',
-        'supplier_price', 'net_price', 'regie_price', 'regie_code',
+        'supplier_price', 'net_price', 'regie_price', 'regie_code', 'price_updated_at',
     ];
 
     /**
@@ -30,6 +30,12 @@ class PriceElementController extends Controller
 
         if (! $request->filled('sort')) {
             $query->orderBy('family');
+        } elseif ($request->query('sort') === 'margin') {
+            // Majoration = (prix régie − prix net) / prix net : colonne calculée, triée ici, puis numéro en second.
+            $dir = $request->query('dir') === 'desc' ? 'DESC' : 'ASC';
+            $query->orderByRaw('(regie_price IS NULL OR net_price IS NULL OR net_price = 0)') // sans majoration : toujours en fin
+                ->orderByRaw('(regie_price - net_price) / NULLIF(net_price, 0) '.$dir);
+            $request->merge(['sort' => null]);
         }
 
         return PriceElementResource::collection(

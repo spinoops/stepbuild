@@ -216,6 +216,7 @@ export default function PriceListsPage() {
           query={query}
           onQueryChange={(next) => setQuery({ ...next, page: 1 })}
           emptyText={list.isLoading ? 'Chargement…' : 'Aucun élément dans cette famille.'}
+          storageKey="price-elements"
         />
         <GridPager meta={list.data?.meta} onPage={(page) => setQuery({ ...query, page })} loading={list.isFetching} />
       </div>
