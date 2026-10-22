@@ -14,6 +14,8 @@ import DocumentPreview from '@/components/documents/DocumentPreview'
 import DocumentRecap from '@/components/documents/DocumentRecap'
 import StepsPanel from '@/components/documents/StepsPanel'
 import TemplateChooser from '@/components/documents/TemplateChooser'
+import DerivedDocumentDialog from '@/components/documents/DerivedDocumentDialog'
+import type { DerivedDocumentInput, DerivedType } from '@/components/documents/DerivedDocumentDialog'
 import { Icon } from '@/components/icons'
 import Badge from '@/components/ui/Badge'
 import { useDebounced } from '@/hooks/useDebounced'
@@ -75,6 +77,8 @@ export default function DocumentsPage() {
   const templates = useQuoteTemplates()
   const saveAsTemplate = useSaveDocumentAsTemplate()
   const [chooserOpen, setChooserOpen] = useState(false)
+  const [derivedType, setDerivedType] = useState<DerivedType | null>(null)
+  const [newMenuOpen, setNewMenuOpen] = useState(false)
   // Panneau de gauche : « Étapes et devis » pour naviguer, « Catalogue de prix » pour ajouter des articles.
   const [stepsOpen, setStepsOpen] = useState(true)
   const [catalogOpen, setCatalogOpen] = useState(true)
@@ -135,6 +139,33 @@ export default function DocumentsPage() {
     )
   }
 
+  /** Demande d'acompte ou travaux exécutés : créés depuis un devis du projet. */
+  function openDerived(type: DerivedType) {
+    setNewMenuOpen(false)
+    if (!projectId) {
+      toast("Choisissez d'abord un projet dans la barre du haut.", 'info')
+      return
+    }
+    setDerivedType(type)
+  }
+
+  function createDerived(input: DerivedDocumentInput) {
+    if (!projectId) {
+      return
+    }
+    create.mutate(
+      { projectId, type: input.type, sourceDocumentId: input.sourceDocumentId, advancePercent: input.advancePercent, advanceAmount: input.advanceAmount },
+      {
+        onSuccess: (created) => {
+          setDerivedType(null)
+          toast(`${DOCUMENT_TYPE_LABELS[created.type]} ${created.number} créé${created.type === 'acompte' ? 'e' : ''}.`, 'success')
+          open(created.id)
+        },
+        onError: () => toast("Le document n'a pas pu être créé.", 'error'),
+      },
+    )
+  }
+
   function saveTemplate() {
     if (!doc) {
       return
@@ -172,6 +203,7 @@ export default function DocumentsPage() {
   return (
     <>
     <TemplateChooser open={chooserOpen} onClose={() => setChooserOpen(false)} onChoose={createWithTemplate} busy={create.isPending} />
+    <DerivedDocumentDialog key={derivedType ?? 'none'} type={derivedType} documents={projectDocuments.data ?? []} busy={create.isPending} onClose={() => setDerivedType(null)} onCreate={createDerived} />
     <Workspace
       asideWidth={360}
       tabLabel={doc ? `${DOCUMENT_TYPE_LABELS[doc.type]} N° ${doc.number}` : 'Documents'}
@@ -181,6 +213,36 @@ export default function DocumentsPage() {
       toolbar={
         <>
           <ToolPrimary icon="fileplus" label="Nouveau devis" onClick={createQuote} />
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setNewMenuOpen((value) => !value)}
+              onBlur={() => window.setTimeout(() => setNewMenuOpen(false), 150)}
+              title="Autres documents : demande d'acompte, travaux exécutés"
+              className="flex h-8 items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 text-[13px] text-gray-700 hover:bg-gray-50"
+            >
+              Autre document
+              <Icon name="chevrondown" className="h-3.5 w-3.5 text-gray-400" />
+            </button>
+            {newMenuOpen && (
+              <div className="absolute left-0 top-9 z-30 w-72 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-xl">
+                <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => openDerived('acompte')} className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-primary-50">
+                  <Icon name="file" className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
+                  <span>
+                    <span className="block text-[13px] font-medium text-gray-800">Demande d'acompte</span>
+                    <span className="block text-[11px] text-gray-500">Pourcentage ou montant sur le devis.</span>
+                  </span>
+                </button>
+                <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => openDerived('travaux')} className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-primary-50">
+                  <Icon name="clipboard" className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
+                  <span>
+                    <span className="block text-[13px] font-medium text-gray-800">Travaux exécutés</span>
+                    <span className="block text-[11px] text-gray-500">Quantités réalisées face au devis.</span>
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
           <ToolSep />
           <ToolButton icon="trash" title="Supprimer le document" tone="danger" onClick={onDelete} disabled={!doc} />
           <ToolSep />

@@ -43,7 +43,7 @@ interface DropTarget {
 const isEmptyItem = (position: DocumentPosition) => position.kind === 'item' && position.quantity === null
 
 /** Intitulé imprimé par type de document (cf. DocumentPrint::TITLES côté API). */
-const PRINT_TITLES: Record<DocumentDetail['type'], string> = { devis: 'Devis estimatif', acompte: "Demande d'acompte", facture: 'Facture' }
+const PRINT_TITLES: Record<DocumentDetail['type'], string> = { devis: 'Devis estimatif', acompte: "Demande d'acompte", travaux: 'Travaux exécutés', facture: 'Facture' }
 
 /**
  * Détail du devis, présenté comme la feuille que le client recevra : même largeur de colonnes, même
@@ -78,6 +78,8 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
   const external = useCatalogDrag()
   const chapters = useCatalogChapters()
   const steps = useMemo(() => doc.steps ?? [], [doc.steps])
+  // Travaux exécutés : une colonne « Qté devis » en plus, la quantité saisie étant celle exécutée.
+  const executed = doc.type === 'travaux'
   const numbers = useMemo(() => printNumbers(steps), [steps])
   // Sous-détail de prix ouvert, et nombre de reports de prix par position : la ligne du devis est
   // remontée (clé) après un report, pour reprendre le prix venu du serveur sans toucher à la saisie en cours.
@@ -399,6 +401,7 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
             </div>
             <div className="truncate text-[12px] text-gray-500">
               Projet : {doc.project?.number} {doc.project?.designation1}
+              {doc.source && ` · Devis N° ${doc.source.number}`}
             </div>
           </div>
           <div className="shrink-0 text-[12px] text-gray-500">{fmtDate(doc.date)}</div>
@@ -408,8 +411,9 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
           <colgroup>
             <col className="w-[28px]" />
             <col className="w-[54px]" />
-            <col className="w-[338px]" />
+            <col className={executed ? 'w-[268px]' : 'w-[338px]'} />
             <col className="w-[54px]" />
+            {executed && <col className="w-[70px]" />}
             <col className="w-[75px]" />
             <col className="w-[92px]" />
             <col className="w-[104px]" />
@@ -421,7 +425,8 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
               <th className="border-b border-gray-900 px-1 py-1.5 text-left font-normal">Pos.</th>
               <th className="border-b border-gray-900 px-1 py-1.5 text-left font-normal">Description</th>
               <th className="border-b border-gray-900 px-1 py-1.5 text-left font-normal">Un.</th>
-              <th className="border-b border-gray-900 px-1 py-1.5 text-right font-normal">Quantité</th>
+              {executed && <th className="border-b border-gray-900 px-1 py-1.5 text-right font-normal text-gray-400">Qté devis</th>}
+              <th className="border-b border-gray-900 px-1 py-1.5 text-right font-normal">{executed ? 'Exécuté' : 'Quantité'}</th>
               <th className="border-b border-gray-900 px-1 py-1.5 text-right font-normal">Prix</th>
               <th className="border-b border-gray-900 px-1 py-1.5 text-right font-normal">Montant</th>
               <th />
@@ -502,7 +507,7 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
                     </button>
                   </td>
                   <td className="border-b border-gray-400 px-1 pb-1 pt-5">{stepIndex + 1}</td>
-                  <td colSpan={4} className="border-b border-gray-400 px-1 pb-1 pt-5" onDoubleClick={() => setRenaming({ id: step.id, label: step.label })}>
+                  <td colSpan={executed ? 5 : 4} className="border-b border-gray-400 px-1 pb-1 pt-5" onDoubleClick={() => setRenaming({ id: step.id, label: step.label })}>
                     {renaming?.id === step.id ? (
                       <input
                         autoFocus
@@ -582,6 +587,7 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
                     onOpenBreakdown={() => setBreakdownId(position.id)}
                     showBreakdown={view.showBreakdown}
                     hidePrices={view.hidePrices}
+                    showQuoted={executed}
                   />
                 ))}
                 <tr
@@ -600,7 +606,7 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
                   }`}
                 >
                   <td />
-                  <td colSpan={6} className="py-1.5" style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
+                  <td colSpan={executed ? 7 : 6} className="py-1.5" style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
                     <ArticlePicker
                       stepId={step.id}
                       chapterId={step.catalog_chapter_id}
@@ -630,7 +636,7 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
             <tr className="font-bold">
               <td />
               <td className="border-t border-gray-900 px-1 py-2" />
-              <td colSpan={4} className="border-t border-gray-900 px-1 py-2">
+              <td colSpan={executed ? 5 : 4} className="border-t border-gray-900 px-1 py-2">
                 Total brut
               </td>
               <td className="border-t border-gray-900 px-1 py-2 text-right tabular-nums">{view.hidePrices ? '' : fmtAmount(doc.total_net)}</td>

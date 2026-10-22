@@ -117,7 +117,7 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
 - Composants : `components/projects/` (`ProjectForm`, `ProjectAddressesTab`, `ProjectPhotosTab`), hooks `hooks/useProjects.ts`.
 
 ### Devis (phase 3)
-- `documents` (type `devis` | `acompte` | `facture`, même base pour la phase 6) → `document_steps` →
+- `documents` (type `devis` | `acompte` | `travaux` | `facture`, même base pour la phase 6) → `document_steps` →
   `document_positions`. Numéro automatique par projet et par type : `2853-055-DE.1` (`Document::createForProject`).
   Destinataire = **instantané** du client du projet, modifiable sans toucher au carnet. Champs **Entreprise**
   (`recipient_company`) et **ligne complémentaire** : mention `recipient_extra_label` (`Document::EXTRA_LABELS` :
@@ -213,6 +213,15 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `ensureStep()`. `takeCatalogDrag()` garantit un seul gestionnaire par dépôt. Clic sur un chapitre :
   déplie ses articles. Crayon sur un article : `ArticleQuickEdit` modifie le catalogue seulement (les positions du
   devis sont des instantanés, jamais touchées).
+- **Documents dérivés d'un devis** (22.10.2026, `documents.source_document_id`, menu « Autre document » de la page
+  Documents → `DerivedDocumentDialog`) : **Demande d'acompte** (`type` acompte, `AC.n`, `Document::createAdvance()` :
+  pourcentage du net HT du devis (`advance_percent`) ou montant fixe, arrondi à 5 ct, une étape « Demande d'acompte » avec
+  une position « Acompte n° x sur le devis N° … », destinataire et TVA repris ; le PDF rappelle le devis, les acomptes déjà
+  demandés et le montant à verser TTC) et **Travaux exécutés** (`type` travaux, `TE.n`, `Document::createExecuted()` :
+  étapes et positions copiées, `document_positions.quoted_quantity` = quantité du devis, `quantity` = quantité exécutée
+  pré-remplie à corriger ; la feuille et le PDF ont une colonne « Qté devis », la récapitulation et la page de garde
+  comparent devis / exécuté par étape avec le %). `POST /projects/{id}/documents` prend `source_document_id` (devis du
+  projet) et, pour l'acompte, `advance_percent` ou `advance_amount`. `Document::INHERITED` = champs d'en-tête repris.
 - **Modèles de devis** (`quote_templates` → `quote_template_steps`, page `/modeles-devis`) : jeu d'étapes
   (chapitres, avec ou sans articles, ou libres), un seul `is_default`. `POST /projects/{id}/documents`
   applique le modèle choisi (`quote_template_id`), sinon le modèle par défaut ; `null` = devis vide.

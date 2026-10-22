@@ -59,6 +59,8 @@ interface PositionRowProps {
   /** Options d'affichage du devis : sous-détail en rouge sous la ligne, prix masqués. */
   showBreakdown?: boolean
   hidePrices?: boolean
+  /** Travaux exécutés : affiche la quantité du devis à côté de la quantité exécutée. */
+  showQuoted?: boolean
 }
 
 /**
@@ -73,7 +75,7 @@ interface PositionRowProps {
  */
 export default function PositionRow({
   position, printNumber, actions, onSaving, onMove, dragging, dropPlace, onDragStart, onDragEnd, onDragOver, onDrop, onOpenBreakdown,
-  showBreakdown = false, hidePrices = false,
+  showBreakdown = false, hidePrices = false, showQuoted = false,
 }: PositionRowProps) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(position))
   // Montant en cours de saisie (null = montant calculé quantité × prix).
@@ -248,7 +250,7 @@ export default function PositionRow({
     return (
       <tr {...rowProps} className={`group transition-opacity ${dragging ? 'opacity-40' : ''} ${dropClass}`}>
         {handle}
-        <td colSpan={6} className="py-2">
+        <td colSpan={showQuoted ? 7 : 6} className="py-2">
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-gray-400" style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
             <span className="h-0 flex-1 border-t-2 border-dashed border-gray-300" />
             <Icon name="pagebreak" className="h-3.5 w-3.5" />
@@ -289,7 +291,7 @@ export default function PositionRow({
           {printNumber}
         </td>
         {/* Graisse et italique sur la cellule : les champs de l'espace de travail héritent leur police (.bb textarea). */}
-        <td colSpan={isItem ? 1 : 5} className={position.kind === 'title' ? 'pt-2 font-bold' : position.kind === 'text' ? 'py-0.5 italic' : 'py-0.5'}>
+        <td colSpan={isItem ? 1 : showQuoted ? 6 : 5} className={position.kind === 'title' ? 'pt-2 font-bold' : position.kind === 'text' ? 'py-0.5 italic' : 'py-0.5'}>
           <textarea
             ref={areaRef}
             value={draft.description}
@@ -306,9 +308,15 @@ export default function PositionRow({
             <td className="py-0.5">
               <UnitSelect value={draft.unit} onChange={(e) => change({ unit: e.target.value })} className={`${CELL} cursor-pointer appearance-none px-1`} aria-label="Unité" />
             </td>
+            {showQuoted && (
+              <td className="px-1 py-1 text-right tabular-nums text-gray-400" title="Quantité du devis">
+                {position.quoted_quantity !== null ? text(position.quoted_quantity) : ''}
+              </td>
+            )}
             <td className="py-0.5">
               <input
                 data-qty={position.id}
+                title={showQuoted ? 'Quantité exécutée' : undefined}
                 value={draft.quantity}
                 onChange={(e) => change({ quantity: e.target.value })}
                 onKeyDown={(e) => onEnter(e, 'price')}
@@ -396,7 +404,7 @@ export default function PositionRow({
         <tr className={`border-b border-gray-200 ${dragging ? 'opacity-40' : ''}`}>
           <td />
           <td />
-          <td colSpan={5} className="pb-1.5 pl-3 pr-1 align-top">
+          <td colSpan={showQuoted ? 6 : 5} className="pb-1.5 pl-3 pr-1 align-top">
             <button
               type="button"
               onClick={onOpenBreakdown}

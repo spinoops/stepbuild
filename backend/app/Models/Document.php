@@ -19,8 +19,8 @@ class Document extends Model
 {
     use HasSearchText, LogsActivity, SoftDeletes;
 
-    /** Type → code utilisé dans le numéro (2853-055-DE.1). */
-    public const TYPES = ['devis' => 'DE', 'acompte' => 'AC', 'facture' => 'FA'];
+    /** Type → code utilisé dans le numéro (2853-055-DE.1). `acompte` et `travaux` dérivent d'un devis (`source_document_id`). */
+    public const TYPES = ['devis' => 'DE', 'acompte' => 'AC', 'travaux' => 'TE', 'facture' => 'FA'];
 
     public const STATUSES = ['en_cours', 'envoye', 'accepte', 'refuse'];
 
@@ -28,11 +28,11 @@ class Document extends Model
     public const EXTRA_LABELS = ["À l'attention de", 'p.a.', 'c/o', 'Case postale'];
 
     protected $fillable = [
-        'project_id', 'type', 'sequence', 'number', 'title', 'date', 'status',
+        'project_id', 'source_document_id', 'type', 'sequence', 'number', 'title', 'date', 'status',
         'address_id', 'recipient_company', 'recipient_title', 'recipient_name', 'recipient_first_name',
         'recipient_extra_label', 'recipient_extra', 'recipient_street',
         'recipient_street_no', 'recipient_zip', 'recipient_city', 'recipient_email',
-        'user_id', 'initials', 'header_text', 'footer_text', 'vat_rate', 'discount_percent',
+        'user_id', 'initials', 'header_text', 'footer_text', 'vat_rate', 'discount_percent', 'advance_percent',
     ];
 
     protected function casts(): array
@@ -42,6 +42,7 @@ class Document extends Model
             'sequence' => 'integer',
             'vat_rate' => 'float',
             'discount_percent' => 'float',
+            'advance_percent' => 'float',
             'total_net' => 'float',
             'discount_amount' => 'float',
             'total_vat' => 'float',
@@ -59,6 +60,94 @@ class Document extends Model
     {
         return $this->belongsTo(User::class)->withTrashed();
     }
+
+    /** Devis dont ce document dérive (demande d'acompte, travaux exécutés). */
+    public function source(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'source_document_id')->withTrashed();
+    }
+
+    /** Documents dérivés de ce devis. */
+    public function derived(): HasMany
+    {
+        return $this->hasMany(self::class, 'source_document_id');
+    }
+
+    /** Montant net HT (après rabais). */
+    public function netAmount(): float
+    {
+        return round($this->total_net - $this->discount_amount, 2);
+    }
+
+    /**
+     * Demande d'acompte sur un devis : un pourcentage du net (ou un montant), en une position chiffrée
+     * modifiable ensuite comme n'importe quel document. Le destinataire et les textes viennent du devis.
+     */
+    public static function createAdvance(self $quote, ?User $user = null, ?float $percent = null, ?float $amount = null): self
+    {
+        return DB::transaction(function () use ($quote, $user, $percent, $amount) {
+            $net = $quote->netAmount();
+            $value = $percent !== null ? round($net * $percent / 100 * 20) / 20 : round((float) $amount * 20) / 20;
+            $document = self::createForProject($quote->project, 'acompte', $user, [
+                ...$quote->only(self::INHERITED),
+                'source_document_id' => $quote->id,
+                'advance_percent' => $percent,
+                'title' => $quote->title,
+                'header_text' => null,
+                'footer_text' => null,
+            ]);
+            $rank = self::where('source_document_id', $quote->id)->where('type', 'acompte')->count();
+            $step = $document->steps()->create(['code' => 'AC', 'label' => "Demande d'acompte", 'position' => 1]);
+            $step->positions()->create([
+                'document_id' => $document->id,
+                'kind' => 'item',
+                'description' => sprintf('Acompte n° %d sur le devis N° %s du %s%s', $rank, $quote->number, $quote->date->format('d.m.Y'),
+                    $percent !== null ? sprintf(' (%s %% de CHF %s net)', rtrim(rtrim(number_format($percent, 2, '.', ''), '0'), '.'), number_format($net, 2, '.', "'")) : ''),
+                'unit' => 'Fr.',
+                'quantity' => 1,
+                'unit_price' => $value,
+                'position' => 1,
+            ]);
+
+            return $document->recalculate();
+        });
+    }
+
+    /**
+     * Travaux exécutés : copie des étapes et positions du devis, la quantité du devis gardée dans
+     * `quoted_quantity` et la quantité saisie (exécutée) pré-remplie avec elle, à corriger position par position.
+     */
+    public static function createExecuted(self $quote, ?User $user = null): self
+    {
+        return DB::transaction(function () use ($quote, $user) {
+            $document = self::createForProject($quote->project, 'travaux', $user, [
+                ...$quote->only(self::INHERITED),
+                'source_document_id' => $quote->id,
+                'title' => $quote->title,
+                'header_text' => null,
+                'footer_text' => null,
+            ]);
+            foreach ($quote->steps()->with('positions')->get() as $step) {
+                $newStep = $document->steps()->create($step->only(['catalog_chapter_id', 'code', 'label', 'position']));
+                foreach ($step->positions as $position) {
+                    $newStep->positions()->create([
+                        ...$position->only(['catalog_article_id', 'kind', 'code', 'description', 'unit', 'quantity', 'unit_price', 'cost_price', 'is_optional', 'position']),
+                        'quoted_quantity' => $position->kind === 'item' ? $position->quantity : null,
+                        'document_id' => $document->id,
+                    ]);
+                }
+            }
+
+            return $document->recalculate();
+        });
+    }
+
+    /** Champs d'en-tête repris du devis par les documents dérivés et les nouvelles versions. */
+    public const INHERITED = [
+        'address_id', 'recipient_company', 'recipient_title', 'recipient_name', 'recipient_first_name',
+        'recipient_extra_label', 'recipient_extra', 'recipient_street',
+        'recipient_street_no', 'recipient_zip', 'recipient_city', 'recipient_email', 'vat_rate',
+    ];
 
     public function steps(): HasMany
     {
@@ -180,10 +269,7 @@ class Document extends Model
     {
         return DB::transaction(function () use ($user) {
             $copy = self::createForProject($this->project, $this->type, $user, $this->only([
-                'title', 'address_id', 'recipient_company', 'recipient_title', 'recipient_name', 'recipient_first_name',
-                'recipient_extra_label', 'recipient_extra', 'recipient_street',
-                'recipient_street_no', 'recipient_zip', 'recipient_city', 'recipient_email',
-                'header_text', 'footer_text', 'vat_rate', 'discount_percent',
+                ...self::INHERITED, 'title', 'header_text', 'footer_text', 'discount_percent', 'source_document_id', 'advance_percent',
             ]));
 
             foreach ($this->steps()->with('positions.costs')->get() as $step) {
@@ -191,7 +277,7 @@ class Document extends Model
                 foreach ($step->positions as $position) {
                     $newPosition = $newStep->positions()->create([
                         ...$position->only([
-                            'catalog_article_id', 'kind', 'code', 'description', 'unit', 'quantity', 'unit_price',
+                            'catalog_article_id', 'kind', 'code', 'description', 'unit', 'quantity', 'quoted_quantity', 'unit_price',
                             'cost_price', 'is_optional', 'internal_remark', 'position',
                             'dimension', 'dimension_unit', 'price_per_dimension', 'calculated_price',
                         ]),

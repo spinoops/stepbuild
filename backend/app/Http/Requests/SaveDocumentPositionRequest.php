@@ -33,6 +33,7 @@ class SaveDocumentPositionRequest extends FormRequest
             'description' => [...($fromArticle || $pageBreak ? ['nullable'] : ($creating ? ['required'] : ['sometimes', 'required'])), 'string', 'max:5000'],
             'unit' => ['nullable', 'string', 'max:20'],
             'quantity' => ['nullable', 'numeric', 'min:-999999999', 'max:999999999'],
+            'quoted_quantity' => ['nullable', 'numeric', 'min:-999999999', 'max:999999999'],
             'unit_price' => ['nullable', 'numeric', 'min:-9999999999', 'max:9999999999'],
             'cost_price' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
             'is_optional' => ['sometimes', 'boolean'],

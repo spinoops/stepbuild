@@ -89,6 +89,54 @@ it('imprime l’adresse du destinataire dans l’ordre suisse (entreprise, menti
     expect($copy['recipient_extra_label'])->toBe('Case postale')->and($copy['recipient_extra'])->toBe('123');
 });
 
+it('crée une demande d’acompte et un document de travaux exécutés depuis le devis', function () {
+    actingAsRole('responsable');
+    $project = quoteProject();
+    $quote = Document::createForProject($project, 'devis', null, ['title' => 'Salle de bain', 'status' => 'accepte']);
+    $step = $quote->steps()->create(['code' => '12', 'label' => 'CARRELAGE', 'position' => 1]);
+    $step->positions()->create(['document_id' => $quote->id, 'description' => 'Pose carrelage', 'unit' => 'm²', 'quantity' => 10, 'unit_price' => 100, 'position' => 1]);
+    $step->positions()->create(['document_id' => $quote->id, 'kind' => 'text', 'description' => 'Selon plans', 'position' => 2]);
+    $step->positions()->create(['document_id' => $quote->id, 'description' => 'Plinthes', 'unit' => 'm', 'quantity' => 20, 'unit_price' => 15, 'position' => 3]);
+    $quote->recalculate();   // net 1 300.-
+
+    // Acompte de 30 % : AC.1, une position de 390.-, destinataire et devis source repris.
+    $advance = $this->postJson("/api/projects/{$project->id}/documents", ['type' => 'acompte', 'source_document_id' => $quote->id, 'advance_percent' => 30])
+        ->assertCreated()->json('data');
+    expect($advance['number'])->toBe('2853-055-AC.1')
+        ->and($advance['source']['number'])->toBe('2853-055-DE.1')
+        ->and($advance['advance_percent'])->toEqual(30)
+        ->and($advance['recipient_name'])->toBe('Dupont')
+        ->and($advance['title'])->toBe('Salle de bain')
+        ->and($advance['steps'][0]['positions'][0]['description'])->toBe("Acompte n° 1 sur le devis N° 2853-055-DE.1 du {$quote->date->format('d.m.Y')} (30 % de CHF 1'300.00 net)")
+        ->and($advance['total_net'])->toEqual(390);
+    // Second acompte en montant fixe, arrondi à 5 ct.
+    $second = $this->postJson("/api/projects/{$project->id}/documents", ['type' => 'acompte', 'source_document_id' => $quote->id, 'advance_amount' => 500.02])
+        ->assertCreated()->json('data');
+    expect($second['number'])->toBe('2853-055-AC.2')->and($second['total_net'])->toEqual(500)->and($second['advance_percent'])->toBeNull();
+    // Sans devis source ni pourcentage : refusé.
+    $this->postJson("/api/projects/{$project->id}/documents", ['type' => 'acompte'])->assertStatus(422);
+
+    // Travaux exécutés : étapes et positions copiées, quantité du devis gardée à part.
+    $executed = $this->postJson("/api/projects/{$project->id}/documents", ['type' => 'travaux', 'source_document_id' => $quote->id])
+        ->assertCreated()->json('data');
+    expect($executed['number'])->toBe('2853-055-TE.1')
+        ->and($executed['steps'][0]['positions'])->toHaveCount(3)
+        ->and($executed['steps'][0]['positions'][0])->toMatchArray(['quantity' => 10, 'quoted_quantity' => 10, 'unit_price' => 100])
+        ->and($executed['steps'][0]['positions'][1]['quoted_quantity'])->toBeNull()
+        ->and($executed['total_net'])->toEqual(1300);
+    // La quantité exécutée se corrige ; la quantité du devis reste.
+    $positionId = $executed['steps'][0]['positions'][0]['id'];
+    $this->putJson("/api/documents/{$executed['id']}/positions/{$positionId}", ['quantity' => 6])->assertOk()
+        ->assertJsonPath('data.steps.0.positions.0.quoted_quantity', 10)
+        ->assertJsonPath('data.total_net', 900);
+
+    // Les trois PDF se produisent ; le devis source reste intact.
+    foreach ([$advance['id'], $executed['id']] as $id) {
+        expect($this->get("/api/documents/{$id}/pdf")->assertOk()->headers->get('content-type'))->toBe('application/pdf');
+    }
+    expect($quote->fresh()->total_net)->toEqual(1300);
+});
+
 it('ajoute une étape depuis un modèle avec ses articles, ou une étape libre', function () {
     actingAsRole('responsable');
     $document = Document::createForProject(quoteProject(), 'devis');

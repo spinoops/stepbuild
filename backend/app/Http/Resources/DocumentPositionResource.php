@@ -21,6 +21,7 @@ class DocumentPositionResource extends JsonResource
             'description' => $this->description,
             'unit' => $this->unit,
             'quantity' => $this->quantity,
+            'quoted_quantity' => $this->quoted_quantity,
             'unit_price' => $this->unit_price,
             'cost_price' => $this->cost_price,
             'amount' => $this->amount,
