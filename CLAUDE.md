@@ -333,6 +333,11 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `hooks/useStock.ts` (le produit renvoyé remplace celui du cache). Pour admin/responsable la page est dans la coque
   normale (Données de base → Stocks).
 
+### Éléments de coûts : unité régie
+`price_elements.unit_regie` (unité du tarif régie BauBit) est reprise par les imports mais **plus affichée ni saisie**
+dans la page Listes de prix (retirée le 22.10.2026 à la demande du client) ; le formulaire ne l'envoie plus, la valeur
+importée reste en base.
+
 ### Unités de mesure
 Table `units` (code imprimé, libellé, ordre, actif), `Unit::DEFAULTS` = codes BauBit du devis type (M1, M2, M3, H., Jour,
 Pce…), créées par `Unit::seedDefaults()` dans `DatabaseSeeder` (tous environnements, jamais écrasées). `GET /units`

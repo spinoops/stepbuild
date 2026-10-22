@@ -40,7 +40,6 @@ const COLUMNS: GridColumn<PriceElement>[] = [
   { key: 'number', header: 'N° élément', value: (e) => e.number, width: 110 },
   { key: 'description', header: 'Description', value: (e) => e.description, width: 460 },
   { key: 'unit', header: 'Un.', value: (e) => e.unit, width: 70 },
-  { key: 'unit_regie', header: 'Un. régie', value: (e) => e.unit_regie, width: 90 },
   { key: 'supplier_price', header: 'Prix fourn.', value: (e) => e.supplier_price, type: 'number', width: 100 },
   { key: 'net_price', header: 'Net', value: (e) => e.net_price, type: 'number', width: 100 },
   { key: 'regie_price', header: 'Prix régie', value: (e) => e.regie_price, type: 'number', width: 100 },
@@ -77,7 +76,6 @@ const schema = z.object({
   number: z.string().trim().min(1, 'Le numéro est requis.').max(30),
   description: z.string().trim().min(1, 'La description est requise.').max(500),
   unit: z.string().max(20),
-  unit_regie: z.string().max(20),
   supplier_price: price,
   net_price: price,
   regie_price: price,
@@ -95,7 +93,6 @@ function toValues(element: PriceElement | null, family: number): FormValues {
     number: element?.number ?? '',
     description: element?.description ?? '',
     unit: element?.unit ?? '',
-    unit_regie: element?.unit_regie ?? '',
     supplier_price: text(element?.supplier_price),
     net_price: text(element?.net_price),
     regie_price: text(element?.regie_price),
@@ -279,7 +276,6 @@ function ElementForm({ element, isNew, defaultFamily, defaultGroup, disabled, on
           number: values.number.trim(),
           description: values.description.trim(),
           unit: nullable(values.unit),
-          unit_regie: nullable(values.unit_regie) ?? nullable(values.unit),
           supplier_price: toNumber(values.supplier_price),
           net_price: toNumber(values.net_price) ?? toNumber(values.supplier_price),
           regie_price: toNumber(values.regie_price),
@@ -308,8 +304,6 @@ function ElementForm({ element, isNew, defaultFamily, defaultGroup, disabled, on
         </Field>
         <Field label="Unité" labelWidth={90}>
           <BbInput className="w-24" {...register('unit')} />
-          <span className="ml-2 text-gray-500">Un. régie</span>
-          <BbInput className="w-24" {...register('unit_regie')} />
         </Field>
         <Field label="Prix fournisseur" labelWidth={110}>
           <BbInput className="w-28 text-right" invalid={Boolean(errors.supplier_price)} {...register('supplier_price')} />
