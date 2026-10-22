@@ -16,8 +16,7 @@ interface ProjectPickerDialogProps {
   open: boolean
   currentId: number | null
   onClose: () => void
-  /** Projet choisi (null = aucun projet courant). */
-  onPick: (project: Project | null) => void
+  onPick: (project: Project) => void
 }
 
 const STATUSES = Object.keys(PROJECT_STATUSES) as ProjectStatus[]
@@ -39,7 +38,7 @@ const COLUMNS: GridColumn<Project>[] = [
 
 /**
  * Choix du projet courant (barre Projet / Document) : recherche instantanée, filtres par statut et
- * « seulement actifs », liste colorée par statut. Double-clic ou Entrée choisit.
+ * « seulement actifs », liste colorée par statut. Un clic sur la ligne choisit et referme ; Entrée prend le premier.
  */
 export default function ProjectPickerDialog({ open, currentId, onClose, onPick }: ProjectPickerDialogProps) {
   return open ? <ProjectPicker currentId={currentId} onClose={onClose} onPick={onPick} /> : null
@@ -50,12 +49,10 @@ function ProjectPicker({ currentId, onClose, onPick }: Omit<ProjectPickerDialogP
   const [status, setStatus] = useState<'' | ProjectStatus>('')
   const [onlyActive, setOnlyActive] = useState(true)
   const [query, setQuery] = useState<GridQuery>(EMPTY_QUERY)
-  const [selected, setSelected] = useState<number | null>(currentId)
   const list = useResourceList<Project>('projects', useDebounced(query, 200), { search: useDebounced(search, 200), status, active: onlyActive })
   const rows = list.data?.data ?? []
-  const current = rows.find((row) => row.id === selected) ?? null
 
-  function pick(project: Project | null) {
+  function pick(project: Project) {
     onPick(project)
     onClose()
   }
@@ -83,9 +80,9 @@ function ProjectPicker({ currentId, onClose, onPick }: Omit<ProjectPickerDialogP
                 setQuery({ ...query, page: 1 })
               }}
               onKeyDown={(event) => {
-                if (event.key === 'Enter' && (current ?? rows[0])) {
+                if (event.key === 'Enter' && rows[0]) {
                   event.preventDefault()
-                  pick(current ?? rows[0])
+                  pick(rows[0])
                 } else if (event.key === 'Escape') {
                   onClose()
                 }
@@ -119,34 +116,17 @@ function ProjectPicker({ currentId, onClose, onPick }: Omit<ProjectPickerDialogP
           rows={rows}
           rowKey={(row) => String(row.id)}
           rowClass={(row) => (row.is_active ? PROJECT_STATUSES[row.status].rowClass : 'bg-white text-gray-400')}
-          selectedKey={selected ? String(selected) : null}
-          onSelect={(row) => setSelected(row.id)}
-          onActivate={pick}
+          selectedKey={currentId ? String(currentId) : null}
+          onSelect={pick}
           query={query}
           onQueryChange={(next) => setQuery({ ...next, page: 1 })}
           emptyText={list.isLoading ? 'Chargement…' : 'Aucun projet pour ces critères.'}
         />
         <GridPager meta={list.data?.meta} onPage={(page) => setQuery({ ...query, page })} loading={list.isFetching} />
-        <div className="mt-3 flex items-center gap-2">
-          <span className="text-[12px] text-gray-400">Double-clic ou Entrée pour choisir.</span>
-          <span className="ml-auto flex gap-2">
-            {currentId !== null && (
-              <button type="button" onClick={() => pick(null)} className="h-8 rounded-md border border-gray-300 bg-white px-3 text-[13px] text-gray-700 hover:bg-gray-50">
-                Aucun projet
-              </button>
-            )}
-            <button type="button" onClick={onClose} className="h-8 rounded-md px-3 text-[13px] text-gray-600 hover:bg-gray-100">
-              Annuler
-            </button>
-            <button
-              type="button"
-              disabled={!current}
-              onClick={() => current && pick(current)}
-              className="h-8 rounded-md bg-accent-600 px-3 text-[13px] font-medium text-white hover:bg-accent-700 disabled:opacity-40"
-            >
-              Choisir
-            </button>
-          </span>
+        <div className="mt-3 flex justify-end">
+          <button type="button" onClick={onClose} className="h-8 rounded-md px-3 text-[13px] text-gray-600 hover:bg-gray-100">
+            Annuler
+          </button>
         </div>
       </div>
     </Modal>

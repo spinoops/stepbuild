@@ -48,16 +48,17 @@ export default function Ribbon({ brand, user: userSlot }: RibbonProps) {
       <div className="flex h-12 items-center gap-2 bg-anthracite-900 px-3 text-gray-200">
         {brand}
 
-        <nav className="ml-4 flex items-center gap-0.5">
+        {/* L'onglet actif descend jusqu'au bord de l'en-tête, sans arrondi en bas : il se raccorde au ruban blanc. */}
+        <nav className="ml-4 flex h-full items-end gap-0.5">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setChoice({ path: pathname, tab: tab.id })}
-              className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition ${
+              className={`px-3 text-[13px] font-medium transition ${
                 tab.id === current?.id
-                  ? 'bg-white text-anthracite-900'
-                  : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                  ? 'mt-1.5 h-[42px] rounded-t-md bg-white text-anthracite-900'
+                  : 'mb-1.5 rounded-md py-1.5 text-gray-300 hover:bg-white/10 hover:text-white'
               }`}
             >
               {tab.label}

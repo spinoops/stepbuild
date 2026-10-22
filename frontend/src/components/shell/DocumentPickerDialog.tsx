@@ -38,7 +38,7 @@ const COLUMNS: GridColumn<DocumentDetail>[] = [
 
 /**
  * Choix du document courant (barre Projet / Document) parmi ceux du projet : filtres par type et
- * statut, recherche sur le numéro et l'objet. Double-clic ou Entrée ouvre le document.
+ * statut, recherche sur le numéro et l'objet. Un clic ouvre le document ; Entrée prend le premier de la liste.
  */
 export default function DocumentPickerDialog({ open, projectId, currentId, onClose, onPick }: DocumentPickerDialogProps) {
   return open ? <DocumentPicker projectId={projectId} currentId={currentId} onClose={onClose} onPick={onPick} /> : null
@@ -49,7 +49,6 @@ function DocumentPicker({ projectId, currentId, onClose, onPick }: Omit<Document
   const [search, setSearch] = useState('')
   const [type, setType] = useState<'' | DocumentType>('')
   const [status, setStatus] = useState<'' | DocumentStatus>('')
-  const [selected, setSelected] = useState<number | null>(currentId)
 
   const rows = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -60,7 +59,6 @@ function DocumentPicker({ projectId, currentId, onClose, onPick }: Omit<Document
         (term === '' || item.number.toLowerCase().includes(term) || (item.title ?? '').toLowerCase().includes(term)),
     )
   }, [documents.data, search, type, status])
-  const current = rows.find((row) => row.id === selected) ?? null
   const counts = useMemo(() => {
     const all = documents.data ?? []
     return Object.fromEntries(TYPES.map((key) => [key, all.filter((item) => item.type === key).length])) as Record<DocumentType, number>
@@ -91,9 +89,9 @@ function DocumentPicker({ projectId, currentId, onClose, onPick }: Omit<Document
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === 'Enter' && (current ?? rows[0])) {
+                if (event.key === 'Enter' && rows[0]) {
                   event.preventDefault()
-                  pick(current ?? rows[0])
+                  pick(rows[0])
                 } else if (event.key === 'Escape') {
                   onClose()
                 }
@@ -125,29 +123,15 @@ function DocumentPicker({ projectId, currentId, onClose, onPick }: Omit<Document
           rows={rows}
           rowKey={(row) => String(row.id)}
           rowClass={(row) => DOCUMENT_STATUSES[row.status].rowClass}
-          selectedKey={selected ? String(selected) : null}
-          onSelect={(row) => setSelected(row.id)}
-          onActivate={pick}
+          selectedKey={currentId ? String(currentId) : null}
+          onSelect={pick}
           showFilter={false}
           emptyText={documents.isLoading ? 'Chargement…' : projectId ? 'Aucun document pour ces critères.' : 'Choisissez d’abord un projet.'}
         />
-        <div className="mt-3 flex items-center gap-2">
-          <span className="text-[12px] text-gray-400">
-            {rows.length} document{rows.length > 1 ? 's' : ''} · double-clic ou Entrée pour ouvrir
-          </span>
-          <span className="ml-auto flex gap-2">
-            <button type="button" onClick={onClose} className="h-8 rounded-md px-3 text-[13px] text-gray-600 hover:bg-gray-100">
-              Annuler
-            </button>
-            <button
-              type="button"
-              disabled={!current}
-              onClick={() => current && pick(current)}
-              className="h-8 rounded-md bg-accent-600 px-3 text-[13px] font-medium text-white hover:bg-accent-700 disabled:opacity-40"
-            >
-              Ouvrir
-            </button>
-          </span>
+        <div className="mt-3 flex justify-end">
+          <button type="button" onClick={onClose} className="h-8 rounded-md px-3 text-[13px] text-gray-600 hover:bg-gray-100">
+            Annuler
+          </button>
         </div>
       </div>
     </Modal>

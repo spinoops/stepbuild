@@ -109,7 +109,7 @@ export default function ContextBar() {
         Connecté
       </span>
 
-      <ProjectPickerDialog open={picking === 'project'} currentId={projectId} onClose={() => setPicking(null)} onPick={(project) => chooseProject(project?.id ?? null)} />
+      <ProjectPickerDialog open={picking === 'project'} currentId={projectId} onClose={() => setPicking(null)} onPick={(project) => chooseProject(project.id)} />
       <DocumentPickerDialog
         open={picking === 'document'}
         projectId={projectId}
