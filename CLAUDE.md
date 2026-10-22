@@ -110,7 +110,11 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
 - Le **projet courant** (`workspaceStore.projectId`, numérique) est reflété dans l'URL (`?projet=12`, composant
   `components/shell/WorkspaceUrlSync` : rechargement, lien collé et bouton Retour le conservent ; sur `/projets` c'est `?id=`).
   Il est choisi dans la barre de contexte ou en
-  ouvrant une fiche ; les modules suivants (devis, rapports) doivent s'y rattacher.
+  ouvrant une fiche ; les modules suivants (devis, rapports) doivent s'y rattacher. **Barre de contexte** (`ContextBar`,
+  22.10.2026) : les champs Projet et Document ne sont plus des listes déroulantes mais ouvrent des fenêtres de choix,
+  `components/shell/ProjectPickerDialog` (recherche serveur, statut, seulement actifs, grille colorée) et
+  `DocumentPickerDialog` (documents du projet, filtres par type et statut) ; double-clic ou Entrée choisit.
+  `StandardTools` n'a plus les boutons factices Colonnes / Filtre / Imprimer.
 - **Nouveau projet** : un écran d'entrée ne demande que le code postal et la localité du chantier, en grand (la localité
   est proposée depuis le carnet d'adresses quand le NPA y est connu, le numéro `2800-003` dès le NPA saisi) ; « Continuer »
   ouvre la fiche complète (`ProjectForm`, état `stage`).
