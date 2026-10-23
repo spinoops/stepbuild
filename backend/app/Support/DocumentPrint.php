@@ -18,7 +18,7 @@ use Dompdf\FontMetrics;
  */
 class DocumentPrint
 {
-    public const TITLES = ['devis' => 'Devis estimatif', 'acompte' => "Demande d'acompte", 'facture' => 'Facture'];
+    public const TITLES = ['devis' => 'Devis estimatif', 'acompte' => "Demande d'acompte", 'travaux' => 'Travaux exécutés', 'facture' => 'Facture'];
 
     public static function title(Document $document): string
     {
@@ -70,6 +70,8 @@ class DocumentPrint
                     'description' => $position->description,
                     'unit' => $position->unit,
                     'quantity' => $position->quantity,
+                    'quoted_quantity' => $position->quoted_quantity,
+                    'quoted_amount' => $position->quoted_quantity !== null && $position->unit_price !== null ? round($position->quoted_quantity * $position->unit_price, 2) : null,
                     'unit_price' => $position->unit_price,
                     'amount' => $position->amount,
                     'is_optional' => $position->is_optional,
@@ -82,6 +84,8 @@ class DocumentPrint
                 'number' => $number,
                 'label' => $step->label,
                 'total' => round((float) $step->positions->where('is_optional', false)->sum('amount'), 2),
+                // Travaux exécutés : montant du devis pour la même étape (quantités du devis × prix).
+                'quoted_total' => round((float) collect($rows)->where('kind', 'item')->where('is_optional', false)->sum('quoted_amount'), 2),
                 'rows' => $rows,
             ];
         }
@@ -140,8 +144,20 @@ class DocumentPrint
     {
         $withBreakdown = (bool) ($options['breakdown'] ?? false);
         $showPrices = (bool) ($options['prices'] ?? true);
-        $document->loadMissing(['project', 'steps.positions']);
+        $document->loadMissing(['project', 'source', 'steps.positions']);
         $company = config('company');
+        // Demande d'acompte : rappel du devis et des acomptes déjà demandés (hors refusés).
+        $advance = null;
+        if ($document->type === 'acompte' && $document->source) {
+            $previous = Document::where('source_document_id', $document->source_document_id)->where('type', 'acompte')
+                ->where('id', '!=', $document->id)->where('sequence', '<', $document->sequence)->where('status', '!=', 'refuse')->get();
+            $advance = [
+                'quote' => $document->source,
+                'quote_net' => $document->source->netAmount(),
+                'previous_count' => $previous->count(),
+                'previous_net' => round((float) $previous->sum(fn (Document $d) => $d->netAmount()), 2),
+            ];
+        }
         $logo = $company['logo'] ? resource_path($company['logo']) : null;
         $title = self::title($document);
 
@@ -154,6 +170,9 @@ class DocumentPrint
             'steps' => self::steps($document, $withBreakdown),
             'withBreakdown' => $withBreakdown,
             'showPrices' => $showPrices,
+            'advance' => $advance,
+            'executed' => $document->type === 'travaux',
+            'source' => $document->source,
             'dateLine' => trim($company['city'].', le '.self::longDate($document->date).($document->initials ? ' /'.$document->initials : '')),
         ])->setPaper('a4');
 

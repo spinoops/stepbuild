@@ -22,7 +22,7 @@ class DocumentPosition extends Model
 
     protected $fillable = [
         'document_id', 'document_step_id', 'catalog_article_id', 'kind', 'code', 'description', 'unit',
-        'quantity', 'unit_price', 'cost_price', 'is_optional', 'internal_remark', 'position',
+        'quantity', 'quoted_quantity', 'unit_price', 'cost_price', 'is_optional', 'internal_remark', 'position',
         'dimension', 'dimension_unit', 'price_per_dimension', 'calculated_price',
     ];
 
@@ -30,6 +30,7 @@ class DocumentPosition extends Model
     {
         return [
             'quantity' => 'float',
+            'quoted_quantity' => 'float',
             'unit_price' => 'float',
             'cost_price' => 'float',
             'amount' => 'float',

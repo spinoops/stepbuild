@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -40,11 +40,9 @@ const COLUMNS: GridColumn<PriceElement>[] = [
   { key: 'number', header: 'N° élément', value: (e) => e.number, width: 110 },
   { key: 'description', header: 'Description', value: (e) => e.description, width: 460 },
   { key: 'unit', header: 'Un.', value: (e) => e.unit, width: 70 },
-  { key: 'unit_regie', header: 'Un. régie', value: (e) => e.unit_regie, width: 90 },
   { key: 'supplier_price', header: 'Prix fourn.', value: (e) => e.supplier_price, type: 'number', width: 100 },
   { key: 'net_price', header: 'Net', value: (e) => e.net_price, type: 'number', width: 100 },
   { key: 'regie_price', header: 'Prix régie', value: (e) => e.regie_price, type: 'number', width: 100 },
-  { key: 'regie_code', header: 'Tarif régie', value: (e) => e.regie_code, width: 110 },
   {
     key: 'price_updated_at',
     header: 'Prix du',
@@ -57,15 +55,10 @@ const COLUMNS: GridColumn<PriceElement>[] = [
     key: 'margin',
     header: 'Majoration',
     value: (e) => (e.net_price && e.regie_price ? ((e.regie_price - e.net_price) / e.net_price) * 100 : null),
-    width: 100,
+    width: 130,
     align: 'right',
     noFilter: true,
-    render: (e) =>
-      e.net_price && e.regie_price ? (
-        <span className="text-gray-500">{fmtAmount(((e.regie_price - e.net_price) / e.net_price) * 100, 1)} %</span>
-      ) : (
-        ''
-      ),
+    render: (e) => <MarkupCell element={e} />,
   },
 ]
 
@@ -77,7 +70,6 @@ const schema = z.object({
   number: z.string().trim().min(1, 'Le numéro est requis.').max(30),
   description: z.string().trim().min(1, 'La description est requise.').max(500),
   unit: z.string().max(20),
-  unit_regie: z.string().max(20),
   supplier_price: price,
   net_price: price,
   regie_price: price,
@@ -95,7 +87,6 @@ function toValues(element: PriceElement | null, family: number): FormValues {
     number: element?.number ?? '',
     description: element?.description ?? '',
     unit: element?.unit ?? '',
-    unit_regie: element?.unit_regie ?? '',
     supplier_price: text(element?.supplier_price),
     net_price: text(element?.net_price),
     regie_price: text(element?.regie_price),
@@ -225,6 +216,7 @@ export default function PriceListsPage() {
           query={query}
           onQueryChange={(next) => setQuery({ ...next, page: 1 })}
           emptyText={list.isLoading ? 'Chargement…' : 'Aucun élément dans cette famille.'}
+          storageKey="price-elements"
         />
         <GridPager meta={list.data?.meta} onPage={(page) => setQuery({ ...query, page })} loading={list.isFetching} />
       </div>
@@ -279,7 +271,6 @@ function ElementForm({ element, isNew, defaultFamily, defaultGroup, disabled, on
           number: values.number.trim(),
           description: values.description.trim(),
           unit: nullable(values.unit),
-          unit_regie: nullable(values.unit_regie) ?? nullable(values.unit),
           supplier_price: toNumber(values.supplier_price),
           net_price: toNumber(values.net_price) ?? toNumber(values.supplier_price),
           regie_price: toNumber(values.regie_price),
@@ -308,8 +299,6 @@ function ElementForm({ element, isNew, defaultFamily, defaultGroup, disabled, on
         </Field>
         <Field label="Unité" labelWidth={90}>
           <BbInput className="w-24" {...register('unit')} />
-          <span className="ml-2 text-gray-500">Un. régie</span>
-          <BbInput className="w-24" {...register('unit_regie')} />
         </Field>
         <Field label="Prix fournisseur" labelWidth={110}>
           <BbInput className="w-28 text-right" invalid={Boolean(errors.supplier_price)} {...register('supplier_price')} />
@@ -319,7 +308,7 @@ function ElementForm({ element, isNew, defaultFamily, defaultGroup, disabled, on
           <BbInput className="w-20" {...register('group_code')} />
           <BbInput className="w-[136px]" autoFocus={isNew} invalid={Boolean(errors.number)} {...register('number')} />
         </Field>
-        <Field label="Tarif régie" labelWidth={90}>
+        <Field label="Code régie" labelWidth={90}>
           <BbInput className="w-56" {...register('regie_code')} />
         </Field>
         <Field label="Prix net" labelWidth={110}>
@@ -336,5 +325,169 @@ function ElementForm({ element, isNew, defaultFamily, defaultGroup, disabled, on
       </fieldset>
       {firstError && <p className="mt-2 text-[12px] text-red-600">{firstError}</p>}
     </form>
+  )
+}
+
+/** Majoration du prix régie sur le prix net, en % (null sans prix net ou sans prix régie). */
+function markupOf(element: PriceElement): number | null {
+  return element.net_price && element.regie_price !== null ? ((element.regie_price - element.net_price) / element.net_price) * 100 : null
+}
+
+/**
+ * Cellule « Majoration » de la liste : un clic ouvre une tirette ; la majoration choisie recalcule le prix
+ * régie (prix net × (1 + majoration), arrondi à 5 ct) et l'enregistre quand on relâche la tirette, qu'on
+ * valide le champ ou qu'on clique un raccourci. Sans prix net, rien à majorer.
+ */
+function MarkupCell({ element }: { element: PriceElement }) {
+  const save = useSaveResource<PriceElement, Record<string, unknown>>('price-elements')
+  const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState<number | null>(null)
+  const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null)
+  const button = useRef<HTMLButtonElement>(null)
+  const current = markupOf(element)
+  const shown = draft ?? Math.round((current ?? 0) * 10) / 10
+  const net = element.net_price ?? 0
+  const projected = Math.round(net * (1 + shown / 100) * 20) / 20
+
+  // Clic hors de la tirette : elle se referme sans enregistrer.
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+    const close = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (!button.current?.contains(target) && !document.getElementById(`markup-${element.id}`)?.contains(target)) {
+        setOpen(false)
+        setDraft(null)
+      }
+    }
+    window.addEventListener('mousedown', close)
+    return () => window.removeEventListener('mousedown', close)
+  }, [open, element.id])
+
+  function toggle(event: React.MouseEvent) {
+    event.stopPropagation()
+    if (!net) {
+      return
+    }
+    const rect = button.current?.getBoundingClientRect()
+    setAnchor(rect ? { top: rect.bottom + 4, right: window.innerWidth - rect.right } : null)
+    setOpen((value) => !value)
+    setDraft(null)
+  }
+
+  /** Enregistre le prix régie correspondant à la majoration donnée (si elle change). */
+  function apply(value: number) {
+    setDraft(null)
+    if (Math.abs(value - (current ?? 0)) < 0.05) {
+      return
+    }
+    const regie = Math.round(net * (1 + value / 100) * 20) / 20
+    save.mutate(
+      {
+        id: element.id,
+        payload: {
+          family: element.family,
+          group_code: element.group_code,
+          number: element.number,
+          description: element.description,
+          unit: element.unit,
+          unit_regie: element.unit_regie,
+          supplier_price: element.supplier_price,
+          net_price: element.net_price,
+          regie_price: regie,
+          regie_code: element.regie_code,
+          unit_factor: element.unit_factor,
+          discount_amount: element.discount_amount,
+          discount_percent: element.discount_percent,
+        },
+      },
+      {
+        onSuccess: () => toast(`Prix régie de ${element.number} : ${fmtAmount(regie)} (net + ${fmtAmount(value, 1)} %).`, 'success'),
+        onError: () => toast("La majoration n'a pas pu être enregistrée.", 'error'),
+      },
+    )
+  }
+
+  const commit = () => {
+    if (draft !== null) {
+      apply(draft)
+    }
+  }
+
+  return (
+    <>
+      <button
+        ref={button}
+        type="button"
+        onClick={toggle}
+        disabled={!net}
+        title={net ? 'Cliquer pour régler la majoration avec une tirette' : 'Pas de prix net : rien à majorer'}
+        className={`h-7 w-full rounded px-1.5 text-right tabular-nums transition ${
+          net ? 'text-gray-600 hover:bg-primary-50 hover:text-primary-800' : 'cursor-default text-gray-300'
+        } ${open ? 'bg-primary-50 text-primary-800' : ''}`}
+      >
+        {current !== null ? `${fmtAmount(current, 1)} %` : net ? '—' : ''}
+      </button>
+      {open && anchor && (
+        <div
+          id={`markup-${element.id}`}
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              setOpen(false)
+              setDraft(null)
+            }
+          }}
+          style={{ position: 'fixed', top: anchor.top, right: anchor.right }}
+          className="z-50 w-[300px] rounded-lg border border-gray-200 bg-white p-3 text-[12px] shadow-xl"
+        >
+          <div className="mb-2 flex items-baseline justify-between">
+            <span className="font-semibold text-gray-700">Majoration sur le prix net</span>
+            <span className="text-gray-400">net {fmtAmount(net)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="range"
+              min={0}
+              max={200}
+              step={1}
+              value={Math.min(200, Math.max(0, shown))}
+              onChange={(event) => setDraft(Number(event.target.value))}
+              onPointerUp={commit}
+              onKeyUp={(event) => (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'Enter') && commit()}
+              autoFocus
+              aria-label="Majoration en pour-cent"
+              className="flex-1 accent-primary-600"
+            />
+            <input
+              type="number"
+              min={0}
+              max={500}
+              step={1}
+              value={Math.round(shown * 10) / 10}
+              onChange={(event) => setDraft(event.target.value === '' ? 0 : Number(event.target.value))}
+              onKeyDown={(event) => event.key === 'Enter' && commit()}
+              onBlur={commit}
+              aria-label="Majoration"
+              className="h-7 w-16 rounded-md border border-gray-300 px-1 text-right tabular-nums outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+            />
+            <span className="text-gray-500">%</span>
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-gray-500">Prix régie</span>
+            <span className={`text-[14px] font-semibold tabular-nums ${draft !== null ? 'text-primary-800' : 'text-gray-800'}`}>{fmtAmount(projected)}</span>
+          </div>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {[0, 10, 20, 30, 50].map((value) => (
+              <button key={value} type="button" onClick={() => apply(value)} className="h-6 rounded-full border border-gray-200 px-2 text-[11px] text-gray-600 hover:bg-gray-100">
+                {value} %
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] text-gray-400">Enregistré au relâchement de la tirette ou à la validation du champ.</p>
+        </div>
+      )}
+    </>
   )
 }

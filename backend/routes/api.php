@@ -7,6 +7,7 @@ use App\Http\Controllers\CatalogArticleController;
 use App\Http\Controllers\CatalogChapterController;
 use App\Http\Controllers\CollaboratorAbsenceController;
 use App\Http\Controllers\CollaboratorController;
+use App\Http\Controllers\CostControlController;
 use App\Http\Controllers\CronController;
 use App\Http\Controllers\DailyReportController;
 use App\Http\Controllers\DailyReportFileController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentPositionController;
 use App\Http\Controllers\DocumentStepController;
 use App\Http\Controllers\HoursControlController;
+use App\Http\Controllers\LoginLogController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PriceElementController;
 use App\Http\Controllers\ProjectAddressController;
@@ -180,6 +182,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('units', UnitController::class)->only(['store', 'update', 'destroy']);
 
         // Régie : trois niveaux de prix (brut, régie, client) sur les lignes des rapports.
+        Route::get('/cost-control', [CostControlController::class, 'show']);
+        Route::post('/cost-control/margin', [CostControlController::class, 'applyMargin']);
         Route::get('/regie/lines', [RegieController::class, 'index']);
         Route::put('/regie/lines/{kind}/{id}', [RegieController::class, 'update'])->whereIn('kind', ['hour', 'item'])->whereNumber('id');
         Route::post('/regie/apply-tariffs', [RegieController::class, 'applyTariffs']);
@@ -197,6 +201,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Administration : réservé aux utilisateurs de rôle 'admin'.
     Route::middleware('admin')->group(function () {
         Route::apiResource('users', UserController::class)->except(['show']);
+        Route::get('/login-logs', [LoginLogController::class, 'index']);
         Route::put('/settings', [SettingController::class, 'update']);
     });
 });

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\LoginLog;
 use App\Services\BackupService;
 use Illuminate\Console\Command;
 use Throwable;
@@ -9,7 +10,8 @@ use Throwable;
 /**
  * Tâche périodique pour un hébergement sans crontab (Infomaniak mutualisé : le
  * planificateur appelle une URL, voir CronController). À chaque appel : sauvegarde de
- * la base si la dernière a plus de 20 h. Peu importe l'heure ou la fréquence des appels.
+ * la base si la dernière a plus de 20 h, et purge du journal des connexions au-delà de sa durée de
+ * conservation. Peu importe l'heure ou la fréquence des appels.
  */
 class CronTick extends Command
 {
@@ -31,6 +33,11 @@ class CronTick extends Command
             $this->error('Sauvegarde en échec : '.$e->getMessage());
 
             return self::FAILURE;
+        }
+
+        $pruned = LoginLog::prune();
+        if ($pruned > 0) {
+            $this->line("Journal des connexions : {$pruned} ligne(s) de plus de ".LoginLog::RETENTION_DAYS.' jours supprimée(s).');
         }
 
         return self::SUCCESS;

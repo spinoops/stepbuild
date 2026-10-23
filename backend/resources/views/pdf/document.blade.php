@@ -1,18 +1,14 @@
 @php
     use App\Support\DocumentPrint as P;
     $base = $document->total_net - $document->discount_amount;
-    $recipient = array_filter([
-        $document->recipient_title,
-        trim(($document->recipient_first_name ?? '').' '.($document->recipient_name ?? '')),
-        trim(($document->recipient_street ?? '').' '.($document->recipient_street_no ?? '')),
-        trim(($document->recipient_zip ?? '').' '.($document->recipient_city ?? '')),
-    ]);
+    $recipient = $document->recipientLines();
     $projectAddress = array_filter([
         trim(($project?->street ?? '').' '.($project?->street_no ?? '')),
         trim(($project?->zip ?? '').' '.($project?->city ?? '')),
     ]);
     $intro = $document->header_text ?: ($document->type === 'devis' ? $company['quote_intro'] : null);
-    $columns = $showPrices ? 6 : 4;
+    $columns = ($showPrices ? 6 : 4) + ($executed ? 1 : 0);
+    $quotedTotal = round(array_sum(array_column($steps, 'quoted_total')), 2);
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -42,6 +38,7 @@
         .recap td.num { width: 10mm; color: #666; }
         .recap td.cur { width: 12mm; color: #666; }
         .recap td.amount { width: 28mm; text-align: right; }
+        .recap td.pct { width: 12mm; text-align: right; color: #666; padding-left: 3mm; }
         .recap tr.total td { border-top: 0.8pt solid #1f1f1f; border-bottom: none; font-weight: bold; padding-top: 2mm; }
         .recap tr.sub td { border-bottom: none; }
         .recap tr.grand td { border-top: 0.8pt solid #1f1f1f; border-bottom: 1.6pt solid #1d3f9c; font-weight: bold; font-size: 10.5pt; padding: 2mm 0; }
@@ -122,12 +119,107 @@
                 <td>{{ $document->title }}</td>
             </tr>
         @endif
+        @if ($source)
+            <tr>
+                <td class="label">Devis :</td>
+                <td>N° {{ $source->number }} du {{ $source->date->format('d.m.Y') }}</td>
+            </tr>
+        @endif
     </table>
 
     @if ($intro)
         <div class="intro">{{ $intro }}</div>
     @endif
 
+    @if ($advance)
+        <h2>Demande d'acompte</h2>
+        <table class="recap">
+            <tr>
+                <td colspan="2">Montant du devis N° {{ $advance['quote']->number }}, net HT</td>
+                <td class="cur">CHF</td>
+                <td class="amount">{{ P::money($advance['quote_net']) }}</td>
+            </tr>
+            @if ($advance['previous_count'] > 0)
+                <tr>
+                    <td colspan="2">Acompte{{ $advance['previous_count'] > 1 ? 's' : '' }} déjà demandé{{ $advance['previous_count'] > 1 ? 's' : '' }} ({{ $advance['previous_count'] }}), net HT</td>
+                    <td class="cur">CHF</td>
+                    <td class="amount">{{ P::money($advance['previous_net']) }}</td>
+                </tr>
+            @endif
+            <tr class="total">
+                <td colspan="2">Présente demande{{ $document->advance_percent !== null ? ' ('.rtrim(rtrim(number_format($document->advance_percent, 2, '.', ''), '0'), '.').' % du devis)' : '' }}, net HT</td>
+                <td class="cur">CHF</td>
+                <td class="amount">{{ P::money($base) }}</td>
+            </tr>
+            <tr class="sub">
+                <td colspan="2">TVA {{ number_format($document->vat_rate, 2, '.', '') }} % sur CHF {{ P::money($base) }}</td>
+                <td class="cur">CHF</td>
+                <td class="amount">{{ P::money($document->total_vat) }}</td>
+            </tr>
+            @if (abs($document->rounding) >= 0.005)
+                <tr class="sub">
+                    <td colspan="2">Arrondi</td>
+                    <td class="cur">CHF</td>
+                    <td class="amount">{{ P::money($document->rounding) }}</td>
+                </tr>
+            @endif
+            <tr class="grand">
+                <td colspan="2">Montant à verser TTC</td>
+                <td class="cur">CHF</td>
+                <td class="amount">{{ P::money($document->total_gross) }}</td>
+            </tr>
+        </table>
+    @elseif ($executed && $showPrices)
+        <h2>Travaux exécutés par rapport au devis{{ $source ? ' N° '.$source->number : '' }}</h2>
+        <table class="recap">
+            <tr class="sub">
+                <td class="num"></td>
+                <td></td>
+                <td class="amount muted">Devis CHF</td>
+                <td class="amount muted">Exécuté CHF</td>
+                <td class="pct">%</td>
+            </tr>
+            @foreach ($steps as $step)
+                <tr>
+                    <td class="num">{{ $step['number'] }}</td>
+                    <td>{{ $step['label'] }}</td>
+                    <td class="amount">{{ P::money($step['quoted_total']) }}</td>
+                    <td class="amount">{{ P::money($step['total']) }}</td>
+                    <td class="pct">{{ $step['quoted_total'] > 0 ? round($step['total'] / $step['quoted_total'] * 100).' %' : '' }}</td>
+                </tr>
+            @endforeach
+            <tr class="total">
+                <td colspan="2">Total brut</td>
+                <td class="amount">{{ P::money($quotedTotal) }}</td>
+                <td class="amount">{{ P::money($document->total_net) }}</td>
+                <td class="pct">{{ $quotedTotal > 0 ? round($document->total_net / $quotedTotal * 100).' %' : '' }}</td>
+            </tr>
+            @if ($document->discount_amount > 0)
+                <tr class="sub">
+                    <td colspan="3">Rabais {{ rtrim(rtrim(number_format($document->discount_percent, 2, '.', ''), '0'), '.') }} %</td>
+                    <td class="amount">- {{ P::money($document->discount_amount) }}</td>
+                    <td class="pct"></td>
+                </tr>
+            @endif
+            <tr class="sub">
+                <td colspan="3">TVA {{ number_format($document->vat_rate, 2, '.', '') }} % sur CHF {{ P::money($base) }}</td>
+                <td class="amount">{{ P::money($document->total_vat) }}</td>
+                <td class="pct"></td>
+            </tr>
+            @if (abs($document->rounding) >= 0.005)
+                <tr class="sub">
+                    <td colspan="3">Arrondi</td>
+                    <td class="amount">{{ P::money($document->rounding) }}</td>
+                    <td class="pct"></td>
+                </tr>
+            @endif
+            <tr class="grand">
+                <td colspan="3">Total des travaux exécutés TTC</td>
+                <td class="amount">{{ P::money($document->total_gross) }}</td>
+                <td class="pct"></td>
+            </tr>
+        </table>
+    @else
     <h2>{{ $showPrices ? 'Récapitulation' : 'Étapes des travaux' }}</h2>
     <table class="recap">
         @foreach ($steps as $step)
@@ -177,6 +269,7 @@
             </tr>
         @endif
     </table>
+    @endif
 
     @if ($showPrices)
         <div class="terms">
@@ -208,7 +301,8 @@
 
     {{-- Détail des positions : un saut de page dans le devis ferme le tableau et en ouvre un sur la page suivante. --}}
     @php
-        $head = '<thead><tr><th>Pos.</th><th>Description</th><th>Un.</th><th class="qty">Quantité</th>'
+        $head = '<thead><tr><th>Pos.</th><th>Description</th><th>Un.</th>'
+            .($executed ? '<th class="qty">Qté devis</th><th class="qty">Exécuté</th>' : '<th class="qty">Quantité</th>')
             .($showPrices ? '<th class="price">Prix</th><th class="amount">Montant</th>' : '')
             .'</tr></thead>';
     @endphp
@@ -229,6 +323,9 @@
                             <td class="pos">{{ $row['number'] }}</td>
                             <td class="description">{{ $row['description'] }}@if ($row['is_optional']) <span class="nowrap">(option, hors total)</span>@endif</td>
                             <td class="unit">{{ $row['unit'] }}</td>
+                            @if ($executed)
+                                <td class="qty muted">{{ $row['quoted_quantity'] !== null ? P::money($row['quoted_quantity']) : '' }}</td>
+                            @endif
                             <td class="qty">{{ $row['quantity'] !== null ? P::money($row['quantity']) : '' }}</td>
                             @if ($showPrices)
                                 <td class="price">{{ P::money($row['unit_price']) }}</td>
@@ -240,6 +337,9 @@
                                 <td></td>
                                 <td>{{ $cost['family'] }} · {{ $cost['label'] }}</td>
                                 <td class="unit">{{ $cost['unit'] }}</td>
+                                @if ($executed)
+                                    <td></td>
+                                @endif
                                 <td class="qty">{{ P::qty($cost['quantity']) }}</td>
                                 @if ($showPrices)
                                     <td class="price">{{ P::money($cost['unit_cost']) }}@if ($cost['markup_percent']) +{{ P::qty($cost['markup_percent']) }}%@endif</td>
@@ -258,7 +358,7 @@
             @if ($showPrices)
                 <tr class="grand-total">
                     <td></td>
-                    <td colspan="4">Total brut</td>
+                    <td colspan="{{ $columns - 2 }}">Total brut</td>
                     <td class="amount right">{{ P::money($document->total_net) }}</td>
                 </tr>
             @endif

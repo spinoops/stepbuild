@@ -4,8 +4,8 @@ const path = require('path')
 const fs = require('fs')
 
 // Ports du dev.bat par défaut ; surchargeables : FRONT_URL=http://localhost:5177 API_URL=http://localhost:8007 node capture.cjs
-const FRONT = process.env.FRONT_URL || 'http://localhost:5174'
-const API = (process.env.API_URL || 'http://localhost:8001') + '/api'
+const FRONT = process.env.FRONT_URL || 'http://localhost:5190'
+const API = (process.env.API_URL || 'http://localhost:8020') + '/api'
 const OUT = path.join(__dirname, 'shots')
 fs.mkdirSync(OUT, { recursive: true })
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -49,19 +49,28 @@ async function token(email) {
     const value = await token(email)
     await page.evaluate((t) => localStorage.setItem('stepbuild_token', t), value)
   }
-  // Projet courant de la barre de contexte (perdu à chaque rechargement de page : à refaire après chaque go()).
+  // Projet courant de la barre de contexte : fenêtre de choix (perdu à chaque rechargement : à refaire après go()).
   const selectProject = async (number) => {
-    await page.evaluate((n) => {
-      const select = [...document.querySelectorAll('header select, select')].find((s) => [...s.options].some((o) => o.text.startsWith(n)))
-      const value = [...select.options].find((o) => o.text.startsWith(n)).value
-      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, value)
-      select.dispatchEvent(new Event('change', { bubbles: true }))
-    }, number)
+    await page.evaluate(() => document.querySelector('button[title^="Choisir le projet courant"]')?.click())
+    await page.waitForFunction((n) => [...document.querySelectorAll('.fixed tbody tr')].some((tr) => tr.textContent.includes(n)), { timeout: 10000 }, number)
+    await wait(300)
+    await page.evaluate((n) => [...document.querySelectorAll('.fixed tbody tr')].find((tr) => tr.textContent.includes(n))?.click(), number)
     await wait(1800)
   }
   const clickTitle = async (prefix, index = 0) => {
     await page.evaluate((t, i) => [...document.querySelectorAll(`button[title^="${t}"]`)][i]?.click(), prefix, index)
     await wait(900)
+  }
+  const setValue = async (selector, value) => {
+    await page.evaluate(
+      (s, v) => {
+        const input = document.querySelector(s)
+        Object.getOwnPropertyDescriptor(input.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, 'value').set.call(input, v)
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      },
+      selector,
+      value,
+    )
   }
 
   // 01 — connexion
@@ -101,26 +110,47 @@ async function token(email) {
   await wait(1500)
   await shot('06-catalogue')
 
-  // 07 — éléments de coûts
+  // 07 — éléments de coûts, et la tirette de majoration
   await go('/listes-prix')
   await shot('07-elements-couts')
+  // La colonne Majoration est à droite de la grille, hors de l'écran de 1440 px : la faire défiler avant de cliquer.
+  await page.evaluate(() => document.querySelector('button[title^="Cliquer pour régler la majoration"]')?.scrollIntoView({ block: 'center', inline: 'end' }))
+  await wait(400)
+  await page.evaluate(() => document.querySelector('button[title^="Cliquer pour régler la majoration"]')?.click())
+  await wait(600)
+  const markupBox = await page.evaluate(() => {
+    const rect = document.querySelector('[id^="markup-"]')?.getBoundingClientRect()
+    return rect ? { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right } : null
+  })
+  await shot('40-majoration', markupBox
+    ? { x: Math.max(0, markupBox.left - 360), y: Math.max(0, markupBox.top - 60), width: Math.min(1440, markupBox.right + 30) - Math.max(0, markupBox.left - 360), height: markupBox.bottom - markupBox.top + 90 }
+    : { x: 760, y: 250, width: 680, height: 330 })
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
 
-  // 08 — projets
+  // 08 — projets : la fiche du projet courant
   await go('/projets?id=1')
   await shot('08-projets')
 
-  // 09 — nouveau projet : le client pré-remplit la fiche, le numéro est proposé
+  // 09 — nouveau projet : d'abord le code postal et la localité, le numéro est proposé
   await go('/projets?id=new')
+  await page.type('input[name=zip]', '2854', { delay: 40 })
+  await wait(1500)
+  await shot('09-projet-nouveau', { x: 280, y: 150, width: 1160, height: 420 })
+  // puis la fiche complète, onglet Client
+  await clickText('Continuer')
+  await wait(800)
+  await page.click('input[name=designation1]')
+  await page.keyboard.type('Muller Hans - Rénovation cuisine')
+  await wait(400)
+  await clickText('Client', 'main button')
+  await wait(500)
   const clientValue = await page.evaluate(
     () => [...document.querySelector('select[name=client_id]').options].find((o) => o.text.startsWith('Muller'))?.value,
   )
   await page.select('select[name=client_id]', clientValue)
-  await wait(1800)
-  await page.click('input[name=designation1]')
-  await page.keyboard.press('End')
-  await page.keyboard.type('Rénovation cuisine')
-  await wait(400)
-  await shot('09-projet-nouveau', { x: 280, y: 150, width: 1160, height: 400 })
+  await wait(800)
+  await shot('39-projet-client', { x: 280, y: 150, width: 1160, height: 380 })
 
   // 10 — adresses du projet
   await go('/projets?id=1')
@@ -130,6 +160,13 @@ async function token(email) {
   // 11 — photos du projet (zone d'envoi)
   await clickText('Photos', 'main button')
   await shot('11-projet-photos', { x: 280, y: 190, width: 1160, height: 360 })
+
+  // 31 — fenêtre de choix du projet (barre du haut)
+  await page.evaluate(() => document.querySelector('button[title^="Choisir le projet courant"]')?.click())
+  await wait(1500)
+  await shot('31-choix-projet', { x: 120, y: 90, width: 1200, height: 560 })
+  await page.keyboard.press('Escape')
+  await wait(400)
 
   // 12 — devis : détail
   await go('/documents?id=1', 2500)
@@ -154,26 +191,14 @@ async function token(email) {
   }, pickerStep)
   await shot('13-devis-saisie-rapide', { x: 320, y: Math.max(150, box.y - 250), width: 1120, height: 400 })
   await page.keyboard.press('Escape')
-  await page.evaluate((id) => {
-    const input = document.querySelector(`[data-picker="${id}"]`)
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '')
-    input.dispatchEvent(new Event('input', { bubbles: true }))
-    input.blur()
-  }, pickerStep)
+  await setValue(`[data-picker="${pickerStep}"]`, '')
+  await page.evaluate((id) => document.querySelector(`[data-picker="${id}"]`).blur(), pickerStep)
 
-  // 14 — devis : panneau des étapes et modèles
+  // 14 — devis : panneau de gauche, catalogue en haut (chapitre déplié), étapes en dessous
   await go('/documents?id=1', 2500)
-  const modelValue = await page.evaluate(() => {
-    const select = [...document.querySelectorAll('aside select')].find((s) => s.options[0].text.includes('modèle'))
-    return [...select.options].find((o) => o.text.includes('04 - TERRASSEMENT'))?.value
-  })
-  await page.evaluate((value) => {
-    const select = [...document.querySelectorAll('aside select')].find((s) => s.options[0].text.includes('modèle'))
-    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, value)
-    select.dispatchEvent(new Event('change', { bubbles: true }))
-  }, modelValue)
-  await wait(400)
-  await shot('14-devis-etapes', { x: 0, y: 150, width: 330, height: 680 })
+  await page.evaluate(() => [...document.querySelectorAll('aside [draggable="true"]')].find((el) => el.innerText.includes('DEMONTAGE'))?.click())
+  await wait(800)
+  await shot('14-devis-etapes', { x: 0, y: 150, width: 360, height: 700 })
 
   // 15 / 16 / 17 — en-tête, récapitulation, liste de tous les documents (sans devis ouvert)
   await clickText('En-tête', 'main button')
@@ -187,6 +212,10 @@ async function token(email) {
   await go('/users')
   await shot('18-utilisateurs', { x: 0, y: 0, width: 1440, height: 560 })
 
+  // 38 — journal des connexions
+  await go('/connexions', 2200)
+  await shot('38-connexions', { x: 0, y: 150, width: 1440, height: 520 })
+
   // 19 — vue ouvrier
   await loginAs('ouvrier@chantier.test')
   await go('/projets?id=1')
@@ -199,30 +228,56 @@ async function token(email) {
   await wait(4000)
   await shot('20-devis-apercu')
 
-  // 21 — devis : sous-détail de prix d'une position (fenêtre), avec un sous-détail type chargé
+  // 33 — devis : sous-détails affichés en rouge sous les positions
   await go('/documents?id=1', 2500)
   await page.evaluate(() => {
-    const row = [...document.querySelectorAll('main tr')].find((tr) => tr.innerText.includes('Carrelage') || tr.innerText.includes('carrelage'))
+    const label = [...document.querySelectorAll('label')].find((l) => l.innerText.includes('Afficher les sous-détails'))
+    const input = label?.querySelector('input')
+    if (input && !input.checked) input.click()
+  })
+  await wait(600)
+  await page.evaluate(() => [...document.querySelectorAll('main tr')].find((tr) => tr.innerText.includes('Ouvrier qualifié'))?.scrollIntoView({ block: 'center' }))
+  await wait(400)
+  await shot('33-devis-sous-details', { x: 320, y: 150, width: 1120, height: 420 })
+  await page.evaluate(() => {
+    const label = [...document.querySelectorAll('label')].find((l) => l.innerText.includes('Afficher les sous-détails'))
+    const input = label?.querySelector('input')
+    if (input && input.checked) input.click()
+  })
+
+  // 21 — devis : sous-détail de prix d'une position (fenêtre)
+  await page.evaluate(() => {
+    const row = [...document.querySelectorAll('main tr')].find((tr) => tr.innerText.includes('Ouvrier qualifié'))
     row?.scrollIntoView({ block: 'center' })
-    const button = row?.querySelector('button[title*="sous-détail"]') || document.querySelector('button[title*="sous-détail"]')
+    const button = row?.querySelector('button[title*="ous-détail"]') || document.querySelector('button[title*="ous-détail"]')
     button?.click()
   })
   await wait(1200)
-  const picker = await page.$('input[placeholder^="Charger un sous-détail type"]')
-  if (picker) {
-    try {
-      await picker.click()
-      await page.keyboard.type('carrelage', { delay: 40 })
-      await wait(800)
-      await page.keyboard.press('Enter')
-      await wait(2000)
-    } catch (error) {
-      console.warn('sous-détail type non chargé :', error.message)
-    }
-  }
   await shot('21-devis-sous-detail')
   await page.keyboard.press('Escape')
   await wait(500)
+
+  // 34 — demande d'acompte : la fenêtre de création
+  await go('/documents?id=1', 2500)
+  await clickText('Autre document')
+  await clickText("Demande d'acompte", 'button')
+  await wait(800)
+  await shot('34-acompte', { x: 300, y: 150, width: 840, height: 560 })
+  await clickText('Annuler', '.fixed button')
+  await wait(400)
+
+  // 35 — travaux exécutés : la feuille avec la colonne « Qté devis »
+  const executedId = await page.evaluate(() => {
+    const link = [...document.querySelectorAll('aside button')].find((b) => b.innerText.includes('-TE.'))
+    link?.click()
+    return link ? link.innerText.trim() : null
+  })
+  if (executedId) {
+    await wait(2500)
+    await shot('35-travaux-executes', { x: 320, y: 150, width: 1120, height: 520 })
+    await clickText('Récapitulation', 'main button')
+    await shot('36-travaux-recap', { x: 320, y: 190, width: 1120, height: 380 })
+  }
 
   // 22 / 23 — rapports journaliers : liste du projet, en-tête et grille des heures
   await go('/rapports?id=10', 2200)
@@ -247,6 +302,14 @@ async function token(email) {
   await shot('26-regie')
   await clickText('Récapitulation', 'main button')
   await shot('27-regie-recap', { x: 400, y: 150, width: 1040, height: 420 })
+
+  // 37 — rapport de régie : devis contre rapports, étape par étape
+  await go('/rapport-regie', 1500)
+  await selectProject('2800-001')
+  await wait(2000)
+  await page.evaluate(() => [...document.querySelectorAll('main tbody tr')].find((tr) => tr.innerText.includes('DEMONTAGE'))?.click())
+  await wait(600)
+  await shot('37-rapport-regie')
 
   // 28 / 29 — contrôle des heures : matrice d'un collaborateur, saisie d'une absence
   await go('/controle-heures?mois=2026-08&collaborateur=1', 2500)

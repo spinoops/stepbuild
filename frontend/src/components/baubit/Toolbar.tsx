@@ -87,7 +87,7 @@ interface StandardToolsProps {
   canDelete?: boolean
 }
 
-/** Jeu de boutons standard : nouveau, annuler, supprimer, colonnes, filtre, imprimer (l'enregistrement est automatique). */
+/** Jeu de boutons standard : nouveau, annuler, supprimer (l'enregistrement est automatique). */
 export function StandardTools({ newLabel = 'Nouveau', onNew, onUndo, onDelete, canDelete = true }: StandardToolsProps) {
   return (
     <>
@@ -95,10 +95,6 @@ export function StandardTools({ newLabel = 'Nouveau', onNew, onUndo, onDelete, c
       <ToolSep />
       <ToolButton icon="undo" title="Annuler les modifications" onClick={onUndo} />
       <ToolButton icon="trash" title="Supprimer" tone="danger" onClick={onDelete} disabled={Boolean(onDelete) && !canDelete} />
-      <ToolSep />
-      <ToolButton icon="table" title="Colonnes" />
-      <ToolButton icon="filter" title="Filtre" />
-      <ToolButton icon="print" title="Imprimer" />
       <ToolSep />
     </>
   )

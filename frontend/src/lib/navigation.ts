@@ -36,6 +36,7 @@ export const NAV_GROUPS: NavGroup[] = [
     title: 'Exécution',
     items: [
       { to: '/rapports', label: 'Rapports journaliers', icon: 'clipboard' },
+      { to: '/rapport-regie', label: 'Rapport de régie', icon: 'chart', roles: GESTION },
       { to: '/regie', label: 'Régie', icon: 'calculator', roles: GESTION },
       { to: '/controle-heures', label: 'Contrôle des heures', icon: 'clock', roles: GESTION },
     ],
@@ -62,6 +63,7 @@ export const NAV_GROUPS: NavGroup[] = [
     title: 'Administration',
     items: [
       { to: '/users', label: 'Utilisateurs', icon: 'users', roles: ['admin'] },
+      { to: '/connexions', label: 'Journal des connexions', icon: 'shield', roles: ['admin'] },
       { to: '/settings', label: 'Configuration', icon: 'settings', roles: ['admin'] },
     ],
   },

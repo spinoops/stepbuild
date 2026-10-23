@@ -16,8 +16,8 @@ Contexte de développement détaillé : `CLAUDE.md`.
 
 ```
 app-chantier/   (dépôt GitHub : stepbuild)
-├── backend/    # API Laravel (http://localhost:8001)
-└── frontend/   # SPA React (http://localhost:5174)
+├── backend/    # API Laravel (http://localhost:8020)
+└── frontend/   # SPA React (http://localhost:5190)
 ```
 
 ## Prérequis
@@ -45,7 +45,7 @@ Créer la base puis migrer/seed :
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS app_chantier CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 php artisan migrate --seed
-php artisan serve --port=8001   # http://localhost:8001
+php artisan serve --port=8020   # http://localhost:8020
 ```
 
 > Ajuste `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` dans `backend/.env` si besoin.
@@ -55,8 +55,8 @@ php artisan serve --port=8001   # http://localhost:8001
 ```bash
 cd frontend
 npm install
-copy .env.example .env          # contient VITE_API_URL=http://localhost:8001
-npm run dev                     # http://localhost:5174
+copy .env.example .env          # contient VITE_API_URL=http://localhost:8020
+npm run dev                     # http://localhost:5190
 ```
 
 ## Comptes de démonstration
@@ -93,7 +93,7 @@ ils ne touchent jamais la base MySQL de développement.
 
 ## Telescope (debug, local uniquement)
 
-Accessible sur http://localhost:8001/telescope en environnement `local`.
+Accessible sur http://localhost:8020/telescope en environnement `local`.
 Le paquet est en dépendance `--dev` et n'est chargé qu'en local (voir
 `app/Providers/AppServiceProvider.php`), il ne s'exécutera pas en production.
 

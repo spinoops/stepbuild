@@ -36,5 +36,6 @@ export const DOCUMENT_STATUSES: Record<DocumentStatus, StatusMeta> = {
 export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   devis: 'Devis',
   acompte: 'Acompte',
+  travaux: 'Travaux exécutés',
   facture: 'Facture',
 }

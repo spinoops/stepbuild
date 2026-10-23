@@ -69,7 +69,10 @@ Coque : en-tête anthracite (logo, onglets du **ruban** `lib/ribbon.ts`, recherc
 travail**, contenu, **barre d'état**. Charte Lachat dans `index.css` : `primary` (bleu), `accent`
 (rouge, actions principales), `anthracite`. Composants dans `components/shell/` et `components/baubit/` :
 - `Workspace` (barre d'outils + `AsidePanel` + contenu ; alimente barre d'état et libellé d'onglet),
-- `DataGrid` (filtre par colonne, tri, lignes par statut ; **mode serveur** via `query` / `onQueryChange`), `GridPager`,
+- `DataGrid` (filtre par colonne, tri, lignes par statut ; **mode serveur** via `query` / `onQueryChange` ; **colonnes
+  redimensionnables** en tirant le bord droit de l'en-tête, double-clic = largeur d'origine, mémorisées dans
+  `localStorage` si `storageKey` est donné — en mode serveur, chaque colonne triable doit figurer dans la liste
+  `sortable` du contrôleur, cf. `sort=margin` calculé dans `PriceElementController`), `GridPager`,
 - `Form` (`Field`, `BbInput`, `BbSelect`, `BbTextarea`, `BbCheckbox`, `StatusSelect`, `SectionTitle`),
 - `TabStrip`, `Toolbar` (`StandardTools` branchable : `onNew`, `formId`, `onUndo`, `onDelete`), `Tree`.
 
@@ -107,19 +110,30 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
 - Le **projet courant** (`workspaceStore.projectId`, numérique) est reflété dans l'URL (`?projet=12`, composant
   `components/shell/WorkspaceUrlSync` : rechargement, lien collé et bouton Retour le conservent ; sur `/projets` c'est `?id=`).
   Il est choisi dans la barre de contexte ou en
-  ouvrant une fiche ; les modules suivants (devis, rapports) doivent s'y rattacher.
+  ouvrant une fiche ; les modules suivants (devis, rapports) doivent s'y rattacher. **Barre de contexte** (`ContextBar`,
+  22.10.2026) : les champs Projet et Document ne sont plus des listes déroulantes mais ouvrent des fenêtres de choix,
+  `components/shell/ProjectPickerDialog` (recherche serveur, statut, seulement actifs, grille colorée) et
+  `DocumentPickerDialog` (documents du projet, filtres par type et statut) ; double-clic ou Entrée choisit.
+  `StandardTools` n'a plus les boutons factices Colonnes / Filtre / Imprimer.
 - **Nouveau projet** : un écran d'entrée ne demande que le code postal et la localité du chantier, en grand (la localité
   est proposée depuis le carnet d'adresses quand le NPA y est connu, le numéro `2800-003` dès le NPA saisi) ; « Continuer »
   ouvre la fiche complète (`ProjectForm`, état `stage`).
+- **Page Projets sans liste** (22.10.2026) : la fiche du projet courant occupe toute la page ; le projet se choisit
+  dans la barre du haut (fenêtre de choix) ou par Ctrl+K, la page n'a plus ni grille ni filtres de statut.
 - Fiche : onglets **Général** (NPA / Lieu en premier : dès le NPA saisi, le numéro `2800-003` est proposé ; puis désignations,
   adresse du chantier, statut…), **Client** (client du carnet et ses coordonnées en lecture, lien vers la fiche ; les deux
   onglets sont le même formulaire `ProjectForm` avec `section`, gardé monté pour ne rien perdre), Adresses, Photos.
 - Composants : `components/projects/` (`ProjectForm`, `ProjectAddressesTab`, `ProjectPhotosTab`), hooks `hooks/useProjects.ts`.
 
 ### Devis (phase 3)
-- `documents` (type `devis` | `acompte` | `facture`, même base pour la phase 6) → `document_steps` →
+- `documents` (type `devis` | `acompte` | `travaux` | `facture`, même base pour la phase 6) → `document_steps` →
   `document_positions`. Numéro automatique par projet et par type : `2853-055-DE.1` (`Document::createForProject`).
-  Destinataire = **instantané** du client du projet, modifiable sans toucher au carnet.
+  Destinataire = **instantané** du client du projet, modifiable sans toucher au carnet. Champs **Entreprise**
+  (`recipient_company`) et **ligne complémentaire** : mention `recipient_extra_label` (`Document::EXTRA_LABELS` :
+  « À l'attention de », « p.a. », « c/o », « Case postale ») + texte `recipient_extra`. Ordre imprimé
+  (`Document::recipientLines()`, recopié dans `DocumentHeaderForm` pour l'aperçu) : entreprise, titre, prénom nom,
+  ligne complémentaire, rue, case postale, NPA lieu ; « À l'attention de » sans texte → « À l'attention de Monsieur
+  Jean Dupont » à la place des lignes de la personne.
 - **Étape** = étape du chantier. Créée depuis un **modèle** (chapitre du catalogue, `catalog_chapter_id`, avec ou
   sans ses articles) ou libre. Les rapports journaliers (phase 4) devront référencer `document_steps.id`.
 - **Position** : `item` (chiffrée), `title`, `text`. Depuis un article du catalogue (prix repris, `usage_count`
@@ -137,6 +151,9 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   ses champs depuis le serveur pendant la saisie.
   Réordonnancement par **glisser-déposer** natif (poignée `data-handle`, dépose dans l'étape ou vers une autre étape :
   `updatePosition` avec le nouveau `document_step_id` puis `reorderPositions`) ; au clavier, flèches sur la poignée.
+  **Les étapes se gèrent aussi sur la feuille** (20.10.2026) : poignée `data-step-handle` sur le titre (glisser l'étape
+  entière au-dessus / en dessous d'une autre, `stepDragRef` distinct du glissement de position, ou flèches au clavier →
+  `reorderSteps`), renommage par double-clic ou crayon (`updateStep`), corbeille (`deleteStep`, confirmation).
 - **Sous-détail de prix** par position (fenêtre ouverte depuis la ligne, icône calculatrice) : remplace les formules
   notées en « remarques internes » dans BauBit. `document_position_costs` = lignes par famille (1 MO, 2 MAT, 3 MACH,
   4 MAT EX, 5 OUT, 6 ST = familles des éléments de coûts, `price_element_id` facultatif) : quantité (× **quantité de
@@ -192,7 +209,7 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   (sous-détail ou prix d'achat).
 - Tout le module est réservé à `roles:admin,responsable` (prix). `POST /documents/{id}/duplicate` crée la version suivante.
 - **Panneau de gauche du devis** (`DocumentsPage`, `AsidePanel fill` + `components/baubit/Accordion`) : deux sections
-  dépliables. **« Étapes et devis »** = documents du projet + `StepsPanel` (navigation, modèles, ajout d'étape).
+  dépliables, le catalogue en haut (demande du 20.10.2026). **« Étapes et devis »** (en dessous) = documents du projet + `StepsPanel` (navigation, modèles, ajout d'étape).
   **« Catalogue de prix »** = `components/documents/CatalogPanel` : chapitres (dossiers, ✓ si l'étape est dans le devis,
   compteur d'articles) et articles (recherche en mémoire via `useArticlePicker`). **On ajoute uniquement en
   glissant** (aucun ajout au clic, demande du client du 16.10.2026) : l'élément glissé est gardé dans
@@ -205,6 +222,15 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `ensureStep()`. `takeCatalogDrag()` garantit un seul gestionnaire par dépôt. Clic sur un chapitre :
   déplie ses articles. Crayon sur un article : `ArticleQuickEdit` modifie le catalogue seulement (les positions du
   devis sont des instantanés, jamais touchées).
+- **Documents dérivés d'un devis** (22.10.2026, `documents.source_document_id`, menu « Autre document » de la page
+  Documents → `DerivedDocumentDialog`) : **Demande d'acompte** (`type` acompte, `AC.n`, `Document::createAdvance()` :
+  pourcentage du net HT du devis (`advance_percent`) ou montant fixe, arrondi à 5 ct, une étape « Demande d'acompte » avec
+  une position « Acompte n° x sur le devis N° … », destinataire et TVA repris ; le PDF rappelle le devis, les acomptes déjà
+  demandés et le montant à verser TTC) et **Travaux exécutés** (`type` travaux, `TE.n`, `Document::createExecuted()` :
+  étapes et positions copiées, `document_positions.quoted_quantity` = quantité du devis, `quantity` = quantité exécutée
+  pré-remplie à corriger ; la feuille et le PDF ont une colonne « Qté devis », la récapitulation et la page de garde
+  comparent devis / exécuté par étape avec le %). `POST /projects/{id}/documents` prend `source_document_id` (devis du
+  projet) et, pour l'acompte, `advance_percent` ou `advance_amount`. `Document::INHERITED` = champs d'en-tête repris.
 - **Modèles de devis** (`quote_templates` → `quote_template_steps`, page `/modeles-devis`) : jeu d'étapes
   (chapitres, avec ou sans articles, ou libres), un seul `is_default`. `POST /projects/{id}/documents`
   applique le modèle choisi (`quote_template_id`), sinon le modèle par défaut ; `null` = devis vide.
@@ -262,6 +288,21 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `POST /collaborators/{id}/absences` `{from, to?, type, hours?, note?}` (période → jours ouvrés ; 0 h efface).
 - **Types de travail** : `apiResource('work-types')` store/update/destroy (gestion) ; un type utilisé est désactivé
   au lieu d'être supprimé ; `GET /work-types?all=1` inclut les inactifs.
+- **Rapport de régie** (contrôle des coûts, 22.10.2026, onglet du ruban « Rapport de régie » après Exécution) :
+  `GET /api/cost-control?project_id=&document_id=&status=&from=&to=` (`CostControlController`, `App\Support\CostControl`,
+  gestion seulement). Pour chaque étape du devis (accepté, sinon le dernier, ou `document_id`) : **prévu** (vente hors
+  options, prix de revient = Σ quantité × `cost_price`, heures = positions en heures + lignes MO en heures des
+  sous-détails) contre **réalisé** par les rapports journaliers du projet (heures productives, coût brut, régie, client),
+  avec le détail par rapport. **Budget** = prix de revient s'il existe, sinon vente ; `status` ok | over (coût brut >
+  budget, ou dépense sans rien de prévu) | none. Les heures sur types de travail et les lignes sans étape (ou d'une autre
+  version du devis) sont regroupées dans `others` (une seule ligne). Chaque ligne porte `margin_percent` (prix client
+  sur coût brut) et `locked_cost` (coût des rapports facturés). **Marge** : `POST /api/cost-control/margin`
+  `{project_id, scope: step|other|all, document_step_id?, markup_percent, …filtres}` → `CostControl::applyMargin()`
+  fixe le **prix client** des lignes (heures et ressources) à coût brut × (1 + marge), arrondi à 5 ct, rapports facturés
+  exclus (`locked`), tarif régie inchangé ; renvoie `updated`, `locked` et le rapport recalculé. Front :
+  `pages/CostControlPage` (`/rapport-regie`, projet courant, lignes vertes / rouges, barre de consommation, étape
+  dépliable sur ses rapports, filtres statut / période / devis, **tirette de marge** `MarginControl` par étape et pour
+  tout le chantier, appliquée au relâchement), hook `hooks/useCostControl.ts` (`useApplyMargin` remplace le cache).
 - Front : `pages/RegiePage` (lignes du projet courant groupées par rapport, `components/regie/PriceCell` éditable en
   place, onglet Récapitulation par famille et par rapport, marge affichée ; hooks `hooks/useRegie.ts` : la ligne
   renvoyée remplace celle du cache et les totaux sont recalculés localement), `pages/HoursControlPage` (mois et
@@ -301,6 +342,17 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `hooks/useStock.ts` (le produit renvoyé remplace celui du cache). Pour admin/responsable la page est dans la coque
   normale (Données de base → Stocks).
 
+### Éléments de coûts : majoration par tirette
+Dans la liste des éléments de coûts, la colonne **Majoration** (prix régie sur prix net, en %) est une cellule
+`MarkupCell` : un clic ouvre une tirette (0–200 %, champ et raccourcis 0 / 10 / 20 / 30 / 50 %) ; au relâchement, le
+**prix régie** est réécrit = prix net × (1 + majoration), arrondi à 5 ct (`PUT /price-elements/{id}` avec la fiche
+complète). La colonne « Code régie » a quitté la liste (le champ reste dans la fiche pour les reprises).
+
+### Éléments de coûts : unité régie
+`price_elements.unit_regie` (unité du tarif régie BauBit) est reprise par les imports mais **plus affichée ni saisie**
+dans la page Listes de prix (retirée le 22.10.2026 à la demande du client) ; le formulaire ne l'envoie plus, la valeur
+importée reste en base.
+
 ### Unités de mesure
 Table `units` (code imprimé, libellé, ordre, actif), `Unit::DEFAULTS` = codes BauBit du devis type (M1, M2, M3, H., Jour,
 Pce…), créées par `Unit::seedDefaults()` dans `DatabaseSeeder` (tous environnements, jamais écrasées). `GET /units`
@@ -337,10 +389,20 @@ page Configuration.
 
 ## Modules et routes front
 Navigation dans `frontend/src/lib/navigation.ts` (groupes calqués sur les rubans BauBit),
-filtrée par rôle. Pages dans `frontend/src/pages/` :
+filtrée par rôle. Ruban `lib/ribbon.ts` (22.10.2026) : Accueil, Offre facturation, Exécution, Rapport de régie,
+**Statistiques** (ex-Services centraux), **Données de base** (Clients = carnet d'adresses `/clients`, Catalogue
+d'articles, Stocks, Éléments de coûts, Collaborateurs), Administration. Pages dans `frontend/src/pages/` :
 `/dashboard`, `/projets`, `/clients`, `/rapports`, `/regie`, `/controle-heures`,
-`/documents`, `/statistiques`, `/catalogue`, `/listes-prix`, `/modeles-devis`, `/sous-details-types`,
-`/collaborateurs`, `/stock`, `/users`, `/settings`.
+`/documents`, `/rapport-regie`, `/statistiques`, `/catalogue`, `/listes-prix`, `/modeles-devis`, `/sous-details-types`,
+`/collaborateurs`, `/stock`, `/users`, `/connexions`, `/settings`.
+
+### Journal des connexions (administration, 20.10.2026)
+Table `login_logs` (sans clé étrangère : survit aux suppressions de comptes et aux reprises ; hors `DataTransfer`) :
+`event` login | failed (`reason` unknown_email | bad_password) | throttled (refus du limiteur 6/min, tracé dans le
+rendu de `ThrottleRequestsException` de `bootstrap/app.php`) | logout | password_reset, avec e-mail saisi, IP et
+navigateur. `LoginLog::record()` ne bloque jamais la connexion. `GET /api/login-logs` (middleware `admin`,
+`LoginLogController`, filtres `event`, `user_id`, `from`, `to` + grille, résumé 24 h dans `summary`). Purge au-delà de
+`LoginLog::RETENTION_DAYS` (365) par `stepbuild:cron`. Front : `pages/LoginLogsPage` (`/connexions`, Administration).
 Les modules non développés utilisent `components/ModulePlaceholder.tsx` : **remplacer**
 le placeholder par la vraie page lors de la phase concernée.
 
@@ -354,8 +416,14 @@ Le `php` du PATH Windows est en **8.1** (trop vieux pour Laravel 13, qui exige *
 - Composer/tests : `$env:Path = 'D:\wamp64\bin\php\php8.4.24;' + $env:Path`.
 
 ## Démarrer
-- **`dev.bat`** (racine) lance le backend (`:8001`) + le frontend (`:5174`). **WAMP (MySQL) doit tourner.**
-- Base MySQL : `app_chantier`. Plusieurs projets dérivés de baseapp partagent les ports → **un seul lancé à la fois**.
+- **`dev.bat`** (racine) lance le backend (`:8020`) + le frontend (`:5190`). **WAMP (MySQL) doit tourner.**
+- **Ports réservés à StepBuild : 8020 (API) et 5190 (front)** (21.10.2026). Les autres projets de `D:\wamp64\www`
+  dérivés de baseapp utilisent 5173–5176 et 8000–8003 (stepone-worktime, systeme-reservation… sur 8001/5174) :
+  StepBuild peut donc tourner en même temps qu'eux. Ports écrits dans `.claude/launch.json`, `dev.ps1`,
+  `frontend/vite.config.ts` (`strictPort`), `lib/api.ts`, `config/app.php`, `config/cors.php`, les deux `.env.example`
+  et `docs/manuel/capture.cjs` ; les `.env` locaux (non versionnés) doivent suivre (APP_URL, FRONTEND_URL,
+  SANCTUM_STATEFUL_DOMAINS, VITE_API_URL).
+- Base MySQL : `app_chantier`.
 
 ## Stack
 - **Backend** : Laravel 13, PHP 8.4, Sanctum (token), spatie/laravel-permission (rôles),
@@ -403,7 +471,9 @@ Le `php` du PATH Windows est en **8.1** (trop vieux pour Laravel 13, qui exige *
 `docs/Mode d'emploi - StepBuild.pdf`, généré par `docs/manuel/` : `npm run captures` (puppeteer sur
 Chrome, données d'exemple ; `FRONT_URL` / `API_URL` pour d'autres ports) puis `npm run pdf` (reportlab,
 `build_manual.py`, police Helvetica → caractères WinAnsi seulement). **À compléter à chaque phase livrée**
-(chapitre par module, version et date en tête du script).
+(chapitre par module, version et date en tête du script). `npm run changelog` (`build_changelog.py`, mêmes styles)
+produit le PDF des nouveautés d'une livraison (`docs/Nouveautés - StepBuild - <période>.pdf`) : mettre à jour
+`PERIOD`, `OUTPUT` et la liste à chaque livraison.
 
 ## Déploiement
 Voir `DEPLOY.md`. Même méthode que app-planningchantier : **un seul domaine**

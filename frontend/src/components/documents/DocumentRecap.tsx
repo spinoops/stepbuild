@@ -12,6 +12,11 @@ export default function DocumentRecap({ document: doc }: { document: DocumentDet
   const margin = costedSales > 0 ? ((costedSales - cost) / costedSales) * 100 : null
   const options = steps.flatMap((step) => step.positions).filter((position) => position.is_optional && position.amount !== null)
   const base = doc.total_net - doc.discount_amount
+  // Travaux exécutés : montant du devis par étape (quantités du devis × prix), pour comparer.
+  const executed = doc.type === 'travaux'
+  const quotedOf = (positions: typeof steps[number]['positions']) =>
+    positions.filter((p) => p.kind === 'item' && !p.is_optional && p.quoted_quantity !== null && p.unit_price !== null).reduce((sum, p) => sum + (p.quoted_quantity ?? 0) * (p.unit_price ?? 0), 0)
+  const quotedTotal = steps.reduce((sum, step) => sum + quotedOf(step.positions), 0)
 
   const row = 'border-b border-gray-100 px-3 py-1.5'
 
@@ -21,22 +26,39 @@ export default function DocumentRecap({ document: doc }: { document: DocumentDet
         <thead>
           <tr className="bg-bb-ribbon text-[12px] font-semibold text-gray-500">
             <th className="border-b border-gray-200 px-3 py-2 text-left">Étape</th>
-            <th className="border-b border-gray-200 px-3 py-2 text-right">Montant CHF</th>
+            {executed && <th className="border-b border-gray-200 px-3 py-2 text-right">Devis CHF</th>}
+            <th className="border-b border-gray-200 px-3 py-2 text-right">{executed ? 'Exécuté CHF' : 'Montant CHF'}</th>
+            {executed && <th className="border-b border-gray-200 px-3 py-2 text-right">%</th>}
           </tr>
         </thead>
         <tbody>
-          {steps.map((step) => (
-            <tr key={step.id}>
-              <td className={row}>
-                <span className="mr-2 text-gray-400">{step.code}</span>
-                {step.label}
-              </td>
-              <td className={`${row} text-right tabular-nums`}>{fmtAmount(step.total)}</td>
-            </tr>
-          ))}
+          {steps.map((step) => {
+            const quoted = quotedOf(step.positions)
+            return (
+              <tr key={step.id}>
+                <td className={row}>
+                  <span className="mr-2 text-gray-400">{step.code}</span>
+                  {step.label}
+                </td>
+                {executed && <td className={`${row} text-right tabular-nums text-gray-500`}>{fmtAmount(quoted)}</td>}
+                <td className={`${row} text-right tabular-nums`}>{fmtAmount(step.total)}</td>
+                {executed && (
+                  <td className={`${row} text-right tabular-nums ${quoted > 0 && step.total > quoted + 0.005 ? 'text-red-700' : 'text-gray-500'}`}>
+                    {quoted > 0 ? `${Math.round((step.total / quoted) * 100)} %` : ''}
+                  </td>
+                )}
+              </tr>
+            )
+          })}
           <tr className="bg-gray-50 font-medium">
             <td className="border-b border-gray-200 px-3 py-1.5">Total des étapes</td>
+            {executed && <td className="border-b border-gray-200 px-3 py-1.5 text-right tabular-nums text-gray-500">{fmtAmount(quotedTotal)}</td>}
             <td className="border-b border-gray-200 px-3 py-1.5 text-right tabular-nums">{fmtAmount(doc.total_net)}</td>
+            {executed && (
+              <td className={`border-b border-gray-200 px-3 py-1.5 text-right tabular-nums ${quotedTotal > 0 && doc.total_net > quotedTotal + 0.005 ? 'text-red-700' : 'text-gray-500'}`}>
+                {quotedTotal > 0 ? `${Math.round((doc.total_net / quotedTotal) * 100)} %` : ''}
+              </td>
+            )}
           </tr>
           {doc.discount_amount > 0 && (
             <>
@@ -52,17 +74,23 @@ export default function DocumentRecap({ document: doc }: { document: DocumentDet
           )}
           <tr>
             <td className={`${row} text-gray-600`}>TVA {fmtAmount(doc.vat_rate, 1)} %</td>
+            {executed && <td className={row} />}
             <td className={`${row} text-right tabular-nums`}>{fmtAmount(doc.total_vat)}</td>
+            {executed && <td className={row} />}
           </tr>
           {doc.rounding !== 0 && (
             <tr>
               <td className={`${row} text-gray-600`}>Arrondi à 5 centimes</td>
+              {executed && <td className={row} />}
               <td className={`${row} text-right tabular-nums`}>{fmtAmount(doc.rounding)}</td>
+              {executed && <td className={row} />}
             </tr>
           )}
           <tr className="bg-primary-50 font-semibold text-primary-800">
             <td className="px-3 py-2">Total TTC</td>
+            {executed && <td />}
             <td className="px-3 py-2 text-right tabular-nums">{fmtAmount(doc.total_gross)}</td>
+            {executed && <td />}
           </tr>
         </tbody>
       </table>

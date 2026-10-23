@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { fmtAmount } from '@/lib/format'
 import { Icon } from '@/components/icons'
@@ -48,6 +48,43 @@ interface DataGridProps<T> {
    */
   query?: GridState
   onQueryChange?: (query: GridState) => void
+  /**
+   * Clé de mémorisation des largeurs de colonnes réglées à la souris (localStorage, par page).
+   * Sans clé, les largeurs réglées ne valent que pour la session de la page.
+   */
+  storageKey?: string
+}
+
+const MIN_WIDTH = 40
+
+/** Pendant le réglage d'une largeur : curseur de redimensionnement et pas de sélection de texte. */
+function setBodyResizing(on: boolean): void {
+  const style = window.document.body.style
+  style.cursor = on ? 'col-resize' : ''
+  style.userSelect = on ? 'none' : ''
+}
+
+function loadWidths(storageKey: string | undefined): Record<string, number> {
+  if (!storageKey) {
+    return {}
+  }
+  try {
+    const raw = window.localStorage.getItem(`stepbuild.grid.${storageKey}`)
+    return raw ? (JSON.parse(raw) as Record<string, number>) : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveWidths(storageKey: string | undefined, widths: Record<string, number>): void {
+  if (!storageKey) {
+    return
+  }
+  try {
+    window.localStorage.setItem(`stepbuild.grid.${storageKey}`, JSON.stringify(widths))
+  } catch {
+    // stockage indisponible : les largeurs valent pour la session seulement
+  }
 }
 
 export interface GridState {
@@ -64,7 +101,8 @@ function normalize(value: CellValue): string {
 
 /**
  * Grille de données : en-tête discret, ligne de filtre par colonne (filtrage réel),
- * tri au clic sur l'en-tête, lignes colorées par statut, ligne sélectionnée.
+ * tri au clic sur l'en-tête, lignes colorées par statut, ligne sélectionnée. Les colonnes se
+ * redimensionnent en tirant le bord droit de leur en-tête (double-clic : largeur d'origine).
  */
 export default function DataGrid<T>({
   columns,
@@ -81,8 +119,61 @@ export default function DataGrid<T>({
   rotateHeight = 96,
   query,
   onQueryChange,
+  storageKey,
 }: DataGridProps<T>) {
   const [local, setLocal] = useState<GridState>({ filters: {}, sort: null })
+  // Largeurs réglées à la souris, par clé de colonne (sinon la largeur déclarée par la colonne).
+  const [widths, setWidths] = useState<Record<string, number>>(() => loadWidths(storageKey))
+  const resizing = useRef<{ key: string; startX: number; startWidth: number } | null>(null)
+  const widthOf = (column: GridColumn<T>) => widths[column.key] ?? column.width
+
+  useEffect(() => {
+    const move = (event: MouseEvent) => {
+      const current = resizing.current
+      if (!current) {
+        return
+      }
+      const width = Math.max(MIN_WIDTH, Math.round(current.startWidth + event.clientX - current.startX))
+      setWidths((value) => (value[current.key] === width ? value : { ...value, [current.key]: width }))
+    }
+    const stop = () => {
+      if (!resizing.current) {
+        return
+      }
+      resizing.current = null
+      setBodyResizing(false)
+      setWidths((value) => {
+        saveWidths(storageKey, value)
+        return value
+      })
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', stop)
+    return () => {
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', stop)
+    }
+  }, [storageKey])
+
+  function startResize(event: React.MouseEvent<HTMLSpanElement>, column: GridColumn<T>) {
+    event.preventDefault()
+    event.stopPropagation()
+    const cell = event.currentTarget.parentElement
+    // Largeur de départ = largeur réellement affichée (une colonne peut s'être étirée pour remplir la grille).
+    resizing.current = { key: column.key, startX: event.clientX, startWidth: cell?.getBoundingClientRect().width ?? widthOf(column) ?? 120 }
+    setBodyResizing(true)
+  }
+
+  function resetWidth(event: React.MouseEvent<HTMLSpanElement>, column: GridColumn<T>) {
+    event.preventDefault()
+    event.stopPropagation()
+    setWidths((value) => {
+      const next = { ...value }
+      delete next[column.key]
+      saveWidths(storageKey, next)
+      return next
+    })
+  }
   const controlled = Boolean(query && onQueryChange)
   const { filters, sort } = controlled ? query! : local
 
@@ -169,11 +260,18 @@ export default function DataGrid<T>({
               <th
                 key={column.key}
                 onClick={() => toggleSort(column.key)}
-                style={{ width: column.width, minWidth: column.width }}
-                className={`cursor-pointer select-none border-b border-gray-200 bg-bb-ribbon px-3 text-[12px] font-semibold text-gray-500 transition hover:text-gray-800 ${
-                  column.rotate ? 'align-bottom' : 'h-9 whitespace-nowrap'
+                style={{ width: widthOf(column), minWidth: widthOf(column), maxWidth: widths[column.key] }}
+                className={`relative cursor-pointer select-none border-b border-gray-200 bg-bb-ribbon px-3 text-[12px] font-semibold text-gray-500 transition hover:text-gray-800 ${
+                  column.rotate ? 'align-bottom' : 'h-9 overflow-hidden whitespace-nowrap'
                 } ${column.headerClass ?? ''} ${column.rotate ? 'text-center' : align(column)}`}
               >
+                <span
+                  onMouseDown={(event) => startResize(event, column)}
+                  onDoubleClick={(event) => resetWidth(event, column)}
+                  onClick={(event) => event.stopPropagation()}
+                  title="Tirer pour régler la largeur de la colonne (double-clic : largeur d'origine)"
+                  className="absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize hover:bg-primary-300/60"
+                />
                 {column.rotate ? (
                   <div className="mx-auto flex items-end pb-1" style={{ height: rotateHeight }}>
                     <span className="bb-vertical whitespace-nowrap text-left font-medium">{column.header}</span>
@@ -227,9 +325,10 @@ export default function DataGrid<T>({
                   <td
                     key={column.key}
                     className={`border-b border-gray-100 px-3 py-1.5 align-top ${align(column)} ${
-                      column.wrap ? 'whitespace-normal' : 'whitespace-nowrap'
+                      column.wrap ? 'whitespace-normal' : 'overflow-hidden text-ellipsis whitespace-nowrap'
                     } ${column.cellClass?.(row) ?? ''}`}
-                    style={column.wrap ? { maxWidth: column.width } : undefined}
+                    style={column.wrap || widths[column.key] !== undefined ? { maxWidth: widthOf(column) } : undefined}
+                    title={!column.wrap && widths[column.key] !== undefined && !column.render ? String(column.value(row) ?? '') : undefined}
                   >
                     {renderCell(column, row)}
                   </td>

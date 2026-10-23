@@ -22,7 +22,7 @@ class DocumentController extends Controller
     private const COLUMNS = ['number', 'title', 'date', 'status', 'recipient_name', 'recipient_city', 'total_net', 'total_gross'];
 
     /** Relations d'un document complet (renvoyé après chaque modification, totaux à jour). */
-    public const FULL = ['project', 'steps.positions.costs'];
+    public const FULL = ['project', 'source', 'steps.positions.costs'];
 
     /**
      * Explorateur de documents (tous projets). Filtres : ?type=, ?status=, ?project_id=.
@@ -49,16 +49,31 @@ class DocumentController extends Controller
             'type' => ['required', Rule::in(array_keys(Document::TYPES))],
             'title' => ['nullable', 'string', 'max:255'],
             'quote_template_id' => ['nullable', 'integer', Rule::exists('quote_templates', 'id')->whereNull('deleted_at')],
-        ]);
+            // Demande d'acompte et travaux exécutés dérivent d'un devis du projet.
+            'source_document_id' => ['required_if:type,acompte,travaux', 'nullable', 'integer',
+                Rule::exists('documents', 'id')->where('project_id', $project->id)->where('type', 'devis')->whereNull('deleted_at')],
+            'advance_percent' => ['nullable', 'numeric', 'min:0', 'max:100',
+                Rule::requiredIf(fn () => $request->input('type') === 'acompte' && ! $request->filled('advance_amount'))],
+            'advance_amount' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
+        ], ['source_document_id.required_if' => 'Choisissez le devis dont ce document dérive.']);
+        $source = isset($data['source_document_id']) ? Document::findOrFail($data['source_document_id']) : null;
 
-        $document = Document::createForProject($project, $data['type'], $request->user(), [
-            'title' => $data['title'] ?? null,
-        ]);
+        if ($data['type'] === 'acompte' && $source) {
+            // Un montant explicite l'emporte sur le pourcentage.
+            $amount = isset($data['advance_amount']) ? (float) $data['advance_amount'] : null;
+            $document = Document::createAdvance($source, $request->user(), $amount !== null ? null : (float) $data['advance_percent'], $amount);
+        } elseif ($data['type'] === 'travaux' && $source) {
+            $document = Document::createExecuted($source, $request->user());
+        } else {
+            $document = Document::createForProject($project, $data['type'], $request->user(), [
+                'title' => $data['title'] ?? null,
+            ]);
 
-        // Devis : les étapes du modèle choisi (ou du modèle par défaut) sont créées d'emblée.
-        if ($data['type'] === 'devis') {
-            $template = isset($data['quote_template_id']) ? QuoteTemplate::find($data['quote_template_id']) : QuoteTemplate::default();
-            $template?->applyTo($document);
+            // Devis : les étapes du modèle choisi (ou du modèle par défaut) sont créées d'emblée.
+            if ($data['type'] === 'devis') {
+                $template = isset($data['quote_template_id']) ? QuoteTemplate::find($data['quote_template_id']) : QuoteTemplate::default();
+                $template?->applyTo($document);
+            }
         }
 
         return DocumentResource::make($document->refresh()->load(self::FULL))->response()->setStatusCode(201);

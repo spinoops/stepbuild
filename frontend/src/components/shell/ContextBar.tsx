@@ -1,16 +1,22 @@
+import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useProjectDocuments } from '@/hooks/useDocuments'
 import { useProjectOptions } from '@/hooks/useProjects'
 import { canSeePrices } from '@/lib/roles'
 import { useAuth } from '@/auth/AuthContext'
-import { PROJECT_STATUSES } from '@/lib/status'
+import { DOCUMENT_STATUSES, DOCUMENT_TYPE_LABELS, PROJECT_STATUSES } from '@/lib/status'
 import { setDocument, setProject, useWorkspace } from '@/lib/workspaceStore'
 import { Icon } from '@/components/icons'
+import ProjectPickerDialog from '@/components/shell/ProjectPickerDialog'
+import DocumentPickerDialog from '@/components/shell/DocumentPickerDialog'
 
-const SELECT =
-  'h-8 rounded-md border border-white/10 bg-white px-2.5 text-[13px] text-gray-800 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-300/40'
+const FIELD =
+  'flex h-8 items-center gap-2 rounded-md border border-white/10 bg-white px-2.5 text-left text-[13px] text-gray-800 outline-none transition hover:border-primary-300 focus:border-primary-400 focus:ring-2 focus:ring-primary-300/40 disabled:cursor-default disabled:border-white/10 disabled:bg-white/10 disabled:text-gray-400'
 
-/** Barre de contexte « Projet / Document » : le projet courant est repris par les pages. */
+/**
+ * Barre de contexte « Projet / Document » : le projet courant est repris par les pages. Chaque champ
+ * ouvre une fenêtre de choix avec recherche et filtres (statut, type), comme l'explorateur BauBit.
+ */
 export default function ContextBar() {
   const { user } = useAuth()
   const canManage = canSeePrices(user) // les documents contiennent des prix : jamais pour l'ouvrier
@@ -19,10 +25,11 @@ export default function ContextBar() {
   const documents = useProjectDocuments(projectId, canManage)
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const [picking, setPicking] = useState<'project' | 'document' | null>(null)
   const current = projects.data?.find((project) => project.id === projectId)
+  const currentDocument = documents.data?.find((item) => item.id === documentId)
 
-  function onChange(value: string) {
-    const id = value ? Number(value) : null
+  function chooseProject(id: number | null) {
     setProject(id)
     // Sur la page Projets, changer de projet courant ouvre aussi sa fiche.
     if (pathname === '/projets') {
@@ -36,14 +43,18 @@ export default function ContextBar() {
         <Icon name="folder" className="h-4 w-4 text-gray-300" />
         Projet
       </span>
-      <select value={projectId ?? ''} onChange={(event) => onChange(event.target.value)} className={`${SELECT} w-[420px]`}>
-        <option value="">{projects.isLoading ? 'Chargement…' : 'Aucun projet sélectionné'}</option>
-        {(projects.data ?? []).map((project) => (
-          <option key={project.id} value={project.id}>
-            {project.number} · {project.designation1}
-          </option>
-        ))}
-      </select>
+      <button type="button" onClick={() => setPicking('project')} title="Choisir le projet courant (recherche et filtres)" className={`${FIELD} w-[420px]`}>
+        <span className="min-w-0 flex-1 truncate">
+          {current ? (
+            <>
+              <span className="font-medium">{current.number}</span> · {current.designation1}
+            </>
+          ) : (
+            <span className="text-gray-500">{projects.isLoading ? 'Chargement…' : 'Aucun projet sélectionné'}</span>
+          )}
+        </span>
+        <Icon name="chevrondown" className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+      </button>
       {current && (
         <>
           <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${PROJECT_STATUSES[current.status].className}`}>
@@ -66,30 +77,49 @@ export default function ContextBar() {
         <Icon name="file" className="h-4 w-4 text-gray-300" />
         Document
       </span>
-      <select
-        value={documentId ?? ''}
+      <button
+        type="button"
         disabled={!canManage || !projectId}
-        onChange={(event) => {
-          const id = event.target.value ? Number(event.target.value) : null
-          setDocument(id)
-          navigate(id ? `/documents?id=${id}` : '/documents')
-        }}
-        className={`${SELECT} w-[260px] disabled:border-white/10 disabled:bg-white/10 disabled:text-gray-400`}
+        onClick={() => setPicking('document')}
+        title="Choisir le document courant (filtres par type et statut)"
+        className={`${FIELD} w-[260px]`}
       >
-        <option value="">
-          {!canManage ? 'Réservé à la gestion' : !projectId ? 'Choisir d’abord un projet' : documents.data?.length ? 'Aucun document ouvert' : 'Aucun document'}
-        </option>
-        {(documents.data ?? []).map((item) => (
-          <option key={item.id} value={item.id}>
-            {item.number}
-          </option>
-        ))}
-      </select>
+        <span className="min-w-0 flex-1 truncate">
+          {currentDocument ? (
+            <>
+              <span className="font-medium">{currentDocument.number}</span>
+              <span className="text-gray-500"> · {DOCUMENT_TYPE_LABELS[currentDocument.type]}</span>
+            </>
+          ) : (
+            <span className="text-gray-500">
+              {!canManage ? 'Réservé à la gestion' : !projectId ? 'Choisir d’abord un projet' : documents.data?.length ? 'Aucun document ouvert' : 'Aucun document'}
+            </span>
+          )}
+        </span>
+        <Icon name="chevrondown" className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+      </button>
+      {currentDocument && (
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${DOCUMENT_STATUSES[currentDocument.status].className}`}>
+          {DOCUMENT_STATUSES[currentDocument.status].label}
+        </span>
+      )}
 
       <span className="ml-auto flex items-center gap-1.5 text-[12px] text-gray-400">
         <span className="h-2 w-2 rounded-full bg-green-500" />
         Connecté
       </span>
+
+      <ProjectPickerDialog open={picking === 'project'} currentId={projectId} onClose={() => setPicking(null)} onPick={(project) => chooseProject(project.id)} />
+      <DocumentPickerDialog
+        open={picking === 'document'}
+        projectId={projectId}
+        currentId={documentId}
+        onClose={() => setPicking(null)}
+        onPick={(document) => {
+          setDocument(document.id)
+          navigate(`/documents?id=${document.id}`)
+        }}
+      />
     </div>
   )
 }

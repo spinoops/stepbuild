@@ -224,7 +224,7 @@ export interface ProjectPhoto {
   position: number
 }
 
-export type DocumentType = 'devis' | 'acompte' | 'facture'
+export type DocumentType = 'devis' | 'acompte' | 'travaux' | 'facture'
 export type DocumentStatus = 'en_cours' | 'envoye' | 'accepte' | 'refuse'
 
 /** Position d'un devis : article chiffré, sous-titre ou texte libre. */
@@ -285,6 +285,8 @@ export interface DocumentPosition {
   description: string
   unit: string | null
   quantity: number | null
+  /** Travaux exécutés : quantité du devis d'origine (la quantité saisie est celle exécutée). */
+  quoted_quantity: number | null
   unit_price: number | null
   cost_price: number | null
   amount: number | null
@@ -317,15 +319,23 @@ export interface DocumentDetail {
   project_id: number
   project?: { id: number; number: string; designation1: string }
   type: DocumentType
+  /** Devis dont dérive une demande d'acompte ou un document de travaux exécutés. */
+  source_document_id: number | null
+  source?: { id: number; number: string; date: string | null; total_net: number; discount_amount: number }
+  advance_percent: number | null
   sequence: number
   number: string
   title: string | null
   date: string
   status: DocumentStatus
   address_id: number | null
+  recipient_company: string | null
   recipient_title: string | null
   recipient_name: string | null
   recipient_first_name: string | null
+  /** Mention de la ligne complémentaire (« À l'attention de », « p.a. », « c/o », « Case postale ») et son texte. */
+  recipient_extra_label: string | null
+  recipient_extra: string | null
   recipient_street: string | null
   recipient_street_no: string | null
   recipient_zip: string | null

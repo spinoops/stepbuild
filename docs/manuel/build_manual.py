@@ -26,8 +26,8 @@ SHOTS = os.path.join(HERE, 'shots')
 LOGO = os.path.join(HERE, '..', '..', 'frontend', 'public', 'logo-lachat.png')
 OUTPUT = os.path.join(HERE, '..', "Mode d'emploi - StepBuild.pdf")
 
-VERSION = '0.3'
-DATE = '8 octobre 2026'
+VERSION = '0.4'
+DATE = '22 octobre 2026'
 
 BLUE = colors.HexColor('#1d3f9c')
 RED = colors.HexColor('#d32f2f')
@@ -194,8 +194,9 @@ def cover(canvas, doc):
     canvas.setFont('Helvetica', 10.5)
     canvas.setFillColor(GREY)
     lines = [
-        'Ce guide couvre les modules disponibles à ce jour : adresses, catalogue, éléments de coûts,',
-        "projets, devis, rapports journaliers, régie et contrôle des heures. Il sera complété à chaque livraison.",
+        'Ce guide couvre les modules disponibles à ce jour : adresses, catalogue, éléments de coûts, projets,',
+        "devis, demandes d'acompte, travaux exécutés, rapports journaliers, régie, rapport de régie, contrôle",
+        'des heures et stocks. Il sera complété à chaque livraison.',
         '',
         "Les captures d'écran montrent des données d'exemple fictives.",
     ]
@@ -229,7 +230,7 @@ def later(canvas, doc):
 def build_story():
     # Pastilles de la vue d'ensemble : coordonnées sur la capture 2160 × 1290.
     annotate('12-devis-detail.png', '12-annotee.png', [
-        (1182, 37), (1274, 37), (1992, 107), (1549, 174), (330, 247), (1560, 307), (373, 373), (2068, 780), (700, 1267),
+        (864, 37), (1700, 37), (1992, 107), (1549, 174), (330, 247), (1560, 307), (373, 373), (2068, 780), (700, 1267),
     ])
 
     s = [NextPageTemplate('later'), PageBreak()]
@@ -269,10 +270,13 @@ def build_story():
             "<b>Les rapports journaliers</b> : les heures et le matériel se saisissent sur les étapes du devis.",
             "<b>La régie et le contrôle des heures</b> : chaque ligne de rapport reçoit son prix brut, son prix régie "
             "et son prix client ; les heures de chaque collaborateur se vérifient mois par mois.",
-            "<b>La facture</b> : elle s'appuiera sur le devis et les rapports validés.",
+            "<b>Le rapport de régie</b> : étape par étape, ce que le devis prévoyait face à ce que les rapports ont "
+            "coûté, en vert ou en rouge.",
+            "<b>Les demandes d'acompte et les travaux exécutés</b> : deux documents tirés du devis. "
+            "<b>La facture finale</b> arrive dans la prochaine livraison.",
         ]),
-        note("Les étapes 1 à 4 sont disponibles aujourd'hui. Les acomptes, les factures et les statistiques arrivent "
-             "dans la prochaine livraison (voir le chapitre 15)."),
+        note("Tout ce qui précède est disponible aujourd'hui, sauf la facture finale et les statistiques "
+             "(voir le chapitre 16)."),
     ]
 
     # ------------------------------------------------------------------ 2
@@ -301,14 +305,14 @@ def build_story():
         shot('12-annotee.png', "Les neuf zones de l'écran, ici sur un devis."),
         grid([
             ['N°', 'Zone', 'À quoi elle sert'],
-            ['1', 'Onglets du menu', "Les grandes familles : Accueil, Offre facturation, Exécution, Services centraux, Données de base, Administration."],
+            ['1', 'Onglets du menu', "Les grandes familles : Accueil, Offre facturation, Exécution, Rapport de régie, Statistiques, Données de base, Administration."],
             ['2', 'Recherche', 'Retrouve un projet, un devis, une adresse, un article ou un prix (chapitre 4).'],
             ['3', "Barre d'actions", "Les fonctions de l'onglet choisi. Le bouton rouge est la fonction principale. Les fonctions grisées arrivent plus tard."],
-            ['4', 'Projet et document courants', "Le chantier sur lequel vous travaillez. Les pages s'y rattachent automatiquement."],
+            ['4', 'Projet et document courants', "Le chantier sur lequel vous travaillez. Un clic sur le champ ouvre une fenêtre de choix avec recherche et filtres. Les pages s'y rattachent automatiquement."],
             ['5', 'Onglets ouverts', "Chaque page visitée reste ouverte ici. Cliquez pour y revenir, sur la croix pour la fermer."],
             ['6', "Barre d'outils", 'Nouveau, annuler, supprimer, et les outils propres à la page. Pas de bouton Enregistrer : tout est automatique.'],
             ['7', 'Panneau latéral', "Résumé, étapes ou arborescence selon la page. La punaise le masque pour gagner de la place."],
-            ['8', 'Zone de travail', 'La fiche en cours et la liste.'],
+            ['8', 'Zone de travail', 'La fiche en cours et, selon la page, la liste.'],
             ['9', "Barre d'état", "Nombre d'entrées, totaux (brut, régie, client, heures…), et l'état de l'enregistrement."],
         ], [1 * cm, 4.2 * cm, CONTENT_W - 5.2 * cm]),
         Paragraph("La page d'accueil", H2),
@@ -336,9 +340,16 @@ def build_story():
             "Sous chaque titre de colonne, une case <b>Filtrer…</b> : tapez quelques lettres, la liste se réduit. "
             "Vous pouvez filtrer plusieurs colonnes à la fois.",
             "Cliquez sur un <b>titre de colonne</b> pour trier ; un second clic inverse le tri, un troisième l'annule.",
+            "Tirez le <b>bord droit d'un titre de colonne</b> pour régler sa largeur ; un double-clic sur ce bord "
+            "remet la largeur d'origine. Sur les listes de prix, vos largeurs sont mémorisées.",
             "Cliquez sur une <b>ligne</b> pour ouvrir sa fiche au-dessus de la liste.",
             'Les longues listes sont découpées en pages ; les flèches sont en bas à droite.',
         ]),
+        Paragraph('Choisir le projet et le document', H2),
+        p("La barre sombre sous le menu affiche le <b>projet courant</b> et le <b>document courant</b>. Un clic sur "
+          "l'un des deux champs ouvre une fenêtre de choix : recherche instantanée, filtres par statut (et par type "
+          "pour les documents), liste colorée. Un clic sur une ligne la choisit et referme la fenêtre."),
+        shot('31-choix-projet.png', 'La fenêtre de choix du projet : recherche, statuts, « Seulement actifs ».', max_height=8 * cm),
         Paragraph('La recherche instantanée', H2),
         p("Cliquez dans le champ de recherche de l'en-tête, ou appuyez sur <b>Ctrl + K</b>. Les résultats s'affichent "
           "pendant la frappe, dès la deuxième lettre, classés par famille."),
@@ -353,9 +364,9 @@ def build_story():
     ]
 
     # ------------------------------------------------------------------ 5
-    s += chapter('5. Les adresses')
+    s += chapter("5. Les clients (carnet d'adresses)")
     s += [
-        p("Menu <b>Services centraux</b>, bouton <b>Adresses</b>. C'est votre carnet d'adresses unique : clients, "
+        p("Menu <b>Données de base</b>, bouton <b>Clients</b>. C'est votre carnet d'adresses unique : clients, "
           "fournisseurs, sous-traitants et contacts. Une adresse saisie ici se réutilise dans les projets et les devis.", LEAD),
         shot('04-adresses.png', 'Le carnet : la fiche en haut, la liste en bas, un résumé à gauche.', max_height=8 * cm),
         Paragraph('Créer une adresse', H2),
@@ -421,29 +432,40 @@ def build_story():
         bullets([
             "<b>Prix fournisseur</b> : ce que l'élément vous coûte, tarif brut.",
             "<b>Prix net</b> : après vos remises. S'il est laissé vide, il reprend le prix fournisseur.",
-            "<b>Prix régie</b> : le prix majoré, facturé au client. La colonne <b>Majoration</b> calcule l'écart en pour cent.",
+            "<b>Prix régie</b> : le prix majoré, facturé au client. La colonne <b>Majoration</b> montre l'écart en pour cent.",
         ]),
+        Paragraph('Régler la majoration avec la tirette', H2),
+        p("Dans la liste, cliquez sur la colonne <b>Majoration</b> d'un élément : une tirette s'ouvre. Déplacez-la, tapez "
+          "le pour cent ou cliquez un raccourci (0, 10, 20, 30, 50 %) : le <b>prix régie</b> est recalculé, prix net "
+          "+ majoration arrondi à 5 centimes, et enregistré dès que vous relâchez la tirette."),
+        shot('40-majoration.png', 'La tirette de majoration : le prix régie suit en direct.', width=11 * cm),
         p("Pour créer un élément, cliquez sur <b>Nouvel élément</b> : la famille de l'onglet ouvert et le groupe "
-          "sélectionné sont déjà proposés."),
+          "sélectionné sont déjà proposés. Le <b>code régie</b>, repris de BauBit, reste visible dans la fiche : il sert "
+          "aux reprises de données."),
     ]
 
     # ------------------------------------------------------------------ 8
     s += chapter('8. Les projets')
     s += [
         p("Menu <b>Offre facturation</b>, bouton <b>Projets</b>. Un projet représente un chantier. Tout le reste "
-          "s'y rattache : devis, rapports, régie, factures.", LEAD),
-        shot('08-projets.png', 'La fiche du projet en haut, la liste colorée par statut en bas.'),
+          "s'y rattache : devis, rapports, régie, factures. La page montre la fiche du <b>projet courant</b> : pour "
+          "en ouvrir un autre, choisissez-le dans la barre du haut ou par la recherche instantanée.", LEAD),
+        shot('08-projets.png', 'La fiche du projet courant : onglets Général, Client, Adresses et Photos ; résumé à gauche.'),
         Paragraph('Créer un projet', H2),
         steps([
             'Cliquez sur <b>Nouveau projet</b>.',
-            "Choisissez le <b>client</b>. Son nom est repris dans la <b>désignation</b> et son adresse devient "
-            "l'adresse du chantier. Corrigez-la si le chantier est ailleurs.",
-            "Le <b>numéro de projet</b> est proposé automatiquement : NPA du chantier, puis numéro d'ordre. "
-            "Après 2854-002 vient 2854-003. Vous pouvez le modifier ; le bouton <b>Proposer</b> le recalcule.",
-            'Complétez la désignation avec les travaux à réaliser, par exemple « Muller Hans - Rénovation cuisine ».',
+            "Saisissez d'abord le <b>code postal</b> et la <b>localité</b> du chantier. Si le carnet d'adresses connaît "
+            "ce NPA, la localité est proposée. Le <b>numéro de projet</b> apparaît aussitôt : NPA du chantier, puis "
+            "numéro d'ordre. Après 2854-002 vient 2854-003.",
+            "Cliquez sur <b>Continuer</b> : la fiche complète s'ouvre, le curseur sur la <b>désignation</b>. Décrivez "
+            "les travaux, par exemple « Muller Hans - Rénovation cuisine ». Le numéro reste modifiable ; "
+            "<b>Proposer</b> le recalcule.",
+            "Onglet <b>Client</b> : choisissez le client dans le carnet. Ses coordonnées s'affichent, et un lien ouvre "
+            "sa fiche. Pour un nouveau projet, son adresse remplit celle du chantier si elle est encore vide.",
             "Le projet est créé automatiquement et devient le <b>projet courant</b>, affiché dans la barre du haut.",
         ]),
-        shot('09-projet-nouveau.png', 'Le client choisi a rempli la désignation, l’adresse et proposé le numéro 2854-003.'),
+        shot('09-projet-nouveau.png', "L'écran d'entrée d'un nouveau projet : le NPA 2854 propose la localité et le numéro 2854-003."),
+        shot('39-projet-client.png', "L'onglet Client de la fiche : le client du carnet et ses coordonnées."),
         Paragraph('Les statuts', H2),
         grid([
             ['Statut', 'Signification', 'Couleur dans la liste'],
@@ -452,8 +474,8 @@ def build_story():
             ['Terminé', 'Chantier achevé.', 'Gris clair'],
             ['Refusé', "L'offre n'a pas été retenue.", 'Gris foncé'],
         ], [2.8 * cm, 9.2 * cm, CONTENT_W - 12 * cm]),
-        p("Les pastilles de la barre d'outils filtrent la liste par statut et affichent le nombre de projets de chacun. "
-          "<b>Modèles</b> affiche les projets cochés « Modèle de projet », rangés à part."),
+        p("Dans la fenêtre de choix du projet, les pastilles filtrent par statut et la case <b>Seulement actifs</b> "
+          "masque les projets terminés depuis longtemps ou refusés que vous avez désactivés."),
         Paragraph('Les adresses du projet', H2),
         p("Onglet <b>Adresses</b>. En plus de l'adresse du chantier, un projet peut avoir autant d'adresses que "
           "nécessaire, chacune avec son <b>rôle</b> : facturation, architecte, direction des travaux, accès…"),
@@ -490,7 +512,7 @@ def build_story():
             'Le destinataire est repris du client du projet.',
         ]),
         Paragraph('Les modèles de devis', H2),
-        p("Menu <b>Données de base</b>, bouton <b>Modèles de devis</b>. Un modèle rassemble les étapes générales d'un "
+        p("Menu <b>Offre facturation</b>, bouton <b>Modèles de devis</b>. Un modèle rassemble les étapes générales d'un "
           "type de chantier, dans l'ordre : par exemple architecture, installation de chantier, démontage, carrelage, "
           "sous-traitants, divers. Cochez <b>Modèle par défaut</b> pour qu'il s'applique à chaque nouveau devis."),
         bullets([
@@ -500,21 +522,33 @@ def build_story():
             "Le bouton <b>Enregistrer comme modèle</b>, dans la barre d'outils du devis, crée un modèle à partir des "
             "étapes du devis ouvert.",
         ]),
-        shot('12-devis-detail.png', "Un devis : ses étapes à gauche, le détail chiffré à droite."),
-        Paragraph('Ajouter les étapes', H2),
-        p("Dans le panneau de gauche, rubrique <b>Ajouter depuis un modèle</b> :"),
-        steps([
-            "Choisissez un <b>modèle d'étape</b>, c'est-à-dire un chapitre de votre catalogue.",
-            "Laissez coché <b>Avec ses articles et leurs prix</b> pour récupérer toutes les positions du chapitre. "
-            "Il ne vous restera que les quantités à saisir.",
-            "Cliquez sur <b>Ajouter l'étape</b>. Une coche signale les modèles déjà utilisés.",
-        ]),
-        shot('14-devis-etapes.png', 'Le panneau des étapes : le modèle « Terrassement » est sélectionné.', width=6.2 * cm, max_height=12.5 * cm),
+        shot('12-devis-detail.png', "Un devis : le catalogue de prix et les étapes à gauche, le détail chiffré à droite."),
+        Paragraph('Le panneau de gauche : catalogue et étapes', H2),
+        p("Le panneau de gauche a deux volets dépliables. En haut, le <b>Catalogue de prix</b> : vos chapitres et leurs "
+          "articles, avec une recherche. En dessous, <b>Étapes et devis</b> : les documents du projet et les étapes du "
+          "devis ouvert, pour y naviguer, appliquer un modèle de devis ou ajouter une étape depuis un chapitre."),
+        shot('14-devis-etapes.png', 'Le catalogue de prix, chapitre Démontage déplié, et les étapes du devis en dessous.', width=6.6 * cm, max_height=13 * cm),
+        Paragraph('Ajouter par glisser-déposer', H2),
+        p("Depuis le catalogue, tout se fait en <b>glissant</b> vers la feuille, jamais en cliquant, pour éviter les "
+          "ajouts involontaires :"),
         bullets([
-            "<b>Étape libre</b> : saisissez un code et un libellé, puis cliquez sur le +.",
-            "Survolez une étape pour la <b>monter</b>, la <b>descendre</b>, la <b>renommer</b> ou la <b>supprimer</b> "
-            "(ses positions sont supprimées avec elle).",
-            "Un clic sur une étape fait défiler le détail jusqu'à elle. Son total est affiché à droite.",
+            "Glissez un <b>chapitre</b> sur la feuille : son étape est ajoutée au devis, titre seul.",
+            "Glissez un <b>article</b> : il va toujours dans l'étape de son chapitre. Si elle n'est pas encore dans le "
+            "devis, elle est créée au passage. Déposé sur une ligne de cette étape, il prend sa place ; déposé ailleurs, "
+            "il se met en fin d'étape. Un article de terrassement ne peut pas atterrir dans les sous-traitants.",
+            "Le crayon, au survol d'un article, ouvre une fenêtre pour le <b>modifier dans le catalogue</b>. Les lignes "
+            "déjà dans les devis ne changent pas.",
+            "Une coche sur un chapitre signale que son étape est déjà dans le devis.",
+        ]),
+        Paragraph('Gérer les étapes sur la feuille', H2),
+        bullets([
+            "Chaque titre d'étape a sa <b>poignée</b> à gauche : glissez l'étape entière, avec ses positions, au-dessus "
+            "ou en dessous d'une autre. Au clavier, cliquez la poignée puis flèches haut et bas.",
+            "Un <b>double-clic</b> sur le titre, ou le crayon au survol, renomme l'étape ; la corbeille la supprime "
+            "avec ses positions, après confirmation.",
+            "Dans le volet <b>Étapes et devis</b>, un clic sur une étape fait défiler la feuille jusqu'à elle ; "
+            "<b>Ajouter une étape depuis un chapitre</b> reprend un chapitre avec ou sans ses articles, et "
+            "<b>étape libre</b> en crée une à votre nom.",
         ]),
         Paragraph('Saisir les positions rapidement', H2),
         p("Sous chaque étape se trouve un champ <b>Ajouter une position</b>. Tout se fait au clavier :"),
@@ -558,21 +592,41 @@ def build_story():
         p("Il remplace les formules notées en remarque dans BauBit. Sur une ligne, cliquez sur l'icône "
           "<b>calculatrice</b>, à droite : une fenêtre détaille le prix par famille de coûts, main-d'œuvre, matériaux, "
           "machines, matériel d'exploitation, outillage et sous-traitants."),
-        shot('21-devis-sous-detail.png', "Le sous-détail d'une position : un sous-détail type a été chargé, les lignes restent modifiables.", max_height=9 * cm),
+        shot('21-devis-sous-detail.png', "Le sous-détail d'une position : les lignes, le total de la ligne et le prix à l'unité.", max_height=9 * cm),
+        box('Important', "Le sous-détail chiffre <b>toute la ligne</b>. Son total, divisé par la quantité de la ligne, "
+            "donne le <b>prix unitaire</b> : 1 000.- de sous-détail pour 10 m² font 100.- le m². Si la quantité change, "
+            "le prix suit.", LIGHT_BLUE, BLUE),
         bullets([
             "Chaque ligne : quantité, coût unitaire, majoration en pour cent ; le logiciel calcule le coût et le prix de "
-            "vente. La quantité peut être <b>par unité de dimension</b> (m², ml…) et arrondie au <b>conditionnement</b>.",
-            "<b>Charger un sous-détail type</b> reprend un ouvrage de votre bibliothèque (menu <b>Données de base</b>, "
+            "vente. Une ligne <b>× Qté</b> se multiplie par la quantité de la position (4,2 kg de colle par m²) ; le "
+            "<b>conditionnement</b> arrondit au sac ou à la pièce entière.",
+            "<b>Charger un sous-détail type</b> reprend un ouvrage de votre bibliothèque (menu <b>Offre facturation</b>, "
             "bouton <b>Sous-détails types</b> : les 110 ouvrages du métreur y sont déjà). <b>Enregistrer comme "
             "sous-détail type</b> ajoute le vôtre à la bibliothèque.",
-            "<b>Reporter le prix calculé</b> inscrit le prix de vente dans la position. Sinon le prix saisi à la main "
-            "reste, et l'écart est signalé. Le coût alimente la marge de la récapitulation.",
+            "Vous pouvez quand même corriger le <b>prix unitaire</b> ou le <b>montant</b> de la ligne à la main : un "
+            "montant saisi donne le prix unitaire (montant ÷ quantité). Le prix passe alors en rouge dans la ligne et "
+            "le sous-détail indique « corrigé à … » ; ce prix corrigé est conservé si la quantité change.",
+            "Le coût du sous-détail alimente la marge de la récapitulation et le budget du rapport de régie.",
             "Conventions du métreur : main-d'œuvre vendue 750.- la personne-jour, 90.- l'heure ; fournitures +30 %.",
         ]),
+        Paragraph("Afficher les sous-détails, masquer les prix, saut de page", H2),
+        p("Au-dessus de la feuille, deux cases : <b>Afficher les sous-détails</b> écrit les lignes du sous-détail en "
+          "rouge, en tout petit, sous chaque position ; <b>Masquer les prix</b> donne un devis descriptif, sans prix ni "
+          "montants. Ces deux options s'appliquent aussi à l'aperçu et au PDF."),
+        shot('33-devis-sous-details.png', 'Les sous-détails affichés en rouge sous les positions.', max_height=8 * cm),
+        p("Le bouton à droite du champ d'ajout de chaque étape insère un <b>saut de page</b> : il s'affiche en "
+          "pointillé sur la feuille, se déplace par sa poignée comme une ligne, et coupe la page à l'impression."),
         Paragraph("L'en-tête du devis", H2),
         p("Onglet <b>En-tête</b> : objet, date, initiales, <b>statut</b> (en cours, envoyé, accepté, refusé), "
           "taux de <b>TVA</b>, <b>rabais</b> en pour cent, destinataire, texte d'introduction et conditions."),
-        shot('15-devis-entete.png', "L'en-tête du devis.", max_height=7.6 * cm),
+        shot('15-devis-entete.png', "L'en-tête du devis, avec l'aperçu de l'adresse telle qu'elle s'imprime.", max_height=7.6 * cm),
+        bullets([
+            "Le destinataire a un champ <b>Entreprise</b> et une ligne <b>Complément</b> : choisissez la mention, "
+            "<b>À l'attention de</b>, <b>p.a.</b>, <b>c/o</b> ou <b>Case postale</b>, et son texte. « À l'attention de » "
+            "laissé sans texte vise la personne saisie : « À l'attention de Madame Marie Dupont ».",
+            "L'adresse s'imprime dans l'ordre de La Poste : entreprise, titre, prénom et nom, complément, rue, case "
+            "postale, NPA et localité. L'aperçu sous les champs la montre telle quelle.",
+        ]),
         tip("Le destinataire est une copie de l'adresse au moment du devis. Vous pouvez l'adapter sans modifier le "
             "carnet, et un changement ultérieur dans le carnet ne modifie pas un devis déjà envoyé."),
         Paragraph('La récapitulation', H2),
@@ -588,10 +642,25 @@ def build_story():
         shot('20-devis-apercu.png', "L'aperçu du devis, tel qu'il sera imprimé.", max_height=9 * cm),
         bullets([
             "Le bouton <b>Télécharger</b> enregistre le PDF pour l'envoyer par email.",
-            "Les remarques internes et les sous-détails de prix ne sont jamais imprimés.",
+            "Les cases <b>Imprimer les sous-détails</b> et <b>Sans les prix</b> reprennent les options de la feuille : "
+            "sous-détails en rouge sous les positions, ou devis descriptif sans aucun prix. Les remarques internes "
+            "ne sont jamais imprimées.",
             "Un devis <b>accepté</b> passe automatiquement le projet au statut <b>Adjugé</b>, et devient le devis "
             "de référence des rapports journaliers.",
         ]),
+        Paragraph("La demande d'acompte", H2),
+        p("Bouton <b>Autre document</b>, puis <b>Demande d'acompte</b>. Choisissez le devis de référence, puis un "
+          "<b>pourcentage</b> du net HT (20, 30, 40, 50, 70, 100 % ou une valeur libre) ou un <b>montant fixe</b>. "
+          "Le document AC.1 est créé avec une ligne, modifiable comme n'importe quel document. Son PDF rappelle le "
+          "devis, les acomptes déjà demandés, la présente demande, la TVA et le montant à verser."),
+        shot('34-acompte.png', "Création d'une demande d'acompte : 30 % du devis.", width=11 * cm),
+        Paragraph('Les travaux exécutés', H2),
+        p("Bouton <b>Autre document</b>, puis <b>Travaux exécutés</b>. Le document TE.1 reprend toutes les étapes et "
+          "positions du devis. La <b>quantité du devis</b> reste affichée en gris ; la quantité <b>exécutée</b>, "
+          "pré-remplie avec elle, se corrige position par position. La récapitulation et la page de garde du PDF "
+          "comparent devis et exécuté par étape, avec le pourcentage."),
+        shot('35-travaux-executes.png', 'Les travaux exécutés : la colonne « Qté devis » à côté de la quantité exécutée.', max_height=8 * cm),
+        shot('36-travaux-recap.png', "La récapitulation : devis, exécuté et pourcentage par étape.", max_height=7 * cm),
         Paragraph('Nouvelle version, liste des documents', H2),
         bullets([
             "<b>Nouvelle version</b> copie le devis avec toutes ses étapes et positions : DE.1 devient DE.2. "
@@ -692,7 +761,7 @@ def build_story():
             "<b>Tarif régie propre</b> : à remplir seulement si ce collaborateur se facture à un autre prix que sa position.",
         ]),
         Paragraph('Le compte de connexion', H2),
-        p("Un administrateur relie la fiche au compte de l'ouvrier (chapitre 14). Un compte ne peut être relié qu'à un "
+        p("Un administrateur relie la fiche au compte de l'ouvrier (chapitre 15). Un compte ne peut être relié qu'à un "
           "seul collaborateur."),
         Paragraph('Les types de travail', H2),
         p("À droite de la fiche : les colonnes supplémentaires de la grille des heures. Modifiez un libellé ou une "
@@ -704,7 +773,8 @@ def build_story():
     # ------------------------------------------------------------------ 12
     s += chapter('12. La régie : brut, régie, client')
     s += [
-        p("Menu <b>Exécution</b>, bouton <b>Rapports régie</b>. La régie reprend chaque ligne des rapports journaliers "
+        p("Menu <b>Exécution</b>, bouton <b>Rapports régie</b> (ou <b>Lignes de régie</b> dans l'onglet Rapport de régie). "
+          "La régie reprend chaque ligne des rapports journaliers "
           "du projet courant, heures et matériel, et lui donne <b>trois prix</b>, comme le rapport régie de BauBit.", LEAD),
         grid([
             ['Niveau', "D'où il vient", 'À quoi il sert'],
@@ -740,7 +810,44 @@ def build_story():
     ]
 
     # ------------------------------------------------------------------ 13
-    s += chapter('13. Le contrôle des heures')
+    s += chapter('13. Le rapport de régie : le devis face aux rapports')
+    s += [
+        p("Onglet <b>Rapport de régie</b> du menu, bouton <b>Rapport de régie</b>. Pour le projet courant, chaque "
+          "étape du devis est mise en face de ce que les rapports journaliers ont consommé : les coûts sont-ils "
+          "respectés ?", LEAD),
+        shot('37-rapport-regie.png', "Le rapport de régie : une ligne par étape, verte dans le budget, rouge dépassée ; une étape dépliée sur ses rapports."),
+        Paragraph('Lire le tableau', H2),
+        grid([
+            ['Colonne', 'Contenu'],
+            ['Devis vente', 'Le prix de vente de l’étape dans le devis, options exclues.'],
+            ['Prix de revient', "Le coût prévu : sous-détails de prix et prix d'achat des articles. Un tiret s'il n'y en a pas."],
+            ['Heures prév. / réal.', "Les heures prévues (positions en heures, main-d'œuvre des sous-détails) et les heures des rapports."],
+            ['Coût réalisé', 'Le coût brut des rapports : heures au tarif du collaborateur, plus les ressources au prix net.'],
+            ['Écart, Consommé', "Budget moins coût réalisé, et la part du budget consommée. Le budget est le prix de revient s'il existe, sinon le prix de vente."],
+            ['Régie, Client', 'Les montants régie et client des mêmes rapports : ce que vous pouvez facturer.'],
+            ['Marge client', 'La marge du prix client sur le coût brut, réglable par la tirette (ci-dessous).'],
+        ], [4 * cm, CONTENT_W - 4 * cm]),
+        bullets([
+            "<b>Vert</b> : le coût réalisé tient dans le budget. <b>Rouge</b> : dépassé, ou des dépenses sur une étape "
+            "où rien n'était prévu. Gris : ni budget ni dépense.",
+            "Un clic sur une étape la <b>déplie</b> sur les rapports journaliers qui l'ont alimentée ; un clic sur un "
+            "rapport l'ouvre.",
+            "Les heures sur les types de travail (samedi, formation…) et les lignes sans étape sont regroupées "
+            "« hors devis ».",
+            "Les pastilles filtrent par statut de rapport, les dates par période ; si le projet a plusieurs devis, "
+            "choisissez la version à comparer. Le panneau de gauche résume tout le chantier.",
+        ]),
+        Paragraph('Régler la marge avec la tirette', H2),
+        p("Sur chaque étape, et pour tout le chantier dans le panneau de gauche, une <b>tirette</b> fixe la marge du "
+          "prix client sur le coût brut. Quand vous la relâchez, toutes les lignes de l'étape (heures et ressources, "
+          "rapports non facturés) prennent le prix client « coût brut + marge », arrondi à 5 centimes. Le tarif régie "
+          "de l'entreprise ne bouge pas. Les lignes des rapports facturés restent figées."),
+        note("La marge affichée avant tout réglage reflète vos tarifs : un chef d'équipe facturé 98.- en régie pour un "
+             "coût de 52.78 donne 86 %. Le prix client suit le tarif régie tant que vous n'y touchez pas."),
+    ]
+
+    # ------------------------------------------------------------------ 14
+    s += chapter('14. Le contrôle des heures')
     s += [
         p("Menu <b>Exécution</b>, bouton <b>Contrôle des heures</b>. Pour chaque collaborateur, un tableau mensuel "
           "croise ses <b>chantiers</b> et les <b>jours</b> : les heures viennent des rapports journaliers, rien n'est "
@@ -773,8 +880,8 @@ def build_story():
              "congés, maladie) de la prochaine livraison."),
     ]
 
-    # ------------------------------------------------------------------ 14
-    s += chapter('14. Utilisateurs et rôles')
+    # ------------------------------------------------------------------ 15
+    s += chapter('15. Utilisateurs, rôles et journal des connexions')
     s += [
         p("Menu <b>Administration</b>, réservé aux administrateurs.", LEAD),
         shot('18-utilisateurs.png', 'La gestion des utilisateurs.', width=14 * cm),
@@ -791,26 +898,37 @@ def build_story():
         shot('19-ouvrier.png', "La page Projets vue par un ouvrier : pas de bouton de création, fiche verrouillée.", max_height=7.6 * cm),
         note("Chaque création, modification et suppression est enregistrée dans un journal d'activité : qui a modifié "
              "quoi, et quand. Il est particulièrement utile pour les prix."),
+        Paragraph('Le journal des connexions', H2),
+        p("Menu <b>Administration</b>, bouton <b>Journal des connexions</b>. Chaque connexion réussie, chaque échec "
+          "(email inconnu ou mauvais mot de passe), chaque blocage après six essais, chaque déconnexion et chaque "
+          "mot de passe réinitialisé y est enregistré avec la date, l'utilisateur, l'email saisi, l'adresse IP et le "
+          "navigateur. Les échecs ressortent en rouge ; le panneau de gauche résume les dernières 24 heures."),
+        shot('38-connexions.png', 'Le journal des connexions, réservé aux administrateurs.', max_height=7.5 * cm),
+        bullets([
+            "Filtrez par type d'événement, par période ou par colonne. La liste se met à jour toute seule.",
+            "Beaucoup d'échecs depuis une même adresse IP signalent une tentative d'intrusion.",
+            "Le journal est conservé un an, puis purgé automatiquement.",
+        ]),
     ]
 
-    # ------------------------------------------------------------------ 15
-    s += chapter('15. Les modules à venir')
+    # ------------------------------------------------------------------ 16
+    s += chapter('16. Les modules à venir')
     s += [
         p("Certaines pages et certains boutons sont déjà visibles mais pas encore actifs : ils sont grisés, ou "
           "signalent « disponible dans une phase ultérieure »."),
         grid([
             ['Module', 'Contenu prévu'],
-            ['Factures et statistiques', "Acomptes, factures, facture finale depuis les rapports validés (le statut « Facturé en régie » "
-                                         "sera alors posé automatiquement), impression PDF ; suivi de facturation et synthèses par employé."],
+            ['Facture finale et statistiques', "Facture finale depuis les rapports validés et les travaux exécutés (le statut « Facturé en régie » "
+                                                "sera alors posé automatiquement) ; suivi de facturation et synthèses par employé."],
             ['Reprise des données BauBit', 'Vos projets, clients, catalogue et prix existants.'],
             ['Saisie mobile', 'Rapport journalier saisi sur le chantier, depuis un téléphone ou une tablette.'],
-            ['Temps au bureau et stocks', 'Compteur de temps et gestion des stocks de produits.'],
+            ['Temps au bureau', 'Compteur de temps des employés de bureau. Les stocks sont déjà disponibles (Données de base, Stocks).'],
         ], [5 * cm, CONTENT_W - 5 * cm]),
         p("Ce mode d'emploi sera complété à chaque livraison."),
     ]
 
-    # ------------------------------------------------------------------ 16
-    s += chapter('16. Aide-mémoire')
+    # ------------------------------------------------------------------ 17
+    s += chapter('17. Aide-mémoire')
     s += [
         Paragraph('Raccourcis clavier', H2),
         grid([
@@ -829,6 +947,9 @@ def build_story():
             ['Question', 'Réponse'],
             ["Je ne trouve pas le bouton Enregistrer.", "Il n'est pas nécessaire : tout s'enregistre automatiquement. Vérifiez la mention « Enregistré » en bas à droite."],
             ['La liste est vide.', "Un filtre est probablement actif : videz les cases « Filtrer… », vérifiez le statut choisi et « Seulement actifs »."],
+            ['Comment changer de projet ?', "Cliquez sur le champ Projet de la barre du haut : une fenêtre de choix s'ouvre, avec recherche et filtres. Ou Ctrl + K."],
+            ["Je glisse un article dans une étape et il va ailleurs.", "Un article va toujours dans l'étape de son chapitre, créée si besoin. Une fois dans le devis, déplacez la ligne par sa poignée."],
+            ['Le prix d’une ligne ne suit plus le sous-détail.', "Il a été corrigé à la main (il est en rouge). Rouvrez le sous-détail et modifiez une ligne : son prix est reporté à nouveau."],
             ['Je ne peux pas créer de devis.', 'Choisissez d’abord un projet dans la barre du haut. Les devis sont réservés aux responsables et administrateurs.'],
             ["Le numéro de projet proposé ne convient pas.", 'Modifiez-le à la main. Deux projets ne peuvent pas porter le même numéro.'],
             ["L'écran affiche « Cette page a rencontré une erreur ».", 'Cliquez sur Réessayer ou changez de page. Si cela se répète, notez ce que vous faisiez et contactez le support.'],

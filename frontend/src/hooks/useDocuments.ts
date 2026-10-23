@@ -34,12 +34,30 @@ export function useProjectDocuments(projectId: number | null, enabled = true) {
 export function useCreateDocument() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ projectId, type, templateId }: { projectId: number; type: DocumentType; templateId?: number | null }) =>
+    mutationFn: async ({
+      projectId,
+      type,
+      templateId,
+      sourceDocumentId,
+      advancePercent,
+      advanceAmount,
+    }: {
+      projectId: number
+      type: DocumentType
+      templateId?: number | null
+      /** Demande d'acompte et travaux exécutés : devis dont le document dérive. */
+      sourceDocumentId?: number
+      advancePercent?: number | null
+      advanceAmount?: number | null
+    }) =>
       (
         await api.post<{ data: DocumentDetail }>(`/projects/${projectId}/documents`, {
           type,
           // undefined = modèle par défaut ; null = devis vide ; nombre = modèle choisi
           ...(templateId === undefined ? {} : { quote_template_id: templateId }),
+          ...(sourceDocumentId ? { source_document_id: sourceDocumentId } : {}),
+          ...(advancePercent !== undefined && advancePercent !== null ? { advance_percent: advancePercent } : {}),
+          ...(advanceAmount !== undefined && advanceAmount !== null ? { advance_amount: advanceAmount } : {}),
         })
       ).data.data,
     onSuccess: (document) => {

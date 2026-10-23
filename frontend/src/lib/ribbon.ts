@@ -25,7 +25,7 @@ export interface RibbonTab {
 const GESTION: Role[] = ['admin', 'responsable']
 
 /**
- * Ruban calqué sur BauBit PRO : Offre facturation / Exécution / Services centraux /
+ * Ruban calqué sur BauBit PRO : Offre facturation / Exécution / Rapport de régie / Statistiques (ex-Services centraux) /
  * Données de base / Administration. Les boutons sans `to` correspondent à des
  * fonctions prévues dans une phase ultérieure.
  */
@@ -69,6 +69,13 @@ export const RIBBON_TABS: RibbonTab[] = [
           { label: 'Export', icon: 'export', roles: GESTION },
         ],
       },
+      {
+        title: 'Modèles',
+        items: [
+          { label: 'Modèles de devis', icon: 'tree', to: '/modeles-devis', roles: GESTION },
+          { label: 'Sous-détails types', icon: 'calculator', to: '/sous-details-types', roles: GESTION },
+        ],
+      },
     ],
   },
   {
@@ -104,10 +111,24 @@ export const RIBBON_TABS: RibbonTab[] = [
     ],
   },
   {
-    id: 'services',
-    label: 'Services centraux',
+    id: 'controle',
+    label: 'Rapport de régie',
     groups: [
-      { title: 'Adresses', items: [{ label: 'Adresses', icon: 'contacts', to: '/clients', big: true, roles: GESTION }] },
+      {
+        title: 'Suivi du chantier',
+        items: [
+          { label: 'Rapport de régie', icon: 'chart', to: '/rapport-regie', big: true, roles: GESTION },
+          { label: 'Lignes de régie', icon: 'calculator', to: '/regie', roles: GESTION },
+          { label: 'Contrôle des heures', icon: 'clock', to: '/controle-heures', roles: GESTION },
+          { label: 'Rapports journaliers', icon: 'clipboard', to: '/rapports' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'services',
+    label: 'Statistiques',
+    groups: [
       {
         title: 'Evaluations',
         items: [
@@ -122,21 +143,13 @@ export const RIBBON_TABS: RibbonTab[] = [
     id: 'donnees',
     label: 'Données de base',
     groups: [
+      { title: 'Clients', items: [{ label: 'Clients', icon: 'contacts', to: '/clients', big: true, roles: GESTION }] },
       { title: 'Catalogue', items: [{ label: "Catalogue d'articles", icon: 'book', to: '/catalogue', big: true, roles: GESTION }] },
-      { title: 'Stocks', items: [{ label: 'Stocks', icon: 'box', to: '/stock', big: true, roles: GESTION }] },
-      {
-        title: 'Devis',
-        items: [
-          { label: 'Modèles de devis', icon: 'tree', to: '/modeles-devis', roles: GESTION },
-          { label: 'Sous-détails types', icon: 'calculator', to: '/sous-details-types', roles: GESTION },
-        ],
-      },
+      { title: 'Stocks', items: [{ label: 'Stocks', icon: 'box', to: '/stock', roles: GESTION }] },
       {
         title: 'Listes de prix',
         items: [
           { label: 'Eléments de coûts', icon: 'tag', to: '/listes-prix', roles: GESTION },
-          { label: 'Tarifs régie', icon: 'calculator', to: '/listes-prix', roles: GESTION },
-          { label: 'Types de travail', icon: 'table', roles: GESTION },
           { label: 'Collaborateurs', icon: 'users', to: '/collaborateurs', roles: GESTION },
         ],
       },
@@ -151,6 +164,7 @@ export const RIBBON_TABS: RibbonTab[] = [
         items: [
           { label: 'Utilisateurs', icon: 'users', to: '/users', big: true, roles: ['admin'] },
           { label: 'Configuration', icon: 'settings', to: '/settings', big: true, roles: ['admin'] },
+          { label: 'Journal des connexions', icon: 'shield', to: '/connexions', big: true, roles: ['admin'] },
           { label: "Journal d'activité", icon: 'clipboard', roles: ['admin'] },
         ],
       },
