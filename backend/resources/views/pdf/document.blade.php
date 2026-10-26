@@ -366,7 +366,7 @@
                 @if ($stepTotals && $showPrices && collect($step['rows'])->where('kind', 'item')->isNotEmpty())
                     <tr class="step-total">
                         <td></td>
-                        <td colspan="{{ $columns - 2 }}" class="right">Total {{ $step['label'] }}</td>
+                        <td colspan="{{ $columns - 2 }}"></td>
                         <td class="amount">{{ P::money($step['total']) }}</td>
                     </tr>
                 @endif

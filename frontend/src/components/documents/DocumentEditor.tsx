@@ -657,10 +657,8 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
                   <tr className="text-[13px]">
                     <td />
                     <td />
-                    <td colSpan={executed ? 5 : 4} className="px-1 pb-0.5 pt-1.5 text-right italic text-gray-600">
-                      Total {step.label}
-                    </td>
-                    <td className="border-t border-gray-400 px-1 pb-0.5 pt-1.5 text-right font-semibold tabular-nums" title="Total de l'étape, options non comprises">
+                    <td colSpan={executed ? 5 : 4} />
+                    <td className="border-t border-gray-400 px-1 pb-0.5 pt-1.5 text-right font-semibold tabular-nums" title={`Total de l'étape « ${step.label} », options non comprises`}>
                       {fmtAmount(step.total)}
                     </td>
                     <td />
