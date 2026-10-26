@@ -36,7 +36,15 @@ export default function TemplateLibraryPanel({ lines, defaultName, dimension, un
   const remove = useDeleteBreakdownTemplate()
   const [term, setTerm] = useState('')
   const [name, setName] = useState(defaultName)
+  // Groupe (corps de métier) du nouvel ouvrage : un groupe existant, ou « Autre » saisi à la main.
+  const [groupChoice, setGroupChoice] = useState('')
+  const [customGroup, setCustomGroup] = useState('')
+  const group = groupChoice === '__other' ? customGroup : groupChoice
   const usable = lines.filter(hasLabel)
+  const allGroups = useMemo(
+    () => [...new Set((templates.data ?? []).map((item) => item.group).filter((item): item is string => Boolean(item)))].sort((a, b) => a.localeCompare(b, 'fr')),
+    [templates.data],
+  )
 
   const groups = useMemo(() => {
     const words = normalize(term).split(/\s+/).filter(Boolean)
@@ -61,7 +69,7 @@ export default function TemplateLibraryPanel({ lines, defaultName, dimension, un
     save.mutate(
       {
         id: null,
-        payload: { name: name.trim(), dimension, dimension_unit: unit, price_per_dimension: true, lines: linesPayload() },
+        payload: { name: name.trim(), group: group.trim() || null, dimension, dimension_unit: unit, price_per_dimension: true, lines: linesPayload() },
       },
       {
         onSuccess: (template) => {
@@ -169,6 +177,36 @@ export default function TemplateLibraryPanel({ lines, defaultName, dimension, un
 
       <div className="mt-2 rounded-md border border-dashed border-primary-300 bg-primary-50/50 p-2">
         <div className="mb-1 text-[12px] font-medium text-primary-800">Nouvel ouvrage avec les lignes saisies</div>
+        <div className="mb-1.5 flex items-center gap-1.5">
+          <label htmlFor="template-group" className="w-[52px] shrink-0 text-[12px] text-gray-600">
+            Groupe
+          </label>
+          <select
+            id="template-group"
+            value={groupChoice}
+            onChange={(event) => setGroupChoice(event.target.value)}
+            title="Corps de métier sous lequel l'ouvrage sera rangé"
+            className="h-8 min-w-0 flex-1 rounded-md border border-gray-300 bg-white px-2 text-[13px] outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+          >
+            <option value="">— sans groupe —</option>
+            {allGroups.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+            <option value="__other">Autre (saisir)…</option>
+          </select>
+        </div>
+        {groupChoice === '__other' && (
+          <input
+            autoFocus
+            value={customGroup}
+            onChange={(event) => setCustomGroup(event.target.value)}
+            maxLength={80}
+            placeholder="Nom du nouveau groupe"
+            className="mb-1.5 h-8 w-full rounded-md border border-gray-300 bg-white px-2 text-[13px] outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+          />
+        )}
         <div className="flex gap-1.5">
           <input
             value={name}
@@ -181,6 +219,7 @@ export default function TemplateLibraryPanel({ lines, defaultName, dimension, un
             }}
             maxLength={255}
             placeholder="Nom de l'ouvrage"
+            aria-label="Nom de l'ouvrage"
             className="h-8 min-w-0 flex-1 rounded-md border border-gray-300 bg-white px-2 text-[13px] outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
           />
           <button
