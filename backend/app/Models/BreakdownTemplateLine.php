@@ -30,4 +30,10 @@ class BreakdownTemplateLine extends Model
     {
         return $this->belongsTo(BreakdownTemplate::class, 'breakdown_template_id');
     }
+
+    /** Élément de coûts dont le prix s'applique à la ligne (facultatif). */
+    public function priceElement(): BelongsTo
+    {
+        return $this->belongsTo(PriceElement::class)->withTrashed();
+    }
 }

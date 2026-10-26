@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\BreakdownElements;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -16,6 +17,7 @@ class DocumentPositionCostResource extends JsonResource
             'id' => $this->id,
             'family' => $this->family,
             'price_element_id' => $this->price_element_id,
+            'element' => $this->whenLoaded('priceElement', fn () => $this->priceElement ? BreakdownElements::summary($this->priceElement) : null),
             'label' => $this->label,
             'unit' => $this->unit,
             'quantity' => $this->quantity,

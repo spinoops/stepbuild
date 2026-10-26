@@ -1,5 +1,6 @@
 import { computedQuantity, costFamily, round2 } from '@/lib/costFamilies'
 import { toNumber } from '@/lib/crud'
+import type { ElementRef, PriceElement } from '@/types'
 
 /** Ligne de sous-détail telle que saisie (texte), partagée par le devis et les sous-détails types. */
 export interface LineDraft {
@@ -7,6 +8,8 @@ export interface LineDraft {
   id?: number
   family: number
   price_element_id: number | null
+  /** Élément de coûts rattaché : unité et prix viennent de lui (le serveur les réapplique à l'enregistrement). */
+  element: ElementRef | null
   label: string
   unit: string
   quantity: string
@@ -22,6 +25,7 @@ export interface LineData {
   id?: number
   family: number
   price_element_id: number | null
+  element?: ElementRef | null
   label: string
   unit: string | null
   quantity: number
@@ -57,6 +61,7 @@ export function lineFromData(line: LineData, keepId = true): LineDraft {
     ...(keepId && line.id !== undefined ? { id: line.id } : {}),
     family: line.family,
     price_element_id: line.price_element_id,
+    element: line.element ?? null,
     label: line.label,
     unit: line.unit ?? '',
     quantity: numberText(line.quantity),
@@ -73,6 +78,7 @@ export function newLine(family: number, values: Partial<LineDraft> = {}): LineDr
     key: nextKey++,
     family,
     price_element_id: null,
+    element: null,
     label: '',
     unit: '',
     quantity: '1',
@@ -82,6 +88,36 @@ export function newLine(family: number, values: Partial<LineDraft> = {}): LineDr
     markup_percent: String(costFamily(family).defaultMarkup),
     note: '',
     ...values,
+  }
+}
+
+/**
+ * Valeurs d'une ligne tirées d'un élément de coûts (même règle que le serveur, `BreakdownElements`) :
+ * coût unitaire = prix net (sinon fournisseur, sinon régie), majoration = régie sur net quand les deux
+ * existent, unité et libellé de l'élément.
+ */
+export function linkedValues(element: PriceElement | ElementRef): Partial<LineDraft> {
+  const net = element.net_price ?? 0
+  const supplier = 'supplier_price' in element ? (element.supplier_price ?? 0) : 0
+  const regie = element.regie_price ?? 0
+  const cost = net > 0 ? net : supplier > 0 ? supplier : regie
+  const markup = cost > 0 && regie > 0 && net > 0 ? Math.round((regie / cost - 1) * 1000) / 10 : null
+  return {
+    price_element_id: element.id,
+    element: {
+      id: element.id,
+      group_code: element.group_code,
+      number: element.number,
+      description: element.description,
+      unit: element.unit,
+      net_price: element.net_price,
+      regie_price: element.regie_price,
+      price_updated_at: element.price_updated_at,
+    },
+    label: element.description,
+    unit: element.unit ?? '',
+    unit_cost: numberText(Math.round(cost * 100) / 100),
+    ...(markup !== null ? { markup_percent: numberText(markup) } : {}),
   }
 }
 

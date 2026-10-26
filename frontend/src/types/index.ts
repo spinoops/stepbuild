@@ -229,10 +229,23 @@ export type DocumentStatus = 'en_cours' | 'envoye' | 'accepte' | 'refuse'
 
 /** Position d'un devis : article chiffré, sous-titre ou texte libre. */
 /** Sous-détail de prix type (bibliothèque d'ouvrages du métreur). */
+/** Élément de coûts rattaché à une ligne de sous-détail : son prix s'applique directement. */
+export interface ElementRef {
+  id: number
+  group_code: string | null
+  number: string
+  description: string
+  unit: string | null
+  net_price: number | null
+  regie_price: number | null
+  price_updated_at: string | null
+}
+
 export interface BreakdownTemplateLine {
   id: number
   family: number
   price_element_id: number | null
+  element?: ElementRef | null
   label: string
   unit: string | null
   quantity: number
@@ -263,6 +276,7 @@ export interface PositionCost {
   id: number
   family: number
   price_element_id: number | null
+  element?: ElementRef | null
   label: string
   unit: string | null
   quantity: number

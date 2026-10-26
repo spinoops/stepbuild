@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\BreakdownElements;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,19 +24,26 @@ class BreakdownTemplateResource extends JsonResource
             'note' => $this->note,
             'usage_count' => $this->usage_count,
             'lines_count' => $this->whenCounted('lines'),
-            'lines' => $this->whenLoaded('lines', fn () => $this->lines->map(fn ($line) => [
-                'id' => $line->id,
-                'family' => $line->family,
-                'price_element_id' => $line->price_element_id,
-                'label' => $line->label,
-                'unit' => $line->unit,
-                'quantity' => $line->quantity,
-                'per_dimension' => $line->per_dimension,
-                'pack_size' => $line->pack_size,
-                'unit_cost' => $line->unit_cost,
-                'markup_percent' => $line->markup_percent,
-                'note' => $line->note,
-            ])->values()),
+            // Ligne rattachée à un élément de coûts : son prix actuel s'applique (unité, coût, majoration).
+            'lines' => $this->whenLoaded('lines', fn () => $this->lines->map(function ($line) {
+                $element = $line->relationLoaded('priceElement') ? $line->priceElement : null;
+                $live = $element ? BreakdownElements::apply($line->only(['label', 'unit', 'unit_cost', 'markup_percent']), $element) : [];
+
+                return [
+                    'id' => $line->id,
+                    'family' => $line->family,
+                    'price_element_id' => $line->price_element_id,
+                    'element' => $element ? BreakdownElements::summary($element) : null,
+                    'label' => $line->label,
+                    'unit' => $live['unit'] ?? $line->unit,
+                    'quantity' => $line->quantity,
+                    'per_dimension' => $line->per_dimension,
+                    'pack_size' => $line->pack_size,
+                    'unit_cost' => $live['unit_cost'] ?? $line->unit_cost,
+                    'markup_percent' => $live['markup_percent'] ?? $line->markup_percent,
+                    'note' => $line->note,
+                ];
+            })->values()),
             'updated_at' => $this->updated_at,
         ];
     }

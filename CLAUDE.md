@@ -191,6 +191,21 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `TemplatePicker` charge un modèle (lignes remplacées, DIM saisie conservée, `POST …/used` compte l'usage) ;
   « Enregistrer comme sous-détail type » crée un modèle depuis une position. `catalog_article_id` est prévu pour
   rattacher un modèle à un article à la reprise du catalogue BauBit (chargement automatique à l'insertion).
+  **Lignes rattachées aux éléments de coûts** (26.10.2026) : une ligne de sous-détail (modèle ou position) avec
+  `price_element_id` prend **le prix de l'élément** : `App\Support\BreakdownElements` (coût = prix net, sinon
+  fournisseur, sinon régie ; majoration = régie / net − 1 si les deux existent ; unité de l'élément ; libellé libre),
+  appliqué à l'enregistrement (`BreakdownTemplate::syncLines`, `DocumentPosition::syncBreakdown`) et **en direct** sur
+  la fiche d'un modèle et à son chargement (`BreakdownTemplateResource` relit l'élément : `lines.*.element`,
+  `costs.*.element`). Front : pastille avec le numéro de l'élément dans `BreakdownLinesTable` (unité et coût non
+  modifiables, clic = détacher), étiquette au survol d'une ligne libre → `ElementPicker` pour la rattacher
+  (`lib/breakdown.ts` `linkedValues()`). **Rattachement automatique** des 110 modèles transcrits :
+  `php artisan stepbuild:link-breakdown-lines [--dry-run] [--write-json] [--all]` (`App\Support\BreakdownLinker` :
+  main-d'œuvre → Ouvrier qualifié en heures = personnes × jours × `work_day_hours` ; autres familles : mots entiers
+  du libellé dans la désignation, unités compatibles, un seul candidat net, sinon « à choisir »). Fait le 26.10.2026 :
+  170 lignes rattachées et reportées dans `breakdown_templates.json` (10e élément de la ligne = `{baubit_id,
+  group_code, number, description}`) ; `BreakdownTemplateSeeder::linkElements()` applique ces rattachements aux
+  modèles déjà chargés (prod) si l'élément existe. Les 251 lignes « à choisir » et 103 « sans élément » se rattachent
+  à la main dans la page Sous-détails types.
 - **Le détail se présente comme la feuille imprimée** (`DocumentEditor`) : feuille blanche de 869 px sur fond gris, zone
   imprimée de 717 px aux proportions des colonnes du PDF (police Helvetica 14 px, descriptions qui passent à la ligne
   comme sur le papier), **numéro imprimé en direct** (`lib/documentNumbering.ts`, même règle que `DocumentPrint::steps`),

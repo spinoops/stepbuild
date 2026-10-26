@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasSearchText;
+use App\Support\BreakdownElements;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -45,7 +46,7 @@ class BreakdownTemplate extends Model
     {
         $keep = [];
         foreach (array_values($lines) as $index => $line) {
-            $attributes = [...collect($line)->except('id')->all(), 'position' => $index + 1];
+            $attributes = BreakdownElements::apply([...collect($line)->except('id')->all(), 'position' => $index + 1]);
             $existing = isset($line['id']) ? $this->lines()->find($line['id']) : null;
             $model = $existing ? tap($existing)->update($attributes) : $this->lines()->create($attributes);
             $keep[] = $model->id;
