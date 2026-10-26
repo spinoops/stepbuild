@@ -138,7 +138,7 @@ export default function HoursControlPage() {
       statusRight={data ? (pendingCells ? `${pendingCells} jour${pendingCells > 1 ? 's' : ''} à valider` : 'Tout est validé') : undefined}
       toolbar={
         <>
-          <ToolButton icon="check" title="Valider les heures du mois (rapports en cours → en contrôle)" tone="success" disabled={!current || !pendingCells || validate.isPending} onClick={validateMonth} />
+          <ToolButton icon="check" title="Valider les heures du mois (rapports en cours → contrôlés)" tone="success" disabled={!current || !pendingCells || validate.isPending} onClick={validateMonth} />
           <ToolButton
             icon="calendar"
             title="Saisir des vacances ou une absence"

@@ -38,6 +38,7 @@ class SaveBreakdownTemplateRequest extends FormRequest
             'lines.*.per_dimension' => ['sometimes', 'boolean'],
             'lines.*.pack_size' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'lines.*.unit_cost' => ['required', 'numeric', 'min:-9999999999', 'max:9999999999'],
+            'lines.*.unit_sale' => ['nullable', 'numeric', 'min:-9999999999', 'max:9999999999'],
             'lines.*.markup_percent' => ['sometimes', 'numeric', 'min:-100', 'max:1000'],
             'lines.*.note' => ['nullable', 'string', 'max:255'],
         ];

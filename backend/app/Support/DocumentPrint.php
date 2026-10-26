@@ -108,6 +108,7 @@ class DocumentPrint
             'quantity' => $cost->computedQuantity($quantity),
             'unit' => $cost->unit,
             'unit_cost' => $cost->unit_cost,
+            'unit_sale' => $cost->unit_sale,
             'markup_percent' => $cost->markup_percent,
             'sale' => $cost->sale,
         ])->all();

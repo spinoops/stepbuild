@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Icon } from '@/components/icons'
 import { BB_FIELD } from '@/components/baubit/Form'
 import UnitSelect from '@/components/shared/UnitSelect'
+import ArticleCreateDialog from '@/components/documents/ArticleCreateDialog'
 import Modal from '@/components/ui/Modal'
 import { useCatalogChapters } from '@/hooks/useCatalog'
 import { useArticlePicker } from '@/hooks/useDocuments'
@@ -37,6 +38,8 @@ export default function CatalogPanel({ document: doc }: CatalogPanelProps) {
   const [term, setTerm] = useState('')
   const [expanded, setExpanded] = useState<Set<number>>(() => new Set())
   const [editingId, setEditingId] = useState<number | null>(null)
+  // Chapitre dans lequel on crée un article (fenêtre ouverte par le + du chapitre).
+  const [creatingIn, setCreatingIn] = useState<CatalogChapter | null>(null)
   const [selected, setSelected] = useState<string[]>([])
   const [anchor, setAnchor] = useState<string | null>(null)
   const text = term.trim()
@@ -235,6 +238,20 @@ export default function CatalogPanel({ document: doc }: CatalogPanelProps) {
           <span className={`min-w-0 flex-1 truncate ${step ? 'font-medium text-primary-700' : ''}`}>{chapter.label}</span>
           {step && <Icon name="check" className="h-3.5 w-3.5 shrink-0 text-primary-500" />}
           {articles.length > 0 && <span className="shrink-0 text-[11px] text-gray-400">{articles.length}</span>}
+          {doc && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                setCreatingIn(chapter)
+              }}
+              draggable={false}
+              title={`Ajouter un article dans « ${chapter.label} »`}
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-gray-400 opacity-0 transition hover:bg-primary-100 hover:text-primary-700 focus:opacity-100 group-hover:opacity-100"
+            >
+              <Icon name="plus" className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
         {open && (
           <div style={{ marginLeft: 10 + depth * 14 }} className="border-l border-gray-100 pl-1">
@@ -283,6 +300,14 @@ export default function CatalogPanel({ document: doc }: CatalogPanelProps) {
         </p>
       )}
       {editingId !== null && <ArticleQuickEdit key={editingId} id={editingId} chapters={list} onClose={() => setEditingId(null)} />}
+      {creatingIn && (
+        <ArticleCreateDialog
+          key={creatingIn.id}
+          chapter={creatingIn}
+          onClose={() => setCreatingIn(null)}
+          onCreated={() => setExpanded((current) => new Set(current).add(creatingIn.id))}
+        />
+      )}
       <div className="min-h-0 flex-1 select-none">
         {text.length >= 2 ? (
           <>

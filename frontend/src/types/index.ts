@@ -37,7 +37,7 @@ export interface Paginated<T> {
 /** Statuts d'un projet (chantier) — équivalents BauBit : 1-EC, 2-ADJ, 3-TER, 4-REFUSÉ. */
 export type ProjectStatus = 'en_cours' | 'adjuge' | 'termine' | 'refuse'
 
-/** Workflow d'un rapport journalier : en cours → en contrôle → facturé en régie. */
+/** Workflow d'un rapport journalier : en cours → contrôlé → facturé. */
 export type ReportStatus = 'en_cours' | 'en_controle' | 'facture'
 
 export type AddressType = 'client' | 'fournisseur' | 'sous_traitant' | 'contact'
@@ -252,6 +252,8 @@ export interface BreakdownTemplateLine {
   per_dimension: boolean
   pack_size: number | null
   unit_cost: number
+  /** Prix de vente unitaire (élément de coûts ou saisi) ; vide = coût × (1 + majoration). */
+  unit_sale: number | null
   markup_percent: number
   note: string | null
 }
@@ -283,6 +285,7 @@ export interface PositionCost {
   per_dimension: boolean
   pack_size: number | null
   unit_cost: number
+  unit_sale: number | null
   markup_percent: number
   cost: number
   sale: number

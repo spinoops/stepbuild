@@ -458,8 +458,7 @@ export default function PositionRow({
                       {!hidePrices && (
                         <>
                           {' '}
-                          × {fmtAmount(cost.unit_cost)}
-                          {cost.markup_percent ? ` +${qty(cost.markup_percent)}%` : ''} = {fmtAmount(cost.sale)}
+                          × {fmtAmount(cost.unit_sale ?? cost.unit_cost * (1 + cost.markup_percent / 100))} = {fmtAmount(cost.sale)}
                         </>
                       )}
                     </span>

@@ -351,7 +351,7 @@
                                 @endif
                                 <td class="qty">{{ P::qty($cost['quantity']) }}</td>
                                 @if ($showPrices)
-                                    <td class="price">{{ P::money($cost['unit_cost']) }}@if ($cost['markup_percent']) +{{ P::qty($cost['markup_percent']) }}%@endif</td>
+                                    <td class="price">{{ P::money($cost['unit_sale'] ?? $cost['unit_cost'] * (1 + $cost['markup_percent'] / 100)) }}</td>
                                     <td class="amount">{{ P::money($cost['sale']) }}</td>
                                 @endif
                             </tr>

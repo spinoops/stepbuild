@@ -1,13 +1,11 @@
 import { useMemo, useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
-import ArticlePicker from '@/components/documents/ArticlePicker'
 import CostBreakdownDialog from '@/components/documents/CostBreakdownDialog'
 import InsertLineRow, { InsertAboveButton } from '@/components/documents/InsertLineRow'
 import type { InsertKind } from '@/components/documents/InsertLineRow'
 import PositionRow from '@/components/documents/PositionRow'
 import type { DropPlace } from '@/components/documents/PositionRow'
 import { useCatalogChapters } from '@/hooks/useCatalog'
-import { useCreateArticleOnTheFly } from '@/hooks/useDocuments'
 import type { DocumentActions, PositionPayload } from '@/hooks/useDocuments'
 import { dragItems, getCatalogDrag, takeCatalogDrag, useCatalogDrag } from '@/lib/catalogDrag'
 import type { CatalogDrag } from '@/lib/catalogDrag'
@@ -53,7 +51,6 @@ const PRINT_TITLES: Record<DocumentDetail['type'], string> = { devis: 'Devis est
  * étape, positions éditables en place, champ d'ajout rapide. Les outils restent dans les marges.
  */
 export default function DocumentEditor({ document: doc, actions, onSaving, view, onViewChange }: DocumentEditorProps) {
-  const createArticle = useCreateArticleOnTheFly()
   const [busyStep, setBusyStep] = useState<number | null>(null)
   // Étapes de la feuille : déplacées par leur poignée (glisser ou flèches), renommées en place, supprimées.
   const stepDragRef = useRef<number | null>(null)
@@ -105,19 +102,6 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
       toast(isAxiosError(error) ? (error.response?.data?.message ?? "L'ajout a échoué.") : "L'ajout a échoué.", 'error')
     } finally {
       setBusyStep(null)
-    }
-  }
-
-  async function createAndAdd(step: DocumentStep, description: string) {
-    if (!step.catalog_chapter_id) {
-      return
-    }
-    try {
-      const article = await createArticle.mutateAsync({ catalog_chapter_id: step.catalog_chapter_id, description })
-      toast('Article ajouté au catalogue. Pensez à compléter son unité et son prix.', 'success')
-      await add(step, { catalog_article_id: article.id }, true)
-    } catch {
-      toast("L'article n'a pas pu être créé.", 'error')
     }
   }
 
@@ -682,16 +666,16 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
                   <td className="relative">
                     <InsertAboveButton onClick={() => setInserting({ stepId: step.id, positionId: null })} title="Insérer ici, en fin d'étape, un titre de chapitre, un sous-titre ou un texte" />
                   </td>
+                  {/* Zone de dépôt en fin d'étape : les articles s'ajoutent en les glissant depuis le catalogue (panneau de gauche). */}
                   <td colSpan={executed ? 7 : 6} className="py-1.5" style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
-                    <ArticlePicker
-                      stepId={step.id}
-                      chapterId={step.catalog_chapter_id}
-                      canCreateArticle={Boolean(step.catalog_chapter_id)}
-                      busy={busyStep === step.id}
-                      onPickArticle={(article) => void add(step, { catalog_article_id: article.id }, true)}
-                      onFreeLine={(description, kind) => void add(step, { description, kind }, kind === 'item')}
-                      onCreateArticle={(description) => void createAndAdd(step, description)}
-                    />
+                    <div
+                      data-picker={step.id}
+                      className={`flex h-7 items-center rounded-md border border-dashed px-2 text-[12px] transition ${
+                        endTargeted ? 'border-primary-400 bg-primary-50 text-primary-700' : 'border-transparent text-gray-300 group-hover:border-gray-200 group-hover:text-gray-400'
+                      }`}
+                    >
+                      {endTargeted ? 'Déposer ici, en fin d’étape' : 'Glissez un article du catalogue ici · le + à gauche ajoute un titre ou un texte'}
+                    </div>
                   </td>
                   <td className="pl-2 align-middle">
                     <button

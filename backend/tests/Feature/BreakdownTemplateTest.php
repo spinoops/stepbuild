@@ -66,13 +66,13 @@ it('applique le prix de l’élément de coûts rattaché, et le suit quand il c
         'name' => 'Fouille', 'dimension_unit' => 'm3',
         'lines' => [['family' => 2, 'price_element_id' => $element->id, 'label' => 'Sable', 'unit' => 'kg', 'quantity' => 1.1, 'unit_cost' => 999, 'markup_percent' => 0]],
     ])->assertCreated()->json('data');
-    expect($created['lines'][0])->toMatchArray(['unit_cost' => 10, 'unit' => 'M3', 'markup_percent' => 30, 'label' => 'Sable'])
+    expect($created['lines'][0])->toMatchArray(['unit_cost' => 10, 'unit_sale' => 13, 'unit' => 'M3', 'markup_percent' => 30, 'label' => 'Sable'])
         ->and($created['lines'][0]['element'])->toMatchArray(['number' => '068.755', 'net_price' => 10]);
 
     // Le prix de l'élément change : la fiche et le chargement dans un devis donnent le nouveau prix.
     $element->update(['net_price' => 12, 'regie_price' => 15.6]);
     $this->getJson("/api/breakdown-templates/{$created['id']}")->assertOk()->assertJsonPath('data.lines.0.unit_cost', 12);
-    $this->postJson("/api/breakdown-templates/{$created['id']}/used")->assertOk()->assertJsonPath('data.lines.0.unit_cost', 12)->assertJsonPath('data.lines.0.markup_percent', 30);
+    $this->postJson("/api/breakdown-templates/{$created['id']}/used")->assertOk()->assertJsonPath('data.lines.0.unit_cost', 12)->assertJsonPath('data.lines.0.unit_sale', 15.6)->assertJsonPath('data.lines.0.markup_percent', 30);
 });
 
 it('retrouve l’élément de coûts d’une ligne saisie en texte (rattachement automatique)', function () {

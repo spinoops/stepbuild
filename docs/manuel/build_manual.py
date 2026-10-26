@@ -728,8 +728,8 @@ def build_story():
         grid([
             ['Statut', 'Signification', 'Couleur'],
             ['1-EC  En cours', "Le rapport se remplit. L'ouvrier peut encore le modifier.", 'Rouge'],
-            ['2-CTRL  En contrôle', "Transmis à la gestion, qui le vérifie et fixe les prix de régie. Seule la gestion le modifie.", 'Vert'],
-            ['3-FAC  Facturé en régie', 'Repris dans une facture : verrouillé.', 'Bleu'],
+            ['2-CTRL  Contrôlé', "Transmis à la gestion, qui le vérifie et fixe les prix de régie. Seule la gestion le modifie.", 'Vert'],
+            ['3-FAC  Facturé', 'Repris dans une facture : verrouillé.', 'Bleu'],
         ], [4 * cm, CONTENT_W - 6.4 * cm, 2.4 * cm]),
         bullets([
             "Le bouton <b>coche verte</b> de la barre d'outils passe le rapport <b>en contrôle</b>. La gestion peut "

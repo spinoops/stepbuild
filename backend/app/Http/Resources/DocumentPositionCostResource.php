@@ -24,6 +24,7 @@ class DocumentPositionCostResource extends JsonResource
             'per_dimension' => $this->per_dimension,
             'pack_size' => $this->pack_size,
             'unit_cost' => $this->unit_cost,
+            'unit_sale' => $this->unit_sale,
             'markup_percent' => $this->markup_percent,
             'cost' => $this->cost,
             'sale' => $this->sale,

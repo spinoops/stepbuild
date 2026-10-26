@@ -32,6 +32,39 @@ export default function BreakdownLinesTable({ evaluated, onUpdateLine, onAddLine
   // Ligne dont on choisit l'élément de coûts (champ de recherche ouvert sous la ligne).
   const [linking, setLinking] = useState<number | null>(null)
 
+  /** Achat modifié : le prix de vente saisi suit la marge affichée. */
+  function changeCost(line: LineDraft, value: string) {
+    const cost = toNumber(value)
+    const markup = toNumber(line.markup_percent)
+    const patch: Partial<LineDraft> = { unit_cost: value }
+    if (line.unit_sale !== '' && cost !== null && markup !== null) {
+      patch.unit_sale = numberText(round2(cost * (1 + markup / 100)))
+    }
+    onUpdateLine(line.key, patch)
+  }
+
+  /** Prix de vente saisi : la marge en découle (vide = retour au calcul achat + marge). */
+  function changeSale(line: LineDraft, value: string) {
+    const sale = toNumber(value)
+    const cost = toNumber(line.unit_cost)
+    const patch: Partial<LineDraft> = { unit_sale: value }
+    if (sale !== null && cost !== null && cost > 0) {
+      patch.markup_percent = numberText(Math.round((sale / cost - 1) * 1000) / 10)
+    }
+    onUpdateLine(line.key, patch)
+  }
+
+  /** Marge saisie : le prix de vente est recalculé depuis l'achat. */
+  function changeMarkup(line: LineDraft, value: string) {
+    const markup = toNumber(value)
+    const cost = toNumber(line.unit_cost)
+    const patch: Partial<LineDraft> = { markup_percent: value }
+    if (line.unit_sale !== '' && markup !== null && cost !== null) {
+      patch.unit_sale = numberText(round2(cost * (1 + markup / 100)))
+    }
+    onUpdateLine(line.key, patch)
+  }
+
   function add(family: number, values: Partial<LineDraft>) {
     const line = newLine(family, values)
     onAddLine(line)
@@ -53,9 +86,10 @@ export default function BreakdownLinesTable({ evaluated, onUpdateLine, onAddLine
               Cond.
             </th>
             <th className="w-20 border-b border-gray-200 px-1 py-1.5 text-right">Comptée</th>
-            <th className="w-24 border-b border-gray-200 px-1 py-1.5 text-right">Coût unit.</th>
+            <th className="w-[84px] border-b border-gray-200 px-1 py-1.5 text-right" title="Prix d'achat unitaire (prix net de l'élément de coûts)">Achat</th>
+            <th className="w-[84px] border-b border-gray-200 px-1 py-1.5 text-right" title="Prix de vente unitaire (prix de vente de l'élément de coûts) : c'est lui qui fait la vente de la ligne">Vente unit.</th>
+            <th className="w-16 border-b border-gray-200 px-1 py-1.5 text-right" title="Marge : prix de vente sur prix d'achat, en pour cent">Marge %</th>
             <th className="w-24 border-b border-gray-200 px-2 py-1.5 text-right">Coût</th>
-            <th className="w-16 border-b border-gray-200 px-1 py-1.5 text-right">Maj. %</th>
             <th className="w-24 border-b border-gray-200 px-2 py-1.5 text-right">Vente</th>
             <th className="w-8 border-b border-gray-200" />
           </tr>
@@ -66,14 +100,14 @@ export default function BreakdownLinesTable({ evaluated, onUpdateLine, onAddLine
           return (
             <tbody key={family.id}>
               <tr className="bg-gray-100">
-                <td colSpan={9} className="px-2 py-1 text-[12px] font-semibold uppercase tracking-wide text-gray-700">
+                <td colSpan={10} className="px-2 py-1 text-[12px] font-semibold uppercase tracking-wide text-gray-700">
                   {family.code}
                   <span className="ml-2 font-normal normal-case tracking-normal text-gray-400">{family.label}</span>
                 </td>
                 <td className="px-2 py-1 text-right text-[12px] font-semibold tabular-nums text-gray-700">{rows.length > 0 ? fmtAmount(subtotal) : ''}</td>
                 <td />
               </tr>
-              {rows.map(({ line, counted, cost, sale }) => (
+              {rows.map(({ line, counted, cost, sale, unitSale }) => (
                 <Fragment key={line.key}>
                 <tr className="group border-b border-gray-100" title={line.note || undefined}>
                   <td className="py-0.5 pl-1">
@@ -122,18 +156,38 @@ export default function BreakdownLinesTable({ evaluated, onUpdateLine, onAddLine
                   <td className="py-0.5">
                     <input
                       value={line.unit_cost}
-                      onChange={(e) => onUpdateLine(line.key, { unit_cost: e.target.value })}
+                      onChange={(e) => changeCost(line, e.target.value)}
                       disabled={readOnly || line.element !== null}
-                      title={line.element ? `Prix de l'élément de coûts ${line.element.number} : suit la liste de prix` : undefined}
+                      title={line.element ? `Prix d'achat de l'élément de coûts ${line.element.number} : suit la liste de prix` : "Prix d'achat unitaire"}
                       inputMode="decimal"
                       className={`${CELL} text-right ${line.element ? 'text-primary-700' : ''}`}
-                      aria-label="Coût unitaire"
+                      aria-label="Prix d'achat"
                     />
                   </td>
-                  <td className="px-2 py-1 text-right tabular-nums">{fmtAmount(cost)}</td>
                   <td className="py-0.5">
-                    <input value={line.markup_percent} onChange={(e) => onUpdateLine(line.key, { markup_percent: e.target.value })} disabled={readOnly} inputMode="decimal" className={`${CELL} text-right`} aria-label="Majoration" />
+                    <input
+                      value={line.unit_sale}
+                      placeholder={numberText(unitSale)}
+                      onChange={(e) => changeSale(line, e.target.value)}
+                      disabled={readOnly || line.element !== null}
+                      title={line.element ? `Prix de vente de l'élément de coûts ${line.element.number} : suit la liste de prix` : 'Prix de vente unitaire ; vide = achat + marge'}
+                      inputMode="decimal"
+                      className={`${CELL} text-right font-medium ${line.element ? 'text-primary-700' : ''}`}
+                      aria-label="Prix de vente"
+                    />
                   </td>
+                  <td className="py-0.5">
+                    <input
+                      value={line.markup_percent}
+                      onChange={(e) => changeMarkup(line, e.target.value)}
+                      disabled={readOnly || line.element !== null}
+                      title={line.element ? "Marge entre les deux prix de l'élément" : 'Marge en pour cent : recalcule le prix de vente'}
+                      inputMode="decimal"
+                      className={`${CELL} text-right ${line.element ? 'text-primary-700' : ''}`}
+                      aria-label="Marge"
+                    />
+                  </td>
+                  <td className="px-2 py-1 text-right tabular-nums text-gray-500">{fmtAmount(cost)}</td>
                   <td className="px-2 py-1 text-right font-medium tabular-nums">{fmtAmount(sale)}</td>
                   <td className="py-0.5 pr-1">
                     {!readOnly && (
@@ -145,7 +199,7 @@ export default function BreakdownLinesTable({ evaluated, onUpdateLine, onAddLine
                 </tr>
                 {linking === line.key && !readOnly && (
                   <tr className="border-b border-gray-100 bg-primary-50/60">
-                    <td colSpan={11} className="px-2 py-1">
+                    <td colSpan={12} className="px-2 py-1">
                       <div className="flex items-center gap-2">
                         <span className="shrink-0 text-[12px] text-primary-800">Élément de coûts pour « {line.label || 'cette ligne'} » :</span>
                         <div className="min-w-0 flex-1">
@@ -170,7 +224,7 @@ export default function BreakdownLinesTable({ evaluated, onUpdateLine, onAddLine
               ))}
               {!readOnly && (
                 <tr>
-                  <td colSpan={11} className="border-b border-gray-100 px-1 py-0.5">
+                  <td colSpan={12} className="border-b border-gray-100 px-1 py-0.5">
                     <ElementPicker
                       family={family.id}
                       placeholder={`Ajouter ${family.label.toLowerCase()} : élément de coûts ou libellé, puis Entrée`}

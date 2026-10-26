@@ -27,7 +27,7 @@ class BreakdownTemplateResource extends JsonResource
             // Ligne rattachée à un élément de coûts : son prix actuel s'applique (unité, coût, majoration).
             'lines' => $this->whenLoaded('lines', fn () => $this->lines->map(function ($line) {
                 $element = $line->relationLoaded('priceElement') ? $line->priceElement : null;
-                $live = $element ? BreakdownElements::apply($line->only(['label', 'unit', 'unit_cost', 'markup_percent']), $element) : [];
+                $live = $element ? BreakdownElements::apply($line->only(['label', 'unit', 'unit_cost', 'unit_sale', 'markup_percent']), $element) : [];
 
                 return [
                     'id' => $line->id,
@@ -40,6 +40,7 @@ class BreakdownTemplateResource extends JsonResource
                     'per_dimension' => $line->per_dimension,
                     'pack_size' => $line->pack_size,
                     'unit_cost' => $live['unit_cost'] ?? $line->unit_cost,
+                    'unit_sale' => $element ? $live['unit_sale'] : $line->unit_sale,
                     'markup_percent' => $live['markup_percent'] ?? $line->markup_percent,
                     'note' => $line->note,
                 ];

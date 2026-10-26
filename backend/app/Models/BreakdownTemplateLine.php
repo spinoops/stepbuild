@@ -10,7 +10,7 @@ class BreakdownTemplateLine extends Model
 {
     protected $fillable = [
         'breakdown_template_id', 'family', 'price_element_id', 'label', 'unit', 'quantity', 'per_dimension',
-        'pack_size', 'unit_cost', 'markup_percent', 'note', 'position',
+        'pack_size', 'unit_cost', 'unit_sale', 'markup_percent', 'note', 'position',
     ];
 
     protected function casts(): array
@@ -21,6 +21,7 @@ class BreakdownTemplateLine extends Model
             'per_dimension' => 'boolean',
             'pack_size' => 'float',
             'unit_cost' => 'float',
+            'unit_sale' => 'float',
             'markup_percent' => 'float',
             'position' => 'integer',
         ];

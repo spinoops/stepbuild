@@ -141,12 +141,13 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
 - **Totaux** recalculés côté serveur (`Document::recalculate`) : net hors options, rabais %, TVA (8.1 % par défaut),
   **arrondi à 5 centimes**, TTC. Chaque action d'étape ou de position **renvoie le document complet** ; le front
   remplace le cache (`useDocumentActions` dans `hooks/useDocuments.ts`), sans rechargement.
-- **Saisie rapide** (`components/documents/`) : `ArticlePicker` par étape cherche en mémoire dans
-  `/api/catalog-articles/picker` ; Entrée insère, puis quantité → Entrée → prix → Entrée → retour au champ d'ajout.
-  Sans résultat : ligne libre, ou **création de l'article à la volée** dans le chapitre de l'étape. La loupe du champ ouvre
-  `ArticleBrowserDialog` (chapitres en arbre, recherche en mémoire, double-clic ou Entrée insère, « Insérer et
-  continuer ») ; même principe pour les éléments de coûts avec `components/shared/ElementBrowserDialog` (groupes,
-  recherche serveur) depuis `ElementPicker` (rapports, sous-détail). `DataGrid` a reçu `onActivate` (double-clic).
+- **Ajout des articles : uniquement depuis le panneau de gauche** (26.10.2026) : le champ d'ajout d'article par étape
+  (`ArticlePicker`, `ArticleBrowserDialog`) a été retiré de la feuille ; à sa place, une zone de dépôt « Glissez un article
+  du catalogue ici » (toujours `data-picker={step.id}`, cible de fin d'étape). Les sous-titres, textes et titres de
+  chapitre s'insèrent par le « + » entre les lignes (`InsertLineRow`). Après insertion, quantité → Entrée → prix →
+  Entrée. Pour les éléments de coûts, `components/shared/ElementBrowserDialog` (groupes, recherche serveur) depuis
+  `ElementPicker` (rapports, sous-détail). `DataGrid` a reçu `onActivate` (double-clic). **À refaire dans le mode
+  d'emploi** : chapitre 9 « saisie rapide » et capture 13 (`capture.cjs` clique encore `[data-picker]`).
   `PositionRow` garde un brouillon local (enregistré à la sortie de ligne ou après 1,5 s) : ne pas resynchroniser
   ses champs depuis le serveur pendant la saisie.
   Réordonnancement par **glisser-déposer** natif (poignée `data-handle`, dépose dans l'étape ou vers une autre étape :
@@ -173,6 +174,11 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   avec la mention « corrigé à … ». Les colonnes `dimension` / `price_per_dimension` restent en base
   (dimension = quantité de la ligne) mais ne se saisissent plus. `PUT /documents/{id}/positions/{pos}/breakdown`
   remplace tout le sous-détail (`lines`, `internal_remark`).
+  **Prix de vente unitaire** (26.10.2026, colonne `unit_sale` sur `document_position_costs` et
+  `breakdown_template_lines`) : vente = quantité × prix de vente s'il est donné, sinon coût × (1 + majoration)
+  (`DocumentPositionCost::compute`) ; une ligne rattachée à un élément prend ses deux prix (achat = net, vente =
+  régie, tels quels) et la marge affichée en découle. Tableau : colonnes Achat, Vente unit., Marge % (prix de vente
+  sur achat), Coût, Vente ; saisir l'un recalcule les autres (`changeCost` / `changeSale` / `changeMarkup`).
   Front : `CostBreakdownDialog` (autosave 1 s, sauvegardes en file, affiche « ÷ quantité ») + `BreakdownLinesTable`
   (tableau partagé, colonne « × Qté »), familles et calcul dans `lib/costFamilies.ts`, brouillons dans `lib/breakdown.ts`.
   Dans la ligne du devis, le prix d'une position avec sous-détail est en bleu (rouge s'il a été corrigé à la main).
@@ -248,7 +254,9 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   vide) → `lib/quoteInsert.ts` `insertArticle()` le place dans son étape, **créée d'abord (titre seul) si elle
   manque** (toast). Une fois dans le devis, la position se déplace librement par sa poignée. Un chapitre glissé →
   `ensureStep()`. `takeCatalogDrag()` garantit un seul gestionnaire par dépôt. Clic sur un chapitre :
-  déplie ses articles. **Sélection multiple** (26.10.2026) : clic sur un article, Ctrl + clic (articles et chapitres),
+  déplie ses articles. **Bouton +** au survol d'un chapitre (devis ouvert) → `ArticleCreateDialog` : nouvel article
+  dans ce chapitre (description, code, unité, prix d'achat et de vente), le chapitre se déplie. Le volet « Étapes et
+  devis » est **replié par défaut** (26.10.2026). **Sélection multiple** (26.10.2026) : clic sur un article, Ctrl + clic (articles et chapitres),
   Maj + clic pour une plage ; glisser un élément sélectionné emporte toute la sélection (`CatalogDrag` `kind: 'many'`,
   pastille « n éléments ») → `insertMany()` les insère dans l'ordre du catalogue, à la suite à l'endroit visé s'ils
   y ont leur place, sinon dans l'étape de leur chapitre ; le document est relu dans le cache entre deux ajouts
@@ -446,7 +454,8 @@ navigateur. `LoginLog::record()` ne bloque jamais la connexion. `GET /api/login-
 Les modules non développés utilisent `components/ModulePlaceholder.tsx` : **remplacer**
 le placeholder par la vraie page lors de la phase concernée.
 
-Statuts (libellés, codes BauBit, couleurs) dans `frontend/src/lib/status.ts`.
+Statuts (libellés, codes BauBit, couleurs) dans `frontend/src/lib/status.ts` ; rapports journaliers : **En cours,
+Contrôlé, Facturé** (libellés du 26.10.2026, codes `en_cours` / `en_controle` / `facture` inchangés).
 Phases du projet : `frontend/src/lib/phases.ts` (mettre à jour `status` ; n'alimente plus que la barre d'état, la liste a été retirée du tableau de bord le 08.10.2026).
 
 ## ⚠️ Piège PHP (IMPORTANT)

@@ -21,8 +21,8 @@ export const PROJECT_STATUSES: Record<ProjectStatus, StatusMeta> = {
 /** Statuts d'un rapport journalier — workflow de validation. */
 export const REPORT_STATUSES: Record<ReportStatus, StatusMeta> = {
   en_cours: { label: 'En cours', code: '1-EC', className: 'bg-red-100 text-red-800', rowClass: 'bg-bb-red' },
-  en_controle: { label: 'En contrôle', code: '2-CTRL', className: 'bg-amber-100 text-amber-800', rowClass: 'bg-bb-green' },
-  facture: { label: 'Facturé en régie', code: '3-FAC', className: 'bg-green-100 text-green-800', rowClass: 'bg-bb-blue-light' },
+  en_controle: { label: 'Contrôlé', code: '2-CTRL', className: 'bg-amber-100 text-amber-800', rowClass: 'bg-bb-green' },
+  facture: { label: 'Facturé', code: '3-FAC', className: 'bg-green-100 text-green-800', rowClass: 'bg-bb-blue-light' },
 }
 
 /** Statuts d'un devis. */

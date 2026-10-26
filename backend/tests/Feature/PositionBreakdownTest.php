@@ -168,7 +168,14 @@ it('prend le prix de l’élément de coûts rattaché à une ligne du sous-dét
     $data = $this->putJson("/api/documents/{$document->id}/positions/{$position->id}/breakdown", [
         'lines' => [['family' => 2, 'price_element_id' => $element->id, 'label' => 'Colle Weber', 'unit' => 'sac', 'quantity' => 4.2, 'per_dimension' => true, 'unit_cost' => 1, 'markup_percent' => 0]],
     ])->assertOk()->json('data.steps.0.positions.0');
-    expect($data['costs'][0])->toMatchArray(['unit_cost' => 2.5, 'unit' => 'kg', 'markup_percent' => 30, 'label' => 'Colle Weber'])
+    expect($data['costs'][0])->toMatchArray(['unit_cost' => 2.5, 'unit_sale' => 3.25, 'unit' => 'kg', 'markup_percent' => 30, 'label' => 'Colle Weber'])
         ->and($data['costs'][0]['element']['number'])->toBe('M002')
+        ->and($data['costs'][0]['sale'])->toEqual(122.85)   // 9 m² × 4.2 kg × 3.25 : le prix de vente de l'élément, tel quel
         ->and($data['cost_price'])->toEqual(10.5);   // 4.2 kg × 2.50 par m²
+
+    // Ligne libre avec un prix de vente saisi : il prime sur la majoration.
+    $free = $this->putJson("/api/documents/{$document->id}/positions/{$position->id}/breakdown", [
+        'lines' => [['family' => 5, 'label' => 'Carrelette', 'quantity' => 1, 'unit_cost' => 40, 'unit_sale' => 45, 'markup_percent' => 30]],
+    ])->assertOk()->json('data.steps.0.positions.0.costs.0');
+    expect($free['sale'])->toEqual(45)->and($free['cost'])->toEqual(40);
 });

@@ -80,7 +80,7 @@ export default function DocumentsPage() {
   const [derivedType, setDerivedType] = useState<DerivedType | null>(null)
   const [newMenuOpen, setNewMenuOpen] = useState(false)
   // Panneau de gauche : « Étapes et devis » pour naviguer, « Catalogue de prix » pour ajouter des articles.
-  const [stepsOpen, setStepsOpen] = useState(true)
+  const [stepsOpen, setStepsOpen] = useState(false) // replié par défaut (26.10.2026) : le catalogue d'abord
   const [catalogOpen, setCatalogOpen] = useState(true)
   // Options d'affichage du devis (sous-détails, prix masqués), reprises par l'aperçu et le PDF.
   const [view, setView] = useState<QuoteViewOptions>(loadQuoteView)
