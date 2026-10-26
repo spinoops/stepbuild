@@ -414,6 +414,10 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
         <input type="checkbox" checked={view.hidePrices} onChange={(e) => onViewChange({ ...view, hidePrices: e.target.checked })} className="h-4 w-4 accent-primary-600" />
         Masquer les prix
       </label>
+      <label className="flex items-center gap-1.5" title="Le total de chaque étape sous ses lignes, à l'écran comme à l'impression">
+        <input type="checkbox" checked={view.showStepTotals} onChange={(e) => onViewChange({ ...view, showStepTotals: e.target.checked })} className="h-4 w-4 accent-primary-600" />
+        Totaux par étape
+      </label>
       <span className="text-[12px] text-gray-400">Ces options valent aussi pour l'aperçu et le PDF.</span>
     </div>
   )
@@ -649,6 +653,19 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
                   />,
                 ])}
                 {insertRow(step, null)}
+                {view.showStepTotals && !view.hidePrices && step.positions.some((position) => position.kind === 'item') && (
+                  <tr className="text-[13px]">
+                    <td />
+                    <td />
+                    <td colSpan={executed ? 5 : 4} className="px-1 pb-0.5 pt-1.5 text-right italic text-gray-600">
+                      Total {step.label}
+                    </td>
+                    <td className="border-t border-gray-400 px-1 pb-0.5 pt-1.5 text-right font-semibold tabular-nums" title="Total de l'étape, options non comprises">
+                      {fmtAmount(step.total)}
+                    </td>
+                    <td />
+                  </tr>
+                )}
                 <tr
                   onDragOver={(event) => {
                     if (dragRef.current || getCatalogDrag()) {

@@ -113,6 +113,7 @@ class DocumentController extends Controller
         $options = [
             'breakdown' => $request->boolean('breakdown'),
             'prices' => $request->has('prices') ? $request->boolean('prices') : true,
+            'step_totals' => $request->has('totals') ? $request->boolean('totals') : true,
         ];
         $pdf = DocumentPrint::pdf($document, $options);
 

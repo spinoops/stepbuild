@@ -177,10 +177,14 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   (tableau partagé, colonne « × Qté »), familles et calcul dans `lib/costFamilies.ts`, brouillons dans `lib/breakdown.ts`.
   Dans la ligne du devis, le prix d'une position avec sous-détail est en bleu (rouge s'il a été corrigé à la main).
 - **Options d'affichage du devis** (`lib/quoteView.ts`, mémorisées dans le navigateur, barre au-dessus de la feuille) :
-  « Afficher les sous-détails » (lignes du sous-détail **en rouge, très compact, sous la position**) et « Masquer les
-  prix » (devis descriptif). Les mêmes options pilotent l'aperçu et le PDF (`GET …/pdf?breakdown=1&prices=0`,
-  cases aussi dans l'onglet Aperçu) : sous-détails imprimés en rouge sous les positions ; sans prix, la page de garde
-  liste les étapes sans montants et le détail n'a ni Prix ni Montant.
+  « Afficher les sous-détails » (lignes du sous-détail **en rouge, très compact, sous la position**), « Masquer les
+  prix » (devis descriptif) et « Totaux par étape » (26.10.2026, **coché par défaut** : ligne « Total <étape> » sous
+  les lignes de chaque étape, options non comprises). Les mêmes options pilotent l'aperçu et le PDF
+  (`GET …/pdf?breakdown=1&prices=0&totals=0`, cases aussi dans l'onglet Aperçu) : sous-détails imprimés en rouge
+  sous les positions ; sans prix, la page de garde liste les étapes sans montants et le détail n'a ni Prix ni
+  Montant ; `tr.step-total` dans le détail imprimé. **Options** (`is_optional`) : prix et montant **entre
+  parenthèses** sur la feuille (`Parens` dans `PositionRow`) et dans le PDF ; la récapitulation (onglet et page de
+  garde, après le TTC) rappelle le **total des options**, non compris dans le devis.
 - **Saut de page** : position `kind = pagebreak` (sans description, bouton à droite du champ d'ajout de chaque étape,
   déplaçable par sa poignée) ; dessiné en pointillé sur la feuille, le PDF ferme et rouvre le tableau de détail.
 - **Sous-détails types** (`breakdown_templates` → `breakdown_template_lines`, page `/sous-details-types`) : la

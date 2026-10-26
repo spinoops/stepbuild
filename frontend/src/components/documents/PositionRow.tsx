@@ -40,6 +40,20 @@ const CELL =
 
 export type DropPlace = 'above' | 'below'
 
+/** Entoure un champ de parenthèses (prix d'une option : affiché, mais hors total). */
+function Parens({ on, children }: { on: boolean; children: React.ReactNode }) {
+  if (!on) {
+    return children
+  }
+  return (
+    <span className="flex items-center text-gray-400" title="Option : hors total">
+      <span className="pl-1">(</span>
+      <span className="min-w-0 flex-1">{children}</span>
+      <span className="pr-0.5">)</span>
+    </span>
+  )
+}
+
 interface PositionRowProps {
   position: DocumentPosition
   /** Numéro tel qu'il sera imprimé (5.1, 6.1.1…) ; vide pour un texte. */
@@ -345,35 +359,40 @@ export default function PositionRow({
                   ···
                 </span>
               ) : (
-                <input
-                  data-price={position.id}
-                  value={draft.unit_price}
-                  onChange={(e) => change({ unit_price: e.target.value })}
-                  onKeyDown={(e) => onEnter(e, 'picker')}
-                  inputMode="decimal"
-                  title={hasBreakdown ? `Sous-détail : ${fmtAmount(breakdownTotal)} ÷ ${qty(breakdownQuantity)} = ${fmtAmount(position.calculated_price)}${priceDiffers ? ' (prix corrigé à la main)' : ''}` : undefined}
-                  className={`${CELL} text-right ${hasBreakdown ? (priceDiffers ? 'text-accent-700' : 'text-primary-800') : ''}`}
-                  aria-label="Prix unitaire"
-                />
+                // Option : prix et montant entre parenthèses, comme à l'impression (hors total).
+                <Parens on={draft.is_optional}>
+                  <input
+                    data-price={position.id}
+                    value={draft.unit_price}
+                    onChange={(e) => change({ unit_price: e.target.value })}
+                    onKeyDown={(e) => onEnter(e, 'picker')}
+                    inputMode="decimal"
+                    title={hasBreakdown ? `Sous-détail : ${fmtAmount(breakdownTotal)} ÷ ${qty(breakdownQuantity)} = ${fmtAmount(position.calculated_price)}${priceDiffers ? ' (prix corrigé à la main)' : ''}` : undefined}
+                    className={`${CELL} text-right ${hasBreakdown ? (priceDiffers ? 'text-accent-700' : 'text-primary-800') : ''}`}
+                    aria-label="Prix unitaire"
+                  />
+                </Parens>
               )}
             </td>
             <td className="py-0.5">
               {hidePrices ? (
                 ''
               ) : (
-                <input
-                  data-amount={position.id}
-                  value={amountEdit ?? (amount !== null ? fmtAmount(amount) : '')}
-                  onChange={(e) => changeAmount(e.target.value)}
-                  onFocus={() => setAmountEdit(amount !== null ? text(amount) : '')}
-                  onBlur={() => setAmountEdit(null)}
-                  onKeyDown={(e) => onEnter(e, 'picker')}
-                  disabled={quantity === null || quantity <= 0}
-                  inputMode="decimal"
-                  title="Montant de la ligne : un total saisi donne le prix unitaire (total ÷ quantité)"
-                  className={`${CELL} text-right disabled:hover:border-transparent`}
-                  aria-label="Montant"
-                />
+                <Parens on={draft.is_optional}>
+                  <input
+                    data-amount={position.id}
+                    value={amountEdit ?? (amount !== null ? fmtAmount(amount) : '')}
+                    onChange={(e) => changeAmount(e.target.value)}
+                    onFocus={() => setAmountEdit(amount !== null ? text(amount) : '')}
+                    onBlur={() => setAmountEdit(null)}
+                    onKeyDown={(e) => onEnter(e, 'picker')}
+                    disabled={quantity === null || quantity <= 0}
+                    inputMode="decimal"
+                    title="Montant de la ligne : un total saisi donne le prix unitaire (total ÷ quantité)"
+                    className={`${CELL} text-right disabled:hover:border-transparent`}
+                    aria-label="Montant"
+                  />
+                </Parens>
               )}
             </td>
           </>

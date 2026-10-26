@@ -155,6 +155,7 @@ it('imprime les sous-détails et sans prix sur demande, et respecte les sauts de
 
     $plain = $this->get("/api/documents/{$document->id}/pdf")->assertOk();
     $detailed = $this->get("/api/documents/{$document->id}/pdf?breakdown=1&prices=0")->assertOk();
+    $this->get("/api/documents/{$document->id}/pdf?totals=0")->assertOk(); // sans le total de chaque étape
     expect($plain->headers->get('content-type'))->toBe('application/pdf')
         ->and($detailed->headers->get('content-type'))->toBe('application/pdf');
 });

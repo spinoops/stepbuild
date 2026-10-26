@@ -43,7 +43,7 @@ export default function DocumentPreview({ document: doc, options, onOptionsChang
     return () => URL.revokeObjectURL(objectUrl)
   }, [pdf.data])
 
-  const suffix = [options.showBreakdown ? 'sous-détails' : null, options.hidePrices ? 'sans prix' : null].filter(Boolean).join(', ')
+  const suffix = [options.showBreakdown ? 'sous-détails' : null, options.hidePrices ? 'sans prix' : null, options.showStepTotals ? null : 'sans totaux'].filter(Boolean).join(', ')
   const fileName = `${DOCUMENT_TYPE_LABELS[doc.type]} ${doc.number}${suffix ? ` (${suffix})` : ''}.pdf`
   const button = 'flex h-8 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-[13px] text-gray-700 hover:bg-gray-50 disabled:opacity-40'
   const check = 'flex items-center gap-1.5 text-[13px] text-gray-700'
@@ -71,6 +71,10 @@ export default function DocumentPreview({ document: doc, options, onOptionsChang
         <label className={check} title="Devis descriptif : étapes, positions et quantités, sans aucun prix">
           <input type="checkbox" checked={options.hidePrices} onChange={(e) => onOptionsChange({ ...options, hidePrices: e.target.checked })} className="h-4 w-4 accent-primary-600" />
           Sans les prix
+        </label>
+        <label className={check} title="Imprime le total de chaque étape sous ses lignes">
+          <input type="checkbox" checked={options.showStepTotals} onChange={(e) => onOptionsChange({ ...options, showStepTotals: e.target.checked })} className="h-4 w-4 accent-primary-600" />
+          Totaux par étape
         </label>
         <span className="ml-2 text-[12px] text-gray-400">
           {pdf.isFetching ? 'Préparation du PDF…' : pdf.isError ? "L'aperçu n'a pas pu être produit." : 'Tel que le client le recevra. Les remarques internes ne sont jamais imprimées.'}
