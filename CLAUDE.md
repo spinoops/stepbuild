@@ -188,10 +188,12 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `database/data/breakdown_templates.json`, chargés par `BreakdownTemplateSeeder` dans **tous** les environnements,
   jamais écrasés une fois présents). Conventions du métreur : main-d'œuvre vendue **750.- la personne-jour, 90.-
   l'heure** (lignes MO à prix de vente, majoration 0), prix fournisseurs **+30 %**. Dans la fenêtre du sous-détail,
-  `TemplatePicker` charge un modèle (lignes remplacées, DIM saisie conservée, `POST …/used` compte l'usage) ;
-  « Enregistrer comme sous-détail type » et le bouton **+** à côté du chargement ouvrent `NewTemplateDialog` (26.10.2026) :
-  ouvrage, groupe, unité, reprise ou non des lignes saisies ; un modèle créé vide propose « Compléter les lignes »
-  (page Sous-détails types dans un nouvel onglet). `catalog_article_id` est prévu pour
+  la bibliothèque charge un modèle (lignes remplacées, `POST …/used` compte l'usage) ;
+  **Fenêtre pleine largeur** (26.10.2026, `Modal size="full"`) : le calcul de la ligne à gauche, la **bibliothèque des
+  sous-détails types** à droite (`TemplateLibraryPanel` : recherche, liste par groupe, un clic charge l'ouvrage —
+  confirmation si des lignes existent —, l'ouvrage chargé est surligné, icône « enregistrer » = remplacer ses lignes
+  par celles saisies, corbeille = supprimer, et en bas **création directe** d'un ouvrage avec les lignes saisies :
+  nom + Créer, quantité et unité de la ligne comme DIM). `TemplatePicker` et `NewTemplateDialog` ont disparu. `catalog_article_id` est prévu pour
   rattacher un modèle à un article à la reprise du catalogue BauBit (chargement automatique à l'insertion).
   **Lignes rattachées aux éléments de coûts** (26.10.2026) : une ligne de sous-détail (modèle ou position) avec
   `price_element_id` prend **le prix de l'élément** : `App\Support\BreakdownElements` (coût = prix net, sinon

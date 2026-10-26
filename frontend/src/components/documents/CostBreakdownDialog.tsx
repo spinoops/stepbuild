@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Modal from '@/components/ui/Modal'
 import BreakdownLinesTable from '@/components/documents/BreakdownLinesTable'
-import NewTemplateDialog from '@/components/documents/NewTemplateDialog'
-import TemplatePicker from '@/components/documents/TemplatePicker'
+import TemplateLibraryPanel from '@/components/documents/TemplateLibraryPanel'
 import { fmtAmount } from '@/lib/format'
 import { toast } from '@/lib/toast'
 import { round2 } from '@/lib/costFamilies'
@@ -10,7 +9,7 @@ import { evaluateLines, hasLabel, insertLine, lineFromData, toLinePayload } from
 import type { LineDraft } from '@/lib/breakdown'
 import type { DocumentActions } from '@/hooks/useDocuments'
 import { fetchTemplateForUse } from '@/hooks/useBreakdownTemplates'
-import type { DocumentPosition } from '@/types'
+import type { BreakdownTemplate, DocumentPosition } from '@/types'
 import { Icon } from '@/components/icons'
 
 interface BreakdownState {
@@ -59,8 +58,8 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
   const saved = useRef(serialize(fromPosition(position)).serialized)
   const timer = useRef<number | undefined>(undefined)
   const [status, setStatus] = useState<'idle' | 'saving' | 'error'>('idle')
-  // Fenêtre « Nouveau sous-détail type » (bouton + à côté du chargement, ou lien en bas).
-  const [creating, setCreating] = useState(false)
+  // Sous-détail type chargé dans cette ligne (surligné dans la bibliothèque, à droite).
+  const [loadedId, setLoadedId] = useState<number | null>(null)
 
   // Quantité de référence = quantité de la ligne (une ligne sans quantité compte pour 1).
   const quantity = position.quantity !== null && position.quantity > 0 ? position.quantity : 1
@@ -86,12 +85,13 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
   const removeLine = (key: number) => update((current) => ({ ...current, lines: current.lines.filter((line) => line.key !== key) }), 300)
 
   /** Charge un sous-détail type : ses lignes remplacent les lignes actuelles (les lignes « × Qté » suivent la quantité de la ligne). */
-  async function loadTemplate(id: number) {
-    if (hasLines && !window.confirm('Remplacer les lignes actuelles par celles du modèle ?')) {
+  async function loadTemplate(chosen: BreakdownTemplate) {
+    if (hasLines && chosen.id !== loadedId && !window.confirm(`Remplacer les lignes actuelles par celles de « ${chosen.name} » ?`)) {
       return
     }
     try {
-      const template = await fetchTemplateForUse(id)
+      const template = await fetchTemplateForUse(chosen.id)
+      setLoadedId(template.id)
       update((current) => ({
         ...current,
         internal_remark: current.internal_remark.trim() || [`Modèle : ${template.name}`, template.note].filter(Boolean).join(' — '),
@@ -160,8 +160,9 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
   const title = [position.code, position.description.split('\n')[0]].filter(Boolean).join(' · ')
 
   return (
-    <Modal open onClose={close} size="xl">
+    <Modal open onClose={close} size="full">
       <div
+        className="flex min-h-0 flex-1 flex-col"
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
             event.stopPropagation()
@@ -179,82 +180,74 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
           </button>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[13px]">
-          <span className="text-gray-600">
-            Quantité de la ligne :{' '}
-            <span className="font-semibold text-gray-800">
-              {position.quantity !== null ? qty(position.quantity) : '—'} {position.unit ?? ''}
-            </span>
-            {position.quantity === null && <span className="text-gray-400"> (compte pour 1 tant qu'elle n'est pas saisie)</span>}
-          </span>
-          <span className="text-[12px] text-gray-400">Le sous-détail chiffre la ligne entière ; les lignes « × Qté » suivent sa quantité.</span>
-          <span className="ml-auto flex items-center gap-1.5">
-            <TemplatePicker onPick={(template) => void loadTemplate(template.id)} />
-            <button
-              type="button"
-              onClick={() => setCreating(true)}
-              title="Nouveau sous-détail type : avec les lignes saisies ici, ou vide à compléter"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-500 hover:border-primary-400 hover:text-primary-700"
-            >
-              <Icon name="plus" className="h-4 w-4" />
-            </button>
-          </span>
-        </div>
+        <div className="mt-3 flex min-h-0 flex-1 gap-5">
+          {/* Colonne de gauche : le calcul de la ligne. */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[13px]">
+              <span className="text-gray-600">
+                Quantité de la ligne :{' '}
+                <span className="font-semibold text-gray-800">
+                  {position.quantity !== null ? qty(position.quantity) : '—'} {position.unit ?? ''}
+                </span>
+                {position.quantity === null && <span className="text-gray-400"> (compte pour 1 tant qu'elle n'est pas saisie)</span>}
+              </span>
+              <span className="text-[12px] text-gray-400">Le sous-détail chiffre la ligne entière ; les lignes « × Qté » suivent sa quantité.</span>
+            </div>
 
-        <div className="mt-3">
-          <BreakdownLinesTable evaluated={evaluated} onUpdateLine={updateLine} onAddLine={addLine} onRemoveLine={removeLine} />
-        </div>
+            <div className="mt-3 flex min-h-0 flex-1 flex-col">
+              <BreakdownLinesTable evaluated={evaluated} onUpdateLine={updateLine} onAddLine={addLine} onRemoveLine={removeLine} className="max-h-none min-h-0 flex-1" />
+            </div>
 
-        <div className="mt-3 flex flex-wrap items-start gap-4">
-          <label className="min-w-[260px] flex-1 text-[12px] text-gray-500">
-            Remarque interne (jamais imprimée)
-            <textarea
-              value={state.internal_remark}
-              onChange={(e) => update({ internal_remark: e.target.value })}
-              rows={2}
-              maxLength={2000}
-              className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-[13px] text-gray-800 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-            />
-          </label>
-          <dl className="grid w-[360px] grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-[13px]">
-            <dt className="text-gray-500">Coût total de la ligne</dt>
-            <dd className="text-right tabular-nums">{fmtAmount(totalCost)}</dd>
-            <dt className="text-gray-500">Vente totale (coûts majorés)</dt>
-            <dd className="text-right tabular-nums">{fmtAmount(totalSale)}</dd>
-            <dt className="text-gray-500">
-              ÷ {qty(quantity)} {unitLabel} : coût / vente
-            </dt>
-            <dd className="text-right tabular-nums">
-              {fmtAmount(unitCost)} / {fmtAmount(unitPrice)}
-            </dd>
-            <dt className="font-medium text-gray-700">Prix unitaire de la position</dt>
-            <dd className="text-right font-semibold tabular-nums text-primary-800">{hasLines ? `${fmtAmount(unitPrice)} / ${unitLabel}` : '—'}</dd>
-          </dl>
-        </div>
+            <div className="mt-3 flex flex-wrap items-start gap-4">
+              <label className="min-w-[260px] flex-1 text-[12px] text-gray-500">
+                Remarque interne (jamais imprimée)
+                <textarea
+                  value={state.internal_remark}
+                  onChange={(e) => update({ internal_remark: e.target.value })}
+                  rows={2}
+                  maxLength={2000}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-[13px] text-gray-800 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                />
+              </label>
+              <dl className="grid w-[360px] grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-[13px]">
+                <dt className="text-gray-500">Coût total de la ligne</dt>
+                <dd className="text-right tabular-nums">{fmtAmount(totalCost)}</dd>
+                <dt className="text-gray-500">Vente totale (coûts majorés)</dt>
+                <dd className="text-right tabular-nums">{fmtAmount(totalSale)}</dd>
+                <dt className="text-gray-500">
+                  ÷ {qty(quantity)} {unitLabel} : coût / vente
+                </dt>
+                <dd className="text-right tabular-nums">
+                  {fmtAmount(unitCost)} / {fmtAmount(unitPrice)}
+                </dd>
+                <dt className="font-medium text-gray-700">Prix unitaire de la position</dt>
+                <dd className="text-right font-semibold tabular-nums text-primary-800">{hasLines ? `${fmtAmount(unitPrice)} / ${unitLabel}` : '—'}</dd>
+              </dl>
+            </div>
 
-        <div className="mt-4 flex items-center justify-between">
-          <span className="flex items-center gap-3 text-[12px] text-gray-400">
-            {status === 'saving' ? 'Enregistrement…' : status === 'error' ? 'Non enregistré' : 'Enregistré automatiquement, prix reporté dans la ligne'}
-            {hasLines && (
-              <button type="button" onClick={() => setCreating(true)} className="text-gray-500 hover:text-primary-700 hover:underline">
-                Enregistrer comme sous-détail type
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-[12px] text-gray-400">
+                {status === 'saving' ? 'Enregistrement…' : status === 'error' ? 'Non enregistré' : 'Enregistré automatiquement, prix reporté dans la ligne'}
+              </span>
+              <button type="button" onClick={close} className="h-8 rounded-md bg-anthracite-800 px-3 text-[13px] font-medium text-white hover:bg-anthracite-700">
+                Fermer
               </button>
-            )}
-          </span>
-          <button type="button" onClick={close} className="h-8 rounded-md bg-anthracite-800 px-3 text-[13px] font-medium text-white hover:bg-anthracite-700">
-            Fermer
-          </button>
+            </div>
+          </div>
+
+          {/* Colonne de droite : la bibliothèque des sous-détails types. */}
+          <div className="w-[360px] shrink-0 border-l border-gray-200 pl-5">
+            <TemplateLibraryPanel
+              lines={state.lines}
+              defaultName={position.description.split('\n')[0].slice(0, 80)}
+              dimension={position.quantity}
+              unit={position.unit}
+              loadedId={loadedId}
+              onLoad={(template) => void loadTemplate(template)}
+              onCreated={(template) => setLoadedId(template.id)}
+            />
+          </div>
         </div>
-        {creating && (
-          <NewTemplateDialog
-            open
-            onClose={() => setCreating(false)}
-            defaultName={position.description.split('\n')[0].slice(0, 80)}
-            defaultUnit={position.unit ?? ''}
-            defaultDimension={position.quantity}
-            lines={state.lines}
-          />
-        )}
       </div>
     </Modal>
   )
