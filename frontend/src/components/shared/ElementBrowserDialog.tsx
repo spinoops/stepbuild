@@ -303,7 +303,7 @@ function NewElementForm({ family, groups, group: initialGroup, description: init
         <input autoFocus value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Désignation (obligatoire)" maxLength={500} className={`${BB_FIELD} min-w-0 flex-1`} aria-label="Désignation" />
       </div>
       <div className="mt-2 flex items-center gap-2">
-        <UnitSelect value={unit} onChange={(e) => setUnit(e.target.value)} className={`${BB_FIELD} w-28`} aria-label="Unité" />
+        <UnitSelect value={unit} onChange={setUnit} className={`${BB_FIELD} w-28`} aria-label="Unité" />
         <input value={net} onChange={(e) => setNet(e.target.value)} placeholder="Prix net" inputMode="decimal" className={`${BB_FIELD} w-28 text-right ${PRICE_PATTERN.test(net) ? '' : 'border-red-400'}`} aria-label="Prix net" />
         <input value={regie} onChange={(e) => setRegie(e.target.value)} placeholder="Prix régie" inputMode="decimal" className={`${BB_FIELD} w-28 text-right ${PRICE_PATTERN.test(regie) ? '' : 'border-red-400'}`} aria-label="Prix régie" />
         <span className="ml-auto flex gap-2">

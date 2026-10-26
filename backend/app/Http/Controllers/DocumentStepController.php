@@ -46,6 +46,46 @@ class DocumentStepController extends Controller
         return DocumentResource::make($document->recalculate()->load(DocumentController::FULL))->response()->setStatusCode(201);
     }
 
+    /**
+     * Titre de chapitre inséré entre les lignes de la feuille : une étape libre placée juste après l'étape
+     * `after_step_id`. Avec `position_id`, cette ligne et les suivantes de l'étape passent sous le nouveau
+     * titre (l'étape est coupée en deux) ; sans, le titre s'insère après l'étape, sans ligne.
+     */
+    public function insert(Request $request, Document $document): JsonResponse
+    {
+        $data = $request->validate([
+            'after_step_id' => ['required', 'integer'],
+            'position_id' => ['nullable', 'integer'],
+            'label' => ['required', 'string', 'max:255'],
+            'code' => ['nullable', 'string', 'max:20'],
+        ]);
+        $after = $document->steps()->findOrFail($data['after_step_id']);
+        $from = isset($data['position_id']) ? $after->positions()->findOrFail($data['position_id']) : null;
+
+        $step = DB::transaction(function () use ($data, $document, $after, $from) {
+            $document->steps()->where('position', '>', $after->position)->increment('position');
+            $step = $document->steps()->create([
+                'catalog_chapter_id' => null,
+                'code' => $data['code'] ?? '',
+                'label' => trim($data['label']),
+                'position' => $after->position + 1,
+            ]);
+
+            if ($from) {
+                $moved = $after->positions()->get()->skipUntil(fn ($position) => $position->id === $from->id);
+                foreach ($moved->values() as $index => $position) {
+                    $position->forceFill(['document_step_id' => $step->id, 'position' => $index + 1])->saveQuietly();
+                }
+            }
+
+            return $step;
+        });
+
+        return DocumentResource::make($document->recalculate()->load(DocumentController::FULL))
+            ->additional(['created_step_id' => $step->id])
+            ->response()->setStatusCode(201);
+    }
+
     public function update(Request $request, Document $document, DocumentStep $step): DocumentResource
     {
         abort_unless($step->document_id === $document->id, 404);

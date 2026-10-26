@@ -151,6 +151,11 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   ses champs depuis le serveur pendant la saisie.
   Réordonnancement par **glisser-déposer** natif (poignée `data-handle`, dépose dans l'étape ou vers une autre étape :
   `updatePosition` avec le nouveau `document_step_id` puis `reorderPositions`) ; au clavier, flèches sur la poignée.
+  **Insertion entre les lignes** (26.10.2026) : un « + » au survol, sur le bord haut de chaque ligne et du champ
+  d'ajout (`InsertAboveButton`), ouvre `InsertLineRow` : **titre de chapitre** (par défaut), sous-titre ou texte.
+  Le titre de chapitre crée une étape libre juste après l'étape courante, et la ligne visée et les suivantes passent
+  dessous (`POST /documents/{id}/steps/insert` `{after_step_id, position_id?, label}`, renvoie `created_step_id`) ;
+  sous-titre et texte s'insèrent à l'endroit (`after_id`, **`after_id` = 0 = en tête d'étape**, un seul appel).
   **Les étapes se gèrent aussi sur la feuille** (20.10.2026) : poignée `data-step-handle` sur le titre (glisser l'étape
   entière au-dessus / en dessous d'une autre, `stepDragRef` distinct du glissement de position, ou flèches au clavier →
   `reorderSteps`), renommage par double-clic ou crayon (`updateStep`), corbeille (`deleteStep`, confirmation).
@@ -220,7 +225,11 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   vide) → `lib/quoteInsert.ts` `insertArticle()` le place dans son étape, **créée d'abord (titre seul) si elle
   manque** (toast). Une fois dans le devis, la position se déplace librement par sa poignée. Un chapitre glissé →
   `ensureStep()`. `takeCatalogDrag()` garantit un seul gestionnaire par dépôt. Clic sur un chapitre :
-  déplie ses articles. Crayon sur un article : `ArticleQuickEdit` modifie le catalogue seulement (les positions du
+  déplie ses articles. **Sélection multiple** (26.10.2026) : clic sur un article, Ctrl + clic (articles et chapitres),
+  Maj + clic pour une plage ; glisser un élément sélectionné emporte toute la sélection (`CatalogDrag` `kind: 'many'`,
+  pastille « n éléments ») → `insertMany()` les insère dans l'ordre du catalogue, à la suite à l'endroit visé s'ils
+  y ont leur place, sinon dans l'étape de leur chapitre ; le document est relu dans le cache entre deux ajouts
+  (`actions.current()`). Un **chapitre libre** (`catalog_chapter_id` null) accepte tout article déposé dessus. Crayon sur un article : `ArticleQuickEdit` modifie le catalogue seulement (les positions du
   devis sont des instantanés, jamais touchées).
 - **Documents dérivés d'un devis** (22.10.2026, `documents.source_document_id`, menu « Autre document » de la page
   Documents → `DerivedDocumentDialog`) : **Demande d'acompte** (`type` acompte, `AC.n`, `Document::createAdvance()` :
@@ -358,8 +367,10 @@ Table `units` (code imprimé, libellé, ordre, actif), `Unit::DEFAULTS` = codes 
 Pce…), créées par `Unit::seedDefaults()` dans `DatabaseSeeder` (tous environnements, jamais écrasées). `GET /units`
 pour tous les rôles ; store/update/destroy/reorder pour la gestion. Les positions, articles et éléments gardent
 l'unité **en texte** (code) : supprimer ou désactiver une unité ne touche pas aux données. Front :
-`components/shared/UnitSelect` (liste + valeur actuelle hors liste conservée, remonté quand la liste arrive pour
-react-hook-form) dans `PositionRow` et le formulaire d'article ; éditeur `components/settings/UnitsEditor` sur la
+`components/shared/UnitSelect` (26.10.2026 : champ de recherche avec liste par **ordre alphabétique**, les premières
+lettres filtrent — code d'abord, puis libellé, « contient » dès deux lettres —, Entrée / Tab prend l'unité, Échap
+annule ; API `value` / `onChange(code)` / `onEnter`, liste en portail ; dans le formulaire d'article : `useWatch` +
+`setValue`) dans `PositionRow` (Entrée passe à la quantité) et le formulaire d'article ; éditeur `components/settings/UnitsEditor` sur la
 page Configuration.
 
 ### Reprise BauBit (phase 7)

@@ -7,6 +7,7 @@ import type { DocumentActions, PositionPayload } from '@/hooks/useDocuments'
 import type { DocumentPosition } from '@/types'
 import { Icon } from '@/components/icons'
 import UnitSelect from '@/components/shared/UnitSelect'
+import { InsertAboveButton } from '@/components/documents/InsertLineRow'
 
 interface Draft {
   code: string
@@ -61,6 +62,8 @@ interface PositionRowProps {
   hidePrices?: boolean
   /** Travaux exécutés : affiche la quantité du devis à côté de la quantité exécutée. */
   showQuoted?: boolean
+  /** « + » au-dessus de la ligne : insérer un titre de chapitre, un sous-titre ou un texte à cet endroit. */
+  onInsertAbove?: () => void
 }
 
 /**
@@ -75,7 +78,7 @@ interface PositionRowProps {
  */
 export default function PositionRow({
   position, printNumber, actions, onSaving, onMove, dragging, dropPlace, onDragStart, onDragEnd, onDragOver, onDrop, onOpenBreakdown,
-  showBreakdown = false, hidePrices = false, showQuoted = false,
+  showBreakdown = false, hidePrices = false, showQuoted = false, onInsertAbove,
 }: PositionRowProps) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(position))
   // Montant en cours de saisie (null = montant calculé quantité × prix).
@@ -205,7 +208,8 @@ export default function PositionRow({
     dropPlace === 'above' ? 'shadow-[inset_0_3px_0_0_#1d3f9c]' : dropPlace === 'below' ? 'shadow-[inset_0_-3px_0_0_#1d3f9c]' : ''
 
   const handle = (
-    <td className="py-1 align-top">
+    <td className="relative py-1 align-top">
+      {onInsertAbove && <InsertAboveButton onClick={onInsertAbove} />}
       <button
         type="button"
         draggable
@@ -306,7 +310,17 @@ export default function PositionRow({
         {isItem && (
           <>
             <td className="py-0.5">
-              <UnitSelect value={draft.unit} onChange={(e) => change({ unit: e.target.value })} className={`${CELL} cursor-pointer appearance-none px-1`} aria-label="Unité" />
+              <UnitSelect
+                value={draft.unit}
+                onChange={(unit) => change({ unit })}
+                onEnter={() => {
+                  const field = document.querySelector<HTMLInputElement>(`[data-qty="${position.id}"]`)
+                  field?.focus()
+                  field?.select()
+                }}
+                className={CELL}
+                aria-label="Unité"
+              />
             </td>
             {showQuoted && (
               <td className="px-1 py-1 text-right tabular-nums text-gray-400" title="Quantité du devis">

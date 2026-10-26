@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Icon } from '@/components/icons'
 import { BB_FIELD } from '@/components/baubit/Form'
 import UnitSelect from '@/components/shared/UnitSelect'
@@ -7,12 +7,16 @@ import { useCatalogChapters } from '@/hooks/useCatalog'
 import { useArticlePicker } from '@/hooks/useDocuments'
 import type { PickerArticle } from '@/hooks/useDocuments'
 import { endCatalogDrag, startCatalogDrag } from '@/lib/catalogDrag'
+import type { CatalogItem } from '@/lib/catalogDrag'
 import { PRICE_PATTERN, nullable, toNumber, useResourceItem, useSaveResource } from '@/lib/crud'
 import { fmtAmount } from '@/lib/format'
 import { findStepForArticle, findStepForChapter } from '@/lib/quoteInsert'
 import { searchIndex } from '@/lib/searchIndex'
 import { toast } from '@/lib/toast'
 import type { CatalogArticle, CatalogChapter, DocumentDetail } from '@/types'
+
+/** Clé d'un élément du catalogue dans la sélection : « a12 » (article) ou « c3 » (chapitre). */
+const keyOf = (item: CatalogItem) => (item.kind === 'article' ? `a${item.article.id}` : `c${item.chapter.id}`)
 
 interface CatalogPanelProps {
   /** Devis ouvert (marque ✓ les étapes présentes) ; sans devis, le catalogue se consulte seulement. */
@@ -24,6 +28,8 @@ interface CatalogPanelProps {
  * On ajoute au devis **uniquement en glissant** un article ou un chapitre vers la feuille (pas de
  * clic, pour éviter les ajouts involontaires) : sur une ligne pour choisir l'endroit, ailleurs pour
  * l'étape de son chapitre, créée au besoin (titre seul). Le crayon modifie l'article dans le catalogue.
+ * Sélection multiple comme dans l'explorateur : clic sur un article, Ctrl + clic pour ajouter ou retirer
+ * (articles et chapitres), Maj + clic pour une plage ; glisser un élément sélectionné emporte toute la sélection.
  */
 export default function CatalogPanel({ document: doc }: CatalogPanelProps) {
   const chapters = useCatalogChapters()
@@ -31,6 +37,8 @@ export default function CatalogPanel({ document: doc }: CatalogPanelProps) {
   const [term, setTerm] = useState('')
   const [expanded, setExpanded] = useState<Set<number>>(() => new Set())
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [selected, setSelected] = useState<string[]>([])
+  const [anchor, setAnchor] = useState<string | null>(null)
   const text = term.trim()
   const list = useMemo(() => chapters.data ?? [], [chapters.data])
 
@@ -77,30 +85,102 @@ export default function CatalogPanel({ document: doc }: CatalogPanelProps) {
     })
   }
 
-  function dragArticle(event: React.DragEvent, article: PickerArticle) {
-    event.dataTransfer.effectAllowed = 'copy'
-    event.dataTransfer.setData('text/plain', article.description)
-    startCatalogDrag({ kind: 'article', article })
+  // Ordre d'affichage des éléments (pour Maj + clic) et éléments par clé : remplis pendant le rendu.
+  const order: string[] = []
+  const byKey = new Map<string, CatalogItem>()
+  function track(item: CatalogItem): string {
+    const key = keyOf(item)
+    order.push(key)
+    byKey.set(key, item)
+    return key
   }
 
-  function dragChapter(event: React.DragEvent, chapter: CatalogChapter) {
+  // Échap vide la sélection.
+  useEffect(() => {
+    if (selected.length === 0) {
+      return
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelected([])
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selected.length])
+
+  /**
+   * Clic : Ctrl (ou Cmd) ajoute / retire, Maj sélectionne la plage depuis le dernier clic. Un clic simple
+   * sélectionne l'article seul (`only`) ; sur un chapitre il déplie (`none` : renvoie false).
+   */
+  function select(event: React.MouseEvent, key: string, plain: 'only' | 'none'): boolean {
+    if (event.shiftKey && anchor && order.includes(anchor)) {
+      const [from, to] = [order.indexOf(anchor), order.indexOf(key)].sort((a, b) => a - b)
+      const range = order.slice(from, to + 1)
+      setSelected((current) => (event.ctrlKey || event.metaKey ? [...new Set([...current, ...range])] : range))
+      return true
+    }
+    if (event.ctrlKey || event.metaKey) {
+      setSelected((current) => (current.includes(key) ? current.filter((item) => item !== key) : [...current, key]))
+      setAnchor(key)
+      return true
+    }
+    if (plain === 'only') {
+      setSelected((current) => (current.length === 1 && current[0] === key ? [] : [key]))
+      setAnchor(key)
+      return true
+    }
+    return false
+  }
+
+  /** Glisser : un élément sélectionné emporte toute la sélection, dans l'ordre du catalogue. */
+  function drag(event: React.DragEvent, item: CatalogItem, label: string) {
     event.dataTransfer.effectAllowed = 'copy'
-    event.dataTransfer.setData('text/plain', chapter.label)
-    startCatalogDrag({ kind: 'chapter', chapter })
+    const many = selected.includes(keyOf(item)) && selected.length > 1
+    if (!many) {
+      event.dataTransfer.setData('text/plain', label)
+      startCatalogDrag(item)
+      return
+    }
+    const items = order.filter((entry) => selected.includes(entry)).flatMap((entry) => byKey.get(entry) ?? [])
+    event.dataTransfer.setData('text/plain', `${items.length} éléments du catalogue`)
+    // Image de glissement : une pastille « 3 éléments » au lieu de la seule ligne saisie.
+    const badge = window.document.createElement('div')
+    badge.textContent = `${items.length} éléments`
+    badge.style.cssText = 'position:fixed;top:-100px;left:0;padding:4px 10px;border-radius:6px;background:#1d3f9c;color:#fff;font:600 12px system-ui,sans-serif'
+    window.document.body.appendChild(badge)
+    event.dataTransfer.setDragImage(badge, 12, 12)
+    window.setTimeout(() => badge.remove(), 0)
+    startCatalogDrag({ kind: 'many', items })
+  }
+
+  /** Fin du glissement : une sélection déposée sur le devis est vidée. */
+  function dragEnd(event: React.DragEvent) {
+    endCatalogDrag()
+    if (event.dataTransfer.dropEffect !== 'none') {
+      setSelected([])
+    }
   }
 
   const inQuote = (article: PickerArticle) => (doc ? findStepForArticle(doc, list, article) : null)
 
   function renderArticle(article: PickerArticle, withChapter: boolean) {
     const step = inQuote(article)
+    const item: CatalogItem = { kind: 'article', article }
+    const key = track(item)
+    const isSelected = selected.includes(key)
     return (
       <div
         key={article.id}
         draggable
-        onDragStart={(event) => dragArticle(event, article)}
-        onDragEnd={endCatalogDrag}
-        title={`${article.description}\n\nGlisser sur le devis : sur une ligne pour choisir l’endroit, ailleurs ${step ? `dans l’étape « ${step.label} »` : 'dans son étape, qui sera créée'}.`}
-        className="group flex cursor-grab items-center gap-1.5 rounded-md py-0.5 pl-1 pr-0.5 text-[12px] hover:bg-primary-50 active:cursor-grabbing"
+        onDragStart={(event) => drag(event, item, article.description)}
+        onDragEnd={dragEnd}
+        onClick={(event) => select(event, key, 'only')}
+        aria-selected={isSelected}
+        title={`${article.description}\n\nGlisser sur le devis : sur une ligne pour choisir l’endroit, ailleurs ${step ? `dans l’étape « ${step.label} »` : 'dans son étape, qui sera créée'}.\nCtrl + clic ou Maj + clic : en sélectionner plusieurs, puis les glisser ensemble.`}
+        className={`group flex cursor-grab items-center gap-1.5 rounded-md py-0.5 pl-1 pr-0.5 text-[12px] active:cursor-grabbing ${
+          isSelected ? 'bg-primary-100 ring-1 ring-inset ring-primary-300' : 'hover:bg-primary-50'
+        }`}
       >
         <span className="w-9 shrink-0 truncate text-[11px] text-gray-400">{article.code.split('.').slice(-2).join('.')}</span>
         <span className="min-w-0 flex-1 truncate text-gray-800">
@@ -110,7 +190,10 @@ export default function CatalogPanel({ document: doc }: CatalogPanelProps) {
         <span className="shrink-0 tabular-nums text-gray-500">{article.sale !== null ? fmtAmount(article.sale) : ''}</span>
         <button
           type="button"
-          onClick={() => setEditingId(article.id)}
+          onClick={(event) => {
+            event.stopPropagation()
+            setEditingId(article.id)
+          }}
           title="Modifier l'article dans le catalogue (fenêtre ; les lignes déjà dans le devis ne changent pas)"
           className="invisible flex h-5 w-5 shrink-0 items-center justify-center rounded text-gray-500 hover:bg-gray-200 hover:text-gray-800 group-hover:visible"
         >
@@ -125,15 +208,25 @@ export default function CatalogPanel({ document: doc }: CatalogPanelProps) {
     const articles = byChapter.get(chapter.id) ?? []
     const open = expanded.has(chapter.id)
     const step = doc ? findStepForChapter(doc, chapter.id) : null
+    const item: CatalogItem = { kind: 'chapter', chapter }
+    const key = track(item)
+    const isSelected = selected.includes(key)
     return (
       <div key={chapter.id}>
         <div
           draggable
-          onDragStart={(event) => dragChapter(event, chapter)}
-          onDragEnd={endCatalogDrag}
-          onClick={() => toggle(chapter.id)}
-          title={step ? 'Étape déjà dans le devis (clic : déplier les articles).' : 'Clic : déplier les articles. Glisser sur le devis : ajoute l’étape (titre seul).'}
-          className="group flex h-7 cursor-pointer items-center gap-1 rounded-md pr-0.5 text-[13px] text-gray-700 hover:bg-gray-100"
+          onDragStart={(event) => drag(event, item, chapter.label)}
+          onDragEnd={dragEnd}
+          onClick={(event) => {
+            if (!select(event, key, 'none')) {
+              toggle(chapter.id)
+            }
+          }}
+          aria-selected={isSelected}
+          title={`${step ? 'Étape déjà dans le devis (clic : déplier les articles).' : 'Clic : déplier les articles. Glisser sur le devis : ajoute l’étape (titre seul).'}\nCtrl + clic : l’ajouter à la sélection.`}
+          className={`group flex h-7 cursor-pointer items-center gap-1 rounded-md pr-0.5 text-[13px] text-gray-700 ${
+            isSelected ? 'bg-primary-100 ring-1 ring-inset ring-primary-300' : 'hover:bg-gray-100'
+          }`}
           style={{ paddingLeft: 2 + depth * 14 }}
         >
           <Icon name="chevron" className={`h-3 w-3 shrink-0 text-gray-400 transition ${open ? 'rotate-90' : ''}`} />
@@ -162,7 +255,10 @@ export default function CatalogPanel({ document: doc }: CatalogPanelProps) {
         <Icon name="search" className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         <input
           value={term}
-          onChange={(event) => setTerm(event.target.value)}
+          onChange={(event) => {
+            setTerm(event.target.value)
+            setSelected([])
+          }}
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
               setTerm('')
@@ -172,7 +268,20 @@ export default function CatalogPanel({ document: doc }: CatalogPanelProps) {
           className="h-8 w-full rounded-md border border-gray-300 pl-8 pr-2 text-[13px] outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
         />
       </div>
-      <p className="mb-2 shrink-0 text-[12px] text-gray-400">{doc ? 'Glissez un article ou un chapitre sur le devis pour l’ajouter.' : 'Ouvrez un devis pour y glisser des articles.'}</p>
+      {selected.length > 1 ? (
+        <div className="mb-2 flex shrink-0 items-center justify-between gap-2 rounded-md bg-primary-50 px-2 py-1 text-[12px] text-primary-800">
+          <span>
+            <b>{selected.length}</b> éléments sélectionnés : glissez-en un pour les ajouter ensemble.
+          </span>
+          <button type="button" onClick={() => setSelected([])} className="shrink-0 text-primary-600 hover:underline" title="Vider la sélection (Échap)">
+            Annuler
+          </button>
+        </div>
+      ) : (
+        <p className="mb-2 shrink-0 text-[12px] text-gray-400">
+          {doc ? 'Glissez un article ou un chapitre sur le devis pour l’ajouter. Ctrl ou Maj + clic : plusieurs à la fois.' : 'Ouvrez un devis pour y glisser des articles.'}
+        </p>
+      )}
       {editingId !== null && <ArticleQuickEdit key={editingId} id={editingId} chapters={list} onClose={() => setEditingId(null)} />}
       <div className="min-h-0 flex-1 select-none">
         {text.length >= 2 ? (
@@ -289,7 +398,7 @@ function ArticleQuickEdit({ id, chapters, onClose }: ArticleQuickEditProps) {
               </label>
               <label className={label}>
                 Unité
-                <UnitSelect value={current.unit} onChange={(e) => setDraft({ ...current, unit: e.target.value })} className={`${BB_FIELD} w-full font-normal`} />
+                <UnitSelect value={current.unit} onChange={(unit) => setDraft({ ...current, unit })} className={`${BB_FIELD} w-full font-normal`} />
               </label>
               <label className={label}>
                 Prix d'achat

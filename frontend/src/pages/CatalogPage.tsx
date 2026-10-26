@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { isAxiosError } from 'axios'
@@ -329,6 +329,7 @@ function ArticleForm({ article, isNew, chapters, defaultChapterId, disabled, onS
     },
   })
   const { register, formState } = form
+  const unitValue = useWatch({ control: form.control, name: 'unit' })
   const errors = formState.errors
   const firstError = Object.values(errors)[0]?.message
 
@@ -378,7 +379,7 @@ function ArticleForm({ article, isNew, chapters, defaultChapterId, disabled, onS
           </BbSelect>
         </Field>
         <Field label="Unité" labelWidth={100}>
-          <UnitSelect extra={article?.unit} className={`${BB_FIELD} w-32`} {...register('unit')} />
+          <UnitSelect value={unitValue ?? ''} onChange={(unit) => form.setValue('unit', unit, { shouldDirty: true })} className={`${BB_FIELD} w-32`} aria-label="Unité" />
           <BbCheckbox label="Titre de chapitre" className="ml-4" {...register('is_title')} />
         </Field>
 

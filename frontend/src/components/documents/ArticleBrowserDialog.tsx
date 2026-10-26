@@ -254,7 +254,7 @@ function NewArticleForm({ chapters, chapterId, description: initial, onCancel, o
         />
       </div>
       <div className="mt-2 flex items-center gap-2">
-        <UnitSelect value={unit} onChange={(e) => setUnit(e.target.value)} className={`${BB_FIELD} w-28`} aria-label="Unité" />
+        <UnitSelect value={unit} onChange={setUnit} className={`${BB_FIELD} w-28`} aria-label="Unité" />
         <input value={purchase} onChange={(e) => setPurchase(e.target.value)} placeholder="Prix d'achat" inputMode="decimal" className={`${BB_FIELD} w-28 text-right ${PRICE_PATTERN.test(purchase) ? '' : 'border-red-400'}`} aria-label="Prix d'achat" />
         <input value={sale} onChange={(e) => setSale(e.target.value)} placeholder="Prix de vente" inputMode="decimal" className={`${BB_FIELD} w-28 text-right ${PRICE_PATTERN.test(sale) ? '' : 'border-red-400'}`} aria-label="Prix de vente" />
         <span className="ml-auto flex gap-2">
