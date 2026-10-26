@@ -189,7 +189,9 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   jamais écrasés une fois présents). Conventions du métreur : main-d'œuvre vendue **750.- la personne-jour, 90.-
   l'heure** (lignes MO à prix de vente, majoration 0), prix fournisseurs **+30 %**. Dans la fenêtre du sous-détail,
   `TemplatePicker` charge un modèle (lignes remplacées, DIM saisie conservée, `POST …/used` compte l'usage) ;
-  « Enregistrer comme sous-détail type » crée un modèle depuis une position. `catalog_article_id` est prévu pour
+  « Enregistrer comme sous-détail type » et le bouton **+** à côté du chargement ouvrent `NewTemplateDialog` (26.10.2026) :
+  ouvrage, groupe, unité, reprise ou non des lignes saisies ; un modèle créé vide propose « Compléter les lignes »
+  (page Sous-détails types dans un nouvel onglet). `catalog_article_id` est prévu pour
   rattacher un modèle à un article à la reprise du catalogue BauBit (chargement automatique à l'insertion).
   **Lignes rattachées aux éléments de coûts** (26.10.2026) : une ligne de sous-détail (modèle ou position) avec
   `price_element_id` prend **le prix de l'élément** : `App\Support\BreakdownElements` (coût = prix net, sinon

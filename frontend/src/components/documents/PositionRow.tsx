@@ -429,17 +429,21 @@ export default function PositionRow({
               {(position.costs ?? []).map((cost, index) => {
                 const counted = computedQuantity(cost, breakdownQuantity)
                 return (
-                  <span key={cost.id} className="whitespace-nowrap">
+                  // Le libellé passe à la ligne comme un texte ; seul le calcul (quantité × prix = vente) reste insécable.
+                  <span key={cost.id}>
                     {index > 0 && <span className="text-red-300"> · </span>}
-                    <span className="font-semibold">{costFamily(cost.family).code}</span> {cost.label} {qty(counted)}
-                    {cost.unit ? ` ${cost.unit}` : ''}
-                    {!hidePrices && (
-                      <>
-                        {' '}
-                        × {fmtAmount(cost.unit_cost)}
-                        {cost.markup_percent ? ` +${qty(cost.markup_percent)}%` : ''} = {fmtAmount(cost.sale)}
-                      </>
-                    )}
+                    <span className="font-semibold">{costFamily(cost.family).code}</span> {cost.label}{' '}
+                    <span className="whitespace-nowrap">
+                      {qty(counted)}
+                      {cost.unit ? ` ${cost.unit}` : ''}
+                      {!hidePrices && (
+                        <>
+                          {' '}
+                          × {fmtAmount(cost.unit_cost)}
+                          {cost.markup_percent ? ` +${qty(cost.markup_percent)}%` : ''} = {fmtAmount(cost.sale)}
+                        </>
+                      )}
+                    </span>
                   </span>
                 )
               })}

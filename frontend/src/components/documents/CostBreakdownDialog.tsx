@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Modal from '@/components/ui/Modal'
 import BreakdownLinesTable from '@/components/documents/BreakdownLinesTable'
+import NewTemplateDialog from '@/components/documents/NewTemplateDialog'
 import TemplatePicker from '@/components/documents/TemplatePicker'
 import { fmtAmount } from '@/lib/format'
 import { toast } from '@/lib/toast'
@@ -8,7 +9,7 @@ import { round2 } from '@/lib/costFamilies'
 import { evaluateLines, hasLabel, insertLine, lineFromData, toLinePayload } from '@/lib/breakdown'
 import type { LineDraft } from '@/lib/breakdown'
 import type { DocumentActions } from '@/hooks/useDocuments'
-import { fetchTemplateForUse, useSaveBreakdownTemplate } from '@/hooks/useBreakdownTemplates'
+import { fetchTemplateForUse } from '@/hooks/useBreakdownTemplates'
 import type { DocumentPosition } from '@/types'
 import { Icon } from '@/components/icons'
 
@@ -58,7 +59,8 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
   const saved = useRef(serialize(fromPosition(position)).serialized)
   const timer = useRef<number | undefined>(undefined)
   const [status, setStatus] = useState<'idle' | 'saving' | 'error'>('idle')
-  const saveTemplate = useSaveBreakdownTemplate()
+  // Fenêtre « Nouveau sous-détail type » (bouton + à côté du chargement, ou lien en bas).
+  const [creating, setCreating] = useState(false)
 
   // Quantité de référence = quantité de la ligne (une ligne sans quantité compte pour 1).
   const quantity = position.quantity !== null && position.quantity > 0 ? position.quantity : 1
@@ -98,31 +100,6 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
     } catch {
       toast("Le modèle n'a pas pu être chargé.", 'error')
     }
-  }
-
-  /** Enregistre le sous-détail courant comme modèle réutilisable. */
-  function saveAsTemplate() {
-    const name = window.prompt('Nom du sous-détail type (ouvrage) :', position.description.split('\n')[0].slice(0, 80))
-    if (!name?.trim()) {
-      return
-    }
-    const current = latest.current
-    saveTemplate.mutate(
-      {
-        id: null,
-        payload: {
-          name: name.trim(),
-          dimension: position.quantity,
-          dimension_unit: position.unit,
-          price_per_dimension: true,
-          lines: current.lines.filter(hasLabel).map((line) => ({ ...toLinePayload(line), id: undefined })),
-        },
-      },
-      {
-        onSuccess: () => toast('Sous-détail type enregistré.', 'success'),
-        onError: () => toast("Le modèle n'a pas pu être enregistré.", 'error'),
-      },
-    )
   }
 
   // Les enregistrements se suivent dans l'ordre : une saisie pendant une sauvegarde attend qu'elle finisse.
@@ -211,8 +188,16 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
             {position.quantity === null && <span className="text-gray-400"> (compte pour 1 tant qu'elle n'est pas saisie)</span>}
           </span>
           <span className="text-[12px] text-gray-400">Le sous-détail chiffre la ligne entière ; les lignes « × Qté » suivent sa quantité.</span>
-          <span className="ml-auto">
+          <span className="ml-auto flex items-center gap-1.5">
             <TemplatePicker onPick={(template) => void loadTemplate(template.id)} />
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              title="Nouveau sous-détail type : avec les lignes saisies ici, ou vide à compléter"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-500 hover:border-primary-400 hover:text-primary-700"
+            >
+              <Icon name="plus" className="h-4 w-4" />
+            </button>
           </span>
         </div>
 
@@ -251,7 +236,7 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
           <span className="flex items-center gap-3 text-[12px] text-gray-400">
             {status === 'saving' ? 'Enregistrement…' : status === 'error' ? 'Non enregistré' : 'Enregistré automatiquement, prix reporté dans la ligne'}
             {hasLines && (
-              <button type="button" onClick={saveAsTemplate} disabled={saveTemplate.isPending} className="text-gray-500 hover:text-primary-700 hover:underline">
+              <button type="button" onClick={() => setCreating(true)} className="text-gray-500 hover:text-primary-700 hover:underline">
                 Enregistrer comme sous-détail type
               </button>
             )}
@@ -260,6 +245,16 @@ export default function CostBreakdownDialog({ position, actions, onSaving, onPri
             Fermer
           </button>
         </div>
+        {creating && (
+          <NewTemplateDialog
+            open
+            onClose={() => setCreating(false)}
+            defaultName={position.description.split('\n')[0].slice(0, 80)}
+            defaultUnit={position.unit ?? ''}
+            defaultDimension={position.quantity}
+            lines={state.lines}
+          />
+        )}
       </div>
     </Modal>
   )
