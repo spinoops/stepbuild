@@ -172,27 +172,45 @@ async function token(email) {
   await go('/documents?id=1', 2500)
   await shot('12-devis-detail')
 
-  // 13 — devis : saisie rapide avec faute de frappe
-  await page.evaluate(() => {
-    const body = [...document.querySelectorAll('main section tbody')].find((tb) => tb.querySelector('tr').innerText.includes('CARRELAGE'))
-    body.querySelector('[data-picker]').scrollIntoView({ block: 'center' })
+  // 13 — devis : ligne d'insertion (+ au-dessus d'une ligne : titre de chapitre, sous-titre, texte)
+  const insertY = await page.evaluate(() => {
+    const body = [...document.querySelectorAll('main tbody[id^="step-"]')].find((tb) => tb.querySelector('tr').innerText.includes('CARRELAGE'))
+    const rows = [...body.querySelectorAll('tr')].filter((tr) => tr.querySelector('textarea[aria-label="Description"]'))
+    rows[1].scrollIntoView({ block: 'center' })
+    rows[1].querySelector('button[aria-label^="Insérer ici"]').click()
+    return rows[1].getBoundingClientRect().top
   })
-  await wait(400)
-  const pickerStep = await page.evaluate(() => {
-    const body = [...document.querySelectorAll('main section tbody')].find((tb) => tb.querySelector('tr').innerText.includes('CARRELAGE'))
-    return body.querySelector('[data-picker]').getAttribute('data-picker')
-  })
-  await page.click(`[data-picker="${pickerStep}"]`)
-  await page.keyboard.type('bagete angle', { delay: 40 })
   await wait(500)
-  const box = await page.evaluate((id) => {
-    const rect = document.querySelector(`[data-picker="${id}"]`).getBoundingClientRect()
-    return { y: rect.top }
-  }, pickerStep)
-  await shot('13-devis-saisie-rapide', { x: 320, y: Math.max(150, box.y - 250), width: 1120, height: 400 })
+  await page.keyboard.type('Salle de bain de l’étage', { delay: 30 })
+  await wait(300)
+  await shot('13-devis-insertion', { x: 320, y: Math.max(150, insertY - 160), width: 1120, height: 330 })
   await page.keyboard.press('Escape')
-  await setValue(`[data-picker="${pickerStep}"]`, '')
-  await page.evaluate((id) => document.querySelector(`[data-picker="${id}"]`).blur(), pickerStep)
+  await wait(300)
+
+  // 41 — devis : choix de l'unité en tapant ses premières lettres
+  await page.evaluate(() => {
+    const field = [...document.querySelectorAll('main input[aria-label="Unité"]')][1]
+    field.scrollIntoView({ block: 'center' })
+    field.focus()
+  })
+  await page.keyboard.type('m', { delay: 40 })
+  await wait(400)
+  const unitY = await page.evaluate(() => [...document.querySelectorAll('main input[aria-label="Unité"]')][1].getBoundingClientRect().top)
+  await shot('41-devis-unite', { x: 320, y: Math.max(150, unitY - 60), width: 1120, height: 330 })
+  await page.keyboard.press('Escape')
+  await page.evaluate(() => document.activeElement?.blur())
+  await wait(300)
+
+  // 42 — catalogue : le + d'un chapitre crée un article
+  await page.evaluate(() => {
+    const row = [...document.querySelectorAll('aside [draggable="true"]')].find((el) => el.innerText.includes('ARCHITECTURE'))
+    row.querySelector('button[title^="Ajouter un article"]').click()
+  })
+  await wait(600)
+  await page.keyboard.type('Relevé et plans de l’existant', { delay: 20 })
+  await shot('42-catalogue-ajout', { x: 340, y: 110, width: 760, height: 560 })
+  await page.keyboard.press('Escape')
+  await wait(300)
 
   // 14 — devis : panneau de gauche, catalogue en haut (chapitre déplié), étapes en dessous
   await go('/documents?id=1', 2500)
@@ -247,10 +265,10 @@ async function token(email) {
 
   // 21 — devis : sous-détail de prix d'une position (fenêtre)
   await page.evaluate(() => {
-    const row = [...document.querySelectorAll('main tr')].find((tr) => tr.innerText.includes('Ouvrier qualifié'))
+    // La ligne qui a déjà un sous-détail (icône calculatrice bleue) : sa description est dans un champ, pas dans le texte.
+    const row = [...document.querySelectorAll('main tr')].find((tr) => tr.querySelector('button[title="Sous-détail de prix (coûts par famille)"]'))
     row?.scrollIntoView({ block: 'center' })
-    const button = row?.querySelector('button[title*="ous-détail"]') || document.querySelector('button[title*="ous-détail"]')
-    button?.click()
+    row?.querySelector('button[title="Sous-détail de prix (coûts par famille)"]')?.click()
   })
   await wait(1200)
   await shot('21-devis-sous-detail')

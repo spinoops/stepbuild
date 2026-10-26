@@ -2,9 +2,10 @@
 """
 Génère le PDF des nouveautés livrées entre deux dates (document court pour le client).
 
-    python build_changelog.py   -> docs/Nouveautés - StepBuild - 16 au 22 octobre 2026.pdf
+    python build_changelog.py   -> docs/Nouveautés - StepBuild - 23 au 26 octobre 2026.pdf
 
 Reprend la charte du mode d'emploi (build_manual.py). Police Helvetica : caractères WinAnsi seulement.
+À chaque livraison : mettre à jour PERIOD, OUTPUT et la liste des points.
 """
 import os
 from reportlab.lib import colors
@@ -12,13 +13,11 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate, Paragraph, Spacer
 
-from build_manual import (
-    ANTHRACITE, BLUE, BODY, CONTENT_W, GREY, H1, H2, LEAD, MARGIN, PAGE_H, PAGE_W, RED, bullets, grid, note, p, tip,
-)
+from build_manual import ANTHRACITE, BODY, CONTENT_W, GREY, H1, H2, LEAD, MARGIN, PAGE_H, PAGE_W, RED, bullets, note, p, tip
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PERIOD = 'du 16 au 22 octobre 2026'
-OUTPUT = os.path.join(HERE, '..', 'Nouveautés - StepBuild - 16 au 22 octobre 2026.pdf')
+PERIOD = 'du 23 au 26 octobre 2026'
+OUTPUT = os.path.join(HERE, '..', 'Nouveautés - StepBuild - 23 au 26 octobre 2026.pdf')
 
 
 def header(canvas, doc):
@@ -41,100 +40,60 @@ def header(canvas, doc):
 
 
 def story():
-    s = [
+    return [
         Spacer(1, 6),
         Paragraph(f'Nouveautés livrées {PERIOD}', H1),
-        p("Ce document résume ce qui a changé dans StepBuild depuis vendredi 16 octobre après-midi, à la suite de vos "
-          "retours. Tout est en ligne. Le mode d'emploi a été mis à jour en conséquence (version 0.4).", LEAD),
+        p("Ce document résume ce qui a changé dans StepBuild depuis la livraison du 22 octobre, à la suite de vos "
+          "retours. Tout est en ligne. Le mode d'emploi a été mis à jour en conséquence (version 0.5).", LEAD),
 
-        Paragraph('1. Projets', H2),
+        Paragraph('1. Le sous-détail de prix et les éléments de coûts', H2),
         bullets([
-            "<b>Nouveau projet</b> : on saisit d'abord le code postal et la localité du chantier, en grand. La localité "
-            "est proposée si le carnet d'adresses connaît le NPA, et le numéro de projet (2854-003) apparaît aussitôt. "
-            "« Continuer » ouvre la fiche complète.",
-            "<b>Onglet Client</b> : le client et ses coordonnées ont quitté l'onglet Général pour un onglet à part, "
-            "avec un lien vers sa fiche du carnet.",
-            "<b>Plus de liste en bas de la page</b> : la fiche occupe toute la page. Le projet se choisit dans la barre "
-            "du haut.",
+            "<b>Les ouvrages du métreur sont rattachés aux éléments de coûts</b> : chaque ligne d'un sous-détail type "
+            "peut pointer sur un élément de la liste de prix (pastille avec son numéro) et prend alors <b>ses prix, à "
+            "jour</b>. 170 lignes des 110 ouvrages ont été rattachées d'office (main-d'œuvre, machines, matériaux sans "
+            "ambiguïté) ; les autres se rattachent d'un clic sur l'étiquette au survol de la ligne.",
+            "Chaque ligne a maintenant un <b>prix d'achat</b> et un <b>prix de vente</b> unitaires, et la <b>marge</b> en "
+            "pour cent ; la vente de la ligne utilise le prix de vente. Saisir l'un des trois recalcule les deux autres.",
+            "La main-d'œuvre des ouvrages est comptée en heures d'Ouvrier qualifié au tarif de la liste de prix "
+            "(52.78 d'achat, 90.- de vente), soit 810.- la journée de 9 h : à valider avec le métreur (le Word comptait 750.-).",
+            "<b>Éléments de coûts</b> : la liste et la fiche ne montrent plus que <b>Prix d'achat</b> et <b>Prix de vente</b>.",
         ]),
 
-        Paragraph('2. Barre Projet / Document', H2),
+        Paragraph('2. La fenêtre du sous-détail', H2),
         bullets([
-            "Les deux champs ouvrent désormais une <b>fenêtre de choix</b> : recherche instantanée, filtres par statut "
-            "(et par type pour les documents), liste colorée. Un clic sur une ligne la choisit et referme la fenêtre.",
+            "Elle occupe toute la fenêtre : le calcul de la ligne à gauche, la <b>bibliothèque des ouvrages</b> à droite "
+            "(recherche, rangement par corps de métier, un clic charge l'ouvrage, l'ouvrage chargé est surligné).",
+            "<b>Création directe</b> d'un ouvrage : choisissez le groupe, donnez un nom, Créer : les lignes saisies "
+            "deviennent un sous-détail type. Au survol d'un ouvrage : mettre à jour ses lignes, ou le supprimer.",
         ]),
 
-        Paragraph('3. Devis : panneau de gauche et saisie', H2),
+        Paragraph('3. Le devis', H2),
         bullets([
-            "Le panneau de gauche a deux volets : le <b>Catalogue de prix</b> en haut, <b>Étapes et devis</b> en dessous.",
-            "Les articles et les chapitres s'ajoutent <b>uniquement en glissant</b> vers la feuille, jamais au clic.",
-            "Un article glissé va <b>toujours dans l'étape de son chapitre</b>, créée au passage si elle manque. Déposé "
-            "sur une ligne de cette étape, il prend sa place. Une fois dans le devis, la ligne se déplace librement.",
-            "Un article du catalogue se <b>modifie dans une fenêtre</b> depuis le panneau (crayon). Les lignes déjà dans "
-            "les devis ne changent pas.",
-            "Les <b>étapes</b> se déplacent, se renomment (double-clic) et se suppriment directement sur la feuille, "
-            "par leur poignée et les icônes au survol du titre.",
-            "<b>Saut de page</b> : un bouton à droite du champ d'ajout insère un saut de page, déplaçable, respecté à l'impression.",
+            "<b>Unités</b> : par ordre alphabétique, avec recherche en tapant les premières lettres (m2, pce, jo…) ; "
+            "Entrée prend l'unité et passe à la quantité.",
+            "<b>Catalogue</b> : sélection de plusieurs articles ou chapitres (Ctrl + clic, Maj + clic) et glisser "
+            "ensemble ; <b>+</b> au survol d'un chapitre pour créer un article (description, unité, prix) sans quitter le devis.",
+            "Le champ d'ajout d'article sous chaque étape a disparu : les articles arrivent du catalogue, en glissant. "
+            "Les titres, sous-titres et textes s'insèrent par le <b>+</b> qui apparaît au survol d'une ligne.",
+            "<b>Titre de chapitre entre les lignes</b> : un nouveau chapitre numéroté, les lignes en dessous passent dessous.",
+            "<b>Totaux par étape</b> : le montant de chaque étape sous ses lignes, à l'écran et dans le PDF (option, cochée d'office).",
+            "<b>Options</b> : prix et montant entre parenthèses ; la récapitulation et la page de garde rappellent le "
+            "total des options, non compris dans le devis.",
+            "Le volet « Étapes et devis » du panneau de gauche est replié par défaut ; les sous-détails affichés en "
+            "rouge passent à la ligne au lieu de déborder.",
         ]),
 
-        Paragraph('4. Devis : sous-détail de prix', H2),
+        Paragraph('4. Rapports journaliers', H2),
         bullets([
-            "Le sous-détail est toujours <b>le calcul complet de la ligne</b> : son total divisé par la quantité donne le "
-            "prix unitaire (1 000.- pour 10 m² = 100.- le m²), et le prix suit si la quantité change.",
-            "Le <b>prix unitaire</b> et le <b>montant</b> de la ligne restent corrigeables à la main : un total saisi "
-            "donne le prix unitaire. Le sous-détail reste affiché en rouge, avec la mention « corrigé à … ».",
-            "Deux options en haut du devis : <b>Afficher les sous-détails</b> (en rouge, en tout petit, sous chaque "
-            "position) et <b>Masquer les prix</b>. Elles s'appliquent aussi à l'aperçu et au PDF.",
+            "Les statuts s'appellent désormais <b>En cours</b>, <b>Contrôlé</b> et <b>Facturé</b>.",
         ]),
 
-        Paragraph('5. Devis : destinataire et nouveaux documents', H2),
-        bullets([
-            "Destinataire : champ <b>Entreprise</b> et ligne <b>Complément</b> avec la mention « À l'attention de », "
-            "« p.a. », « c/o » ou « Case postale ». L'adresse s'imprime dans l'ordre de La Poste, avec un aperçu dans l'en-tête.",
-            "<b>Demande d'acompte</b> (AC.1) : pourcentage du net HT ou montant fixe, PDF avec rappel du devis, des "
-            "acomptes déjà demandés et du montant à verser.",
-            "<b>Travaux exécutés</b> (TE.1) : les positions du devis avec la quantité du devis en gris et la quantité "
-            "exécutée à corriger ; comparaison devis / exécuté par étape, avec le pourcentage, à l'écran et dans le PDF.",
-        ]),
-
-        Paragraph('6. Rapport de régie (nouvel onglet du menu)', H2),
-        bullets([
-            "Pour le projet courant, chaque <b>étape du devis</b> est mise en face des <b>rapports journaliers</b> : "
-            "devis vente, prix de revient, heures prévues et réalisées, coût réalisé, écart, part du budget consommée, "
-            "régie et client. <b>Vert</b> dans le budget, <b>rouge</b> dépassé.",
-            "Chaque étape se déplie sur ses rapports ; filtres par statut, période et version du devis ; résumé du "
-            "chantier dans le panneau de gauche.",
-            "Une <b>tirette de marge</b> par étape, et une pour tout le chantier, fixe le prix client de toutes les "
-            "lignes à « coût brut + marge » (rapports non facturés).",
-        ]),
-
-        Paragraph('7. Éléments de coûts et listes', H2),
-        bullets([
-            "La <b>majoration</b> se règle d'un clic dans la liste, avec une tirette : le prix régie est recalculé et enregistré.",
-            "Les colonnes « Un. régie » et « Code régie » ont quitté la liste ; le code reste dans la fiche pour les reprises.",
-            "Les colonnes « Prix du » et « Majoration » se trient. Dans toutes les grilles, les <b>colonnes se "
-            "redimensionnent</b> en tirant le bord droit de leur titre.",
-        ]),
-
-        Paragraph('8. Menu et administration', H2),
-        bullets([
-            "Onglet <b>Rapport de régie</b> ajouté à côté d'Exécution ; <b>Services centraux</b> renommé <b>Statistiques</b>.",
-            "<b>Données de base</b> regroupe désormais <b>Clients</b> (le carnet d'adresses, auparavant « Adresses » dans "
-            "Services centraux), Catalogue d'articles, Stocks, Éléments de coûts et Collaborateurs. Les modèles de devis "
-            "et les sous-détails types sont dans Offre facturation.",
-            "L'onglet actif du menu se raccorde à la barre de boutons ; les boutons factices Colonnes, Filtre et "
-            "Imprimer ont disparu des barres d'outils.",
-            "<b>Journal des connexions</b> (Administration) : connexions, échecs, blocages, déconnexions et mots de "
-            "passe réinitialisés, avec adresse IP et navigateur ; conservé un an.",
-        ]),
-
-        note("Le mode d'emploi, version 0.4 du 22 octobre 2026, décrit chacun de ces points avec des captures d'écran."),
+        note("Le mode d'emploi, version 0.5 du 26 octobre 2026, décrit chacun de ces points avec des captures d'écran."),
         tip("Pour tout retour, signalez la page concernée et ce que vous cherchiez à faire : la prochaine livraison "
             "portera sur la facture finale."),
         Spacer(1, 10),
         p('Stéphane Offreda — Step One', BODY),
     ]
-    return s
 
 
 def main():

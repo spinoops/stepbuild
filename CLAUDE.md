@@ -146,8 +146,7 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   du catalogue ici » (toujours `data-picker={step.id}`, cible de fin d'étape). Les sous-titres, textes et titres de
   chapitre s'insèrent par le « + » entre les lignes (`InsertLineRow`). Après insertion, quantité → Entrée → prix →
   Entrée. Pour les éléments de coûts, `components/shared/ElementBrowserDialog` (groupes, recherche serveur) depuis
-  `ElementPicker` (rapports, sous-détail). `DataGrid` a reçu `onActivate` (double-clic). **À refaire dans le mode
-  d'emploi** : chapitre 9 « saisie rapide » et capture 13 (`capture.cjs` clique encore `[data-picker]`).
+  `ElementPicker` (rapports, sous-détail). `DataGrid` a reçu `onActivate` (double-clic). Mode d'emploi 0.5 (26.10.2026) à jour : capture 13 = ligne d'insertion, 41 = unité, 42 = + du chapitre.
   `PositionRow` garde un brouillon local (enregistré à la sortie de ligne ou après 1,5 s) : ne pas resynchroniser
   ses champs depuis le serveur pendant la saisie.
   Réordonnancement par **glisser-déposer** natif (poignée `data-handle`, dépose dans l'étape ou vers une autre étape :

@@ -26,8 +26,8 @@ SHOTS = os.path.join(HERE, 'shots')
 LOGO = os.path.join(HERE, '..', '..', 'frontend', 'public', 'logo-lachat.png')
 OUTPUT = os.path.join(HERE, '..', "Mode d'emploi - StepBuild.pdf")
 
-VERSION = '0.4'
-DATE = '22 octobre 2026'
+VERSION = '0.5'
+DATE = '26 octobre 2026'
 
 BLUE = colors.HexColor('#1d3f9c')
 RED = colors.HexColor('#d32f2f')
@@ -525,8 +525,8 @@ def build_story():
         shot('12-devis-detail.png', "Un devis : le catalogue de prix et les étapes à gauche, le détail chiffré à droite."),
         Paragraph('Le panneau de gauche : catalogue et étapes', H2),
         p("Le panneau de gauche a deux volets dépliables. En haut, le <b>Catalogue de prix</b> : vos chapitres et leurs "
-          "articles, avec une recherche. En dessous, <b>Étapes et devis</b> : les documents du projet et les étapes du "
-          "devis ouvert, pour y naviguer, appliquer un modèle de devis ou ajouter une étape depuis un chapitre."),
+          "articles, avec une recherche. En dessous, <b>Étapes et devis</b>, replié par défaut : les documents du projet "
+          "et les étapes du devis ouvert, pour y naviguer, appliquer un modèle de devis ou ajouter une étape depuis un chapitre."),
         shot('14-devis-etapes.png', 'Le catalogue de prix, chapitre Démontage déplié, et les étapes du devis en dessous.', width=6.6 * cm, max_height=13 * cm),
         Paragraph('Ajouter par glisser-déposer', H2),
         p("Depuis le catalogue, tout se fait en <b>glissant</b> vers la feuille, jamais en cliquant, pour éviter les "
@@ -536,10 +536,16 @@ def build_story():
             "Glissez un <b>article</b> : il va toujours dans l'étape de son chapitre. Si elle n'est pas encore dans le "
             "devis, elle est créée au passage. Déposé sur une ligne de cette étape, il prend sa place ; déposé ailleurs, "
             "il se met en fin d'étape. Un article de terrassement ne peut pas atterrir dans les sous-traitants.",
+            "<b>Plusieurs à la fois</b> : cliquez un article, puis <b>Ctrl + clic</b> pour en ajouter d'autres (ou des "
+            "chapitres) et <b>Maj + clic</b> pour une plage ; glissez l'un d'eux, toute la sélection suit, dans l'ordre du "
+            "catalogue. Échap vide la sélection.",
             "Le crayon, au survol d'un article, ouvre une fenêtre pour le <b>modifier dans le catalogue</b>. Les lignes "
             "déjà dans les devis ne changent pas.",
+            "Le <b>+</b>, au survol d'un chapitre, crée un <b>nouvel article</b> dans ce chapitre : description, code, "
+            "unité, prix d'achat et prix de vente. Il rejoint le catalogue et se glisse ensuite sur le devis.",
             "Une coche sur un chapitre signale que son étape est déjà dans le devis.",
         ]),
+        shot('42-catalogue-ajout.png', "Le + d'un chapitre : un nouvel article, directement depuis le devis.", width=10 * cm),
         Paragraph('Gérer les étapes sur la feuille', H2),
         bullets([
             "Chaque titre d'étape a sa <b>poignée</b> à gauche : glissez l'étape entière, avec ses positions, au-dessus "
@@ -550,27 +556,32 @@ def build_story():
             "<b>Ajouter une étape depuis un chapitre</b> reprend un chapitre avec ou sans ses articles, et "
             "<b>étape libre</b> en crée une à votre nom.",
         ]),
-        Paragraph('Saisir les positions rapidement', H2),
-        p("Sous chaque étape se trouve un champ <b>Ajouter une position</b>. Tout se fait au clavier :"),
+        Paragraph('Chiffrer les positions', H2),
+        p("Les articles arrivent du catalogue, par glisser-déposer. Une fois la ligne sur la feuille, tout se fait "
+          "au clavier :"),
         steps([
-            "Tapez quelques lettres de l'article, ou son code. Les articles du catalogue apparaissent aussitôt, "
-            "fautes de frappe comprises.",
-            "<b>Entrée</b> insère l'article avec son unité et son prix. Le curseur se place sur la <b>quantité</b>.",
+            "L'article déposé arrive avec son unité et son prix ; le curseur se place sur la <b>quantité</b>.",
             "Saisissez la quantité, <b>Entrée</b> : le curseur passe sur le <b>prix</b>, déjà rempli. Corrigez-le si besoin.",
-            "<b>Entrée</b> à nouveau : vous revenez au champ d'ajout, prêt pour la position suivante.",
+            "<b>Entrée</b> à nouveau : la ligne est enregistrée, passez à la suivante.",
         ]),
-        shot('13-devis-saisie-rapide.png', "« bagete angle » retrouve la baguette d'angle. Les deux dernières lignes servent quand l'article n'existe pas."),
-        Paragraph("Quand l'article n'existe pas", H2),
+        Paragraph('Insérer un titre, un sous-titre ou un texte', H2),
+        p("Au survol d'une ligne, un <b>+</b> apparaît sur son bord supérieur, à gauche (aussi en fin d'étape). Il ouvre "
+          "une ligne d'insertion à cet endroit :"),
         bullets([
-            "<b>Ajouter en ligne libre</b> : la position est créée avec votre texte, à chiffrer à la main.",
-            "<b>Créer l'article dans le catalogue et l'ajouter</b> : l'article est créé dans le chapitre de l'étape, "
-            "puis ajouté au devis, sans quitter la page. Pensez à compléter plus tard son unité et son prix dans le catalogue.",
+            "<b>Titre de chapitre</b> : un nouveau chapitre numéroté, comme une étape ; les lignes en dessous passent sous "
+            "ce titre. Pratique pour couper une étape en deux (« Salle de bain de l'étage »).",
+            "<b>Sous-titre</b> : en gras, il ouvre un sous-groupe numéroté (6.1, puis 6.1.1, 6.1.2…).",
+            "<b>Texte</b> : en italique, sans prix ni numéro.",
         ]),
+        shot('13-devis-insertion.png', "La ligne d'insertion ouverte par le + : titre de chapitre, sous-titre ou texte, puis Entrée."),
         Paragraph('Modifier une position', H2),
         bullets([
-            "Cliquez dans une cellule et modifiez : code, description, unité, quantité, prix. Le <b>montant</b> se "
+            "Cliquez dans une cellule et modifiez : description, unité, quantité, prix. Le <b>montant</b> se "
             "recalcule aussitôt, les totaux un instant après.",
-            "La case <b>Opt.</b> marque une <b>option</b> : elle reste affichée mais ne compte pas dans le total.",
+            "L'<b>unité</b> se choisit en tapant ses premières lettres (« m2 », « pce », « jo ») : la liste, par ordre "
+            "alphabétique, se filtre aussitôt ; Entrée prend l'unité et passe à la quantité.",
+            "La case <b>Opt.</b> marque une <b>option</b> : son prix et son montant passent <b>entre parenthèses</b>, elle "
+            "reste imprimée mais ne compte pas dans le total.",
             "Pour déplacer une ligne, saisissez la <b>poignée</b> (les six points à gauche) et glissez-la à sa nouvelle place, "
             "dans la même étape ou dans une autre. Un trait bleu indique où elle sera déposée. Au clavier : cliquez la poignée, "
             "puis flèches haut et bas.",
@@ -578,10 +589,8 @@ def build_story():
         ]),
         note("Les positions s'enregistrent toutes seules quand vous quittez la ligne. La barre d'état, en bas, "
              "affiche en permanence le net et le TTC du devis."),
-        Paragraph('Sous-titres, textes et lignes sans quantité', H2),
+        Paragraph('La feuille et les lignes sans quantité', H2),
         bullets([
-            "Le champ d'ajout propose aussi <b>Ajouter comme sous-titre</b> et <b>comme texte</b>. Un sous-titre ouvre "
-            "un sous-groupe numéroté (6.1, puis 6.1.1, 6.1.2…) ; un texte s'imprime en italique, sans prix ni numéro.",
             "Le détail se présente <b>comme la feuille imprimée</b> : numéros, colonnes et retours à la ligne sont ceux "
             "du PDF. Le code du catalogue n'est plus affiché dans la ligne ; il apparaît au survol du numéro.",
             "Une étape créée depuis un modèle contient tous ses articles. Le bouton <b>– n sans quantité</b>, sur "
@@ -592,29 +601,47 @@ def build_story():
         p("Il remplace les formules notées en remarque dans BauBit. Sur une ligne, cliquez sur l'icône "
           "<b>calculatrice</b>, à droite : une fenêtre détaille le prix par famille de coûts, main-d'œuvre, matériaux, "
           "machines, matériel d'exploitation, outillage et sous-traitants."),
-        shot('21-devis-sous-detail.png', "Le sous-détail d'une position : les lignes, le total de la ligne et le prix à l'unité.", max_height=9 * cm),
+        shot('21-devis-sous-detail.png', "La fenêtre du sous-détail : le calcul de la ligne à gauche, la bibliothèque des ouvrages à droite."),
         box('Important', "Le sous-détail chiffre <b>toute la ligne</b>. Son total, divisé par la quantité de la ligne, "
             "donne le <b>prix unitaire</b> : 1 000.- de sous-détail pour 10 m² font 100.- le m². Si la quantité change, "
             "le prix suit.", LIGHT_BLUE, BLUE),
         bullets([
-            "Chaque ligne : quantité, coût unitaire, majoration en pour cent ; le logiciel calcule le coût et le prix de "
-            "vente. Une ligne <b>× Qté</b> se multiplie par la quantité de la position (4,2 kg de colle par m²) ; le "
-            "<b>conditionnement</b> arrondit au sac ou à la pièce entière.",
-            "<b>Charger un sous-détail type</b> reprend un ouvrage de votre bibliothèque (menu <b>Offre facturation</b>, "
-            "bouton <b>Sous-détails types</b> : les 110 ouvrages du métreur y sont déjà). <b>Enregistrer comme "
-            "sous-détail type</b> ajoute le vôtre à la bibliothèque.",
+            "Chaque ligne : quantité, <b>prix d'achat</b> et <b>prix de vente</b> unitaires, <b>marge</b> en pour cent ; "
+            "le coût et la vente de la ligne en découlent. Saisissez l'un des trois, les deux autres suivent : un prix de "
+            "vente donne la marge, une marge donne le prix de vente. Une ligne <b>× Qté</b> se multiplie par la quantité "
+            "de la position (4,2 kg de colle par m²) ; le <b>conditionnement</b> arrondit au sac ou à la pièce entière.",
+            "Une ligne prise dans la <b>liste des éléments de coûts</b> (champ « Ajouter… », ou l'étiquette au survol "
+            "d'une ligne libre) porte une <b>pastille</b> avec le numéro de l'élément : son prix d'achat et son prix de "
+            "vente sont ceux de la liste de prix, à jour, et ne se modifient pas ici. Un clic sur la pastille détache la ligne.",
             "Vous pouvez quand même corriger le <b>prix unitaire</b> ou le <b>montant</b> de la ligne à la main : un "
             "montant saisi donne le prix unitaire (montant ÷ quantité). Le prix passe alors en rouge dans la ligne et "
             "le sous-détail indique « corrigé à … » ; ce prix corrigé est conservé si la quantité change.",
             "Le coût du sous-détail alimente la marge de la récapitulation et le budget du rapport de régie.",
             "Conventions du métreur : main-d'œuvre vendue 750.- la personne-jour, 90.- l'heure ; fournitures +30 %.",
         ]),
-        Paragraph("Afficher les sous-détails, masquer les prix, saut de page", H2),
-        p("Au-dessus de la feuille, deux cases : <b>Afficher les sous-détails</b> écrit les lignes du sous-détail en "
+        Paragraph('La bibliothèque des ouvrages', H2),
+        p("À droite de la fenêtre, la bibliothèque des <b>sous-détails types</b> : les 110 ouvrages du métreur, rangés "
+          "par corps de métier, et les vôtres. Un clic sur un ouvrage charge ses lignes dans la position (après "
+          "confirmation si des lignes existent déjà) ; les lignes rattachées à un élément de coûts arrivent avec le "
+          "prix du jour. La recherche filtre par mot."),
+        bullets([
+            "<b>Nouvel ouvrage</b>, en bas : choisissez le groupe (corps de métier), donnez un nom, <b>Créer</b> : les "
+            "lignes saisies deviennent un ouvrage réutilisable, pour la quantité et l'unité de la ligne.",
+            "Au survol d'un ouvrage, l'icône <b>enregistrer</b> remplace ses lignes par celles saisies ici, et la "
+            "<b>corbeille</b> le supprime de la bibliothèque.",
+            "La page <b>Sous-détails types</b> (menu Offre facturation) permet de retravailler chaque ouvrage ; les "
+            "lignes encore libres s'y rattachent à un élément de coûts par l'étiquette au survol.",
+        ]),
+        note("Les ouvrages du métreur ont été rattachés aux éléments de coûts quand c'était sûr (main-d'œuvre, "
+             "machines, matériaux sans ambiguïté). Les autres lignes gardent leur prix d'origine jusqu'à ce que vous "
+             "choisissiez l'élément."),
+        Paragraph("Afficher les sous-détails, masquer les prix, totaux, saut de page", H2),
+        p("Au-dessus de la feuille, trois cases : <b>Afficher les sous-détails</b> écrit les lignes du sous-détail en "
           "rouge, en tout petit, sous chaque position ; <b>Masquer les prix</b> donne un devis descriptif, sans prix ni "
-          "montants. Ces deux options s'appliquent aussi à l'aperçu et au PDF."),
+          "montants ; <b>Totaux par étape</b>, cochée d'office, écrit le total de chaque étape sous ses lignes. Ces "
+          "options s'appliquent aussi à l'aperçu et au PDF."),
         shot('33-devis-sous-details.png', 'Les sous-détails affichés en rouge sous les positions.', max_height=8 * cm),
-        p("Le bouton à droite du champ d'ajout de chaque étape insère un <b>saut de page</b> : il s'affiche en "
+        p("Le bouton à droite de la zone de dépôt de chaque étape insère un <b>saut de page</b> : il s'affiche en "
           "pointillé sur la feuille, se déplace par sa poignée comme une ligne, et coupe la page à l'impression."),
         Paragraph("L'en-tête du devis", H2),
         p("Onglet <b>En-tête</b> : objet, date, initiales, <b>statut</b> (en cours, envoyé, accepté, refusé), "
@@ -634,6 +661,10 @@ def build_story():
           "L'encadré <b>Marge</b>, à usage interne, compare vos prix de vente à vos prix d'achat. Il passe en rouge "
           "sous 30 %. Les options sont listées à part."),
         shot('16-devis-recap.png', 'La récapitulation et la marge interne.', width=12.5 * cm),
+        bullets([
+            "Les <b>options</b> sont listées à part, avec leur <b>total</b> : il n'est pas compris dans le devis et s'ajoute si le client les retient. "
+            "La page de garde du PDF le rappelle aussi, sous le total TTC.",
+        ]),
         Paragraph("L'aperçu et le PDF", H2),
         p("Onglet <b>Aperçu</b>, ou l'imprimante de la barre d'outils. Le devis est mis en page comme vos devis "
           "actuels : page de garde avec le logo, le destinataire, « Bassecourt, le … », la récapitulation par étape, "
@@ -732,7 +763,7 @@ def build_story():
             ['3-FAC  Facturé', 'Repris dans une facture : verrouillé.', 'Bleu'],
         ], [4 * cm, CONTENT_W - 6.4 * cm, 2.4 * cm]),
         bullets([
-            "Le bouton <b>coche verte</b> de la barre d'outils passe le rapport <b>en contrôle</b>. La gestion peut "
+            "Le bouton <b>coche verte</b> de la barre d'outils passe le rapport au statut <b>Contrôlé</b>. La gestion peut "
             "revenir en arrière avec le champ Statut de l'en-tête.",
             "Les filtres du panneau de gauche limitent la liste à un <b>mois</b> ou à un <b>statut</b>. Les flèches "
             "de la barre d'outils passent d'un rapport à l'autre.",
@@ -935,7 +966,7 @@ def build_story():
             ['Touche', 'Effet'],
             ['Ctrl + K', 'Place le curseur dans la recherche instantanée.'],
             ['Ctrl + S', 'Enregistre immédiatement la fiche en cours.'],
-            ['Entrée (dans un devis)', "Insère l'article choisi, puis passe de la quantité au prix, puis au champ d'ajout."],
+            ['Entrée (dans un devis)', "Dans l'unité : prend l'unité tapée ; puis passe de la quantité au prix, puis enregistre la ligne."],
             ['Entrée (grille des heures)', 'Enregistre la cellule et descend à la ligne suivante ; les flèches déplacent le curseur.'],
             ['Entrée (régie)', 'Enregistre le prix modifié ; Échap annule la saisie.'],
             ['Flèches haut et bas', "Parcourent les résultats d'une recherche."],
@@ -953,11 +984,11 @@ def build_story():
             ['Je ne peux pas créer de devis.', 'Choisissez d’abord un projet dans la barre du haut. Les devis sont réservés aux responsables et administrateurs.'],
             ["Le numéro de projet proposé ne convient pas.", 'Modifiez-le à la main. Deux projets ne peuvent pas porter le même numéro.'],
             ["L'écran affiche « Cette page a rencontré une erreur ».", 'Cliquez sur Réessayer ou changez de page. Si cela se répète, notez ce que vous faisiez et contactez le support.'],
-            ['Un article manque dans le devis.', "Créez-le à la volée depuis le champ d'ajout, puis complétez-le dans le catalogue."],
+            ['Un article manque dans le devis.', "Dans le panneau de gauche, le + au survol de son chapitre le crée (description, unité, prix) ; glissez-le ensuite sur le devis."],
             ['La grille des heures est vide, sans colonnes.', "Le rapport n'est rattaché à aucun devis avec des étapes : créez le devis, ou choisissez-le dans le champ Devis de l'en-tête."],
             ['Un ouvrier ne voit pas ses rapports.', 'Reliez son compte de connexion à sa fiche de collaborateur (page Collaborateurs, administrateur).'],
             ['Le prix régie d’une ligne est vide.', "Le collaborateur n'a pas de position régie, ou l'élément de coûts n'a ni prix régie ni coût brut. Complétez la fiche, puis réappliquez les tarifs."],
-            ['Je ne peux plus modifier un prix de régie.', 'Le rapport est facturé. Repassez-le « en contrôle » depuis son en-tête si la facture n’est pas encore partie.'],
+            ['Je ne peux plus modifier un prix de régie.', 'Le rapport est facturé. Repassez-le « Contrôlé » depuis son en-tête si la facture n’est pas encore partie.'],
         ], [6 * cm, CONTENT_W - 6 * cm]),
         Paragraph('Support', H2),
         p("Pour toute question ou anomalie, contactez votre interlocuteur Step One. Précisez la page concernée, "
