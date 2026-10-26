@@ -96,8 +96,8 @@ function ElementBrowser({ onClose, family: initialFamily, onPick, showPrices = t
     { key: 'unit', header: 'Un.', value: (e) => e.unit, width: 60 },
     ...(showPrices
       ? [
-          { key: 'net_price', header: 'Prix net', value: (e: PriceElement) => e.net_price ?? e.supplier_price, type: 'number' as const, width: 90 },
-          { key: 'regie_price', header: 'Régie', value: (e: PriceElement) => e.regie_price, type: 'number' as const, width: 90 },
+          { key: 'net_price', header: "Prix d'achat", value: (e: PriceElement) => e.net_price ?? e.supplier_price, type: 'number' as const, width: 90 },
+          { key: 'regie_price', header: 'Prix de vente', value: (e: PriceElement) => e.regie_price, type: 'number' as const, width: 90 },
         ]
       : []),
   ]
@@ -303,9 +303,9 @@ function NewElementForm({ family, groups, group: initialGroup, description: init
         <input autoFocus value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Désignation (obligatoire)" maxLength={500} className={`${BB_FIELD} min-w-0 flex-1`} aria-label="Désignation" />
       </div>
       <div className="mt-2 flex items-center gap-2">
-        <UnitSelect value={unit} onChange={(e) => setUnit(e.target.value)} className={`${BB_FIELD} w-28`} aria-label="Unité" />
-        <input value={net} onChange={(e) => setNet(e.target.value)} placeholder="Prix net" inputMode="decimal" className={`${BB_FIELD} w-28 text-right ${PRICE_PATTERN.test(net) ? '' : 'border-red-400'}`} aria-label="Prix net" />
-        <input value={regie} onChange={(e) => setRegie(e.target.value)} placeholder="Prix régie" inputMode="decimal" className={`${BB_FIELD} w-28 text-right ${PRICE_PATTERN.test(regie) ? '' : 'border-red-400'}`} aria-label="Prix régie" />
+        <UnitSelect value={unit} onChange={setUnit} className={`${BB_FIELD} w-28`} aria-label="Unité" />
+        <input value={net} onChange={(e) => setNet(e.target.value)} placeholder="Prix d'achat" inputMode="decimal" className={`${BB_FIELD} w-28 text-right ${PRICE_PATTERN.test(net) ? '' : 'border-red-400'}`} aria-label="Prix d'achat" />
+        <input value={regie} onChange={(e) => setRegie(e.target.value)} placeholder="Prix de vente" inputMode="decimal" className={`${BB_FIELD} w-28 text-right ${PRICE_PATTERN.test(regie) ? '' : 'border-red-400'}`} aria-label="Prix de vente" />
         <span className="ml-auto flex gap-2">
           <button type="button" onClick={onCancel} className="h-8 rounded-md px-3 text-[13px] text-gray-600 hover:bg-gray-100">
             Annuler

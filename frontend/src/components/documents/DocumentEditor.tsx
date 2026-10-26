@@ -1,16 +1,16 @@
 import { useMemo, useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
-import ArticlePicker from '@/components/documents/ArticlePicker'
 import CostBreakdownDialog from '@/components/documents/CostBreakdownDialog'
+import InsertLineRow, { InsertAboveButton } from '@/components/documents/InsertLineRow'
+import type { InsertKind } from '@/components/documents/InsertLineRow'
 import PositionRow from '@/components/documents/PositionRow'
 import type { DropPlace } from '@/components/documents/PositionRow'
 import { useCatalogChapters } from '@/hooks/useCatalog'
-import { useCreateArticleOnTheFly } from '@/hooks/useDocuments'
 import type { DocumentActions, PositionPayload } from '@/hooks/useDocuments'
-import { getCatalogDrag, takeCatalogDrag, useCatalogDrag } from '@/lib/catalogDrag'
+import { dragItems, getCatalogDrag, takeCatalogDrag, useCatalogDrag } from '@/lib/catalogDrag'
 import type { CatalogDrag } from '@/lib/catalogDrag'
 import { printNumbers } from '@/lib/documentNumbering'
-import { ensureStep, focusInsertedPosition, insertArticle, stepAcceptsArticle } from '@/lib/quoteInsert'
+import { ensureStep, focusInsertedPosition, insertArticle, insertMany, stepAcceptsArticle } from '@/lib/quoteInsert'
 import type { QuoteViewOptions } from '@/lib/quoteView'
 import type { InsertTarget } from '@/lib/quoteInsert'
 import { fmtAmount, fmtDate } from '@/lib/format'
@@ -51,13 +51,15 @@ const PRINT_TITLES: Record<DocumentDetail['type'], string> = { devis: 'Devis est
  * étape, positions éditables en place, champ d'ajout rapide. Les outils restent dans les marges.
  */
 export default function DocumentEditor({ document: doc, actions, onSaving, view, onViewChange }: DocumentEditorProps) {
-  const createArticle = useCreateArticleOnTheFly()
   const [busyStep, setBusyStep] = useState<number | null>(null)
   // Étapes de la feuille : déplacées par leur poignée (glisser ou flèches), renommées en place, supprimées.
   const stepDragRef = useRef<number | null>(null)
   const [stepDrag, setStepDragState] = useState<number | null>(null)
   const [stepTarget, setStepTarget] = useState<{ stepId: number; place: DropPlace } | null>(null)
   const [renaming, setRenaming] = useState<{ id: number; label: string } | null>(null)
+  // Ligne d'insertion ouverte par un « + » : au-dessus de cette ligne, ou en fin d'étape (positionId null).
+  const [inserting, setInserting] = useState<{ stepId: number; positionId: number | null } | null>(null)
+  const [insertBusy, setInsertBusy] = useState(false)
   function setStepDrag(value: number | null) {
     stepDragRef.current = value
     setStepDragState(value)
@@ -103,20 +105,47 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
     }
   }
 
-  async function createAndAdd(step: DocumentStep, description: string) {
-    if (!step.catalog_chapter_id) {
-      return
-    }
+  /**
+   * Insère à l'endroit du « + » : un titre de chapitre (nouvelle étape, les lignes en dessous passent sous ce
+   * titre), ou un sous-titre / un texte entre deux lignes.
+   */
+  async function insertAt(step: DocumentStep, positionId: number | null, kind: InsertKind, text: string) {
+    setInsertBusy(true)
+    onSaving(true)
     try {
-      const article = await createArticle.mutateAsync({ catalog_chapter_id: step.catalog_chapter_id, description })
-      toast('Article ajouté au catalogue. Pensez à compléter son unité et son prix.', 'success')
-      await add(step, { catalog_article_id: article.id }, true)
-    } catch {
-      toast("L'article n'a pas pu être créé.", 'error')
+      if (kind === 'chapter') {
+        const id = await actions.insertStep(step.id, positionId, text)
+        setInserting(null)
+        if (id !== null) {
+          window.setTimeout(() => window.document.getElementById(`step-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60)
+        }
+      } else {
+        const ids = step.positions.map((position) => position.id)
+        const index = positionId === null ? ids.length : ids.indexOf(positionId)
+        // after_id : ligne précédente, 0 en tête d'étape, rien en fin d'étape.
+        const afterId = index >= ids.length ? undefined : index > 0 ? ids[index - 1] : 0
+        await actions.addPosition({ document_step_id: step.id, kind, description: text, ...(afterId !== undefined ? { after_id: afterId } : {}) })
+        setInserting(null)
+      }
+    } catch (error) {
+      toast(isAxiosError(error) ? (error.response?.data?.message ?? "L'insertion a échoué.") : "L'insertion a échoué.", 'error')
+    } finally {
+      setInsertBusy(false)
+      onSaving(false)
     }
   }
 
-  /** Retire les lignes de l'étape restées sans quantité (articles du modèle non retenus). */
+  const insertRow = (step: DocumentStep, positionId: number | null) =>
+    inserting?.stepId === step.id && inserting.positionId === positionId ? (
+      <InsertLineRow
+        key={`insert-${positionId ?? 'end'}`}
+        span={executed ? 7 : 6}
+        busy={insertBusy}
+        onSubmit={(kind, text) => void insertAt(step, positionId, kind, text)}
+        onCancel={() => setInserting(null)}
+      />
+    ) : null
+
   /** Applique un nouvel ordre d'étapes (ids), sans appel si rien ne change. */
   async function reorderSteps(ids: number[]) {
     if (ids.join() === steps.map((step) => step.id).join()) {
@@ -225,7 +254,8 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
       return true // ligne du devis déplacée : toutes les étapes
     }
     const step = steps.find((item) => item.id === stepId)
-    return dragged.kind === 'article' && step !== undefined && stepAcceptsArticle(step, chapters.data ?? [], dragged.article)
+    // Plusieurs éléments : repère sur l'étape si au moins un article y a sa place (les autres iront dans la leur).
+    return step !== undefined && dragItems(dragged).some((item) => item.kind === 'article' && stepAcceptsArticle(step, chapters.data ?? [], item.article))
   }
 
   function hover(stepId: number, positionId: number | null, place: DropPlace) {
@@ -265,7 +295,17 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
   async function dropFromCatalog(dragged: CatalogDrag, dropTarget: InsertTarget | null) {
     onSaving(true)
     try {
-      if (dragged.kind === 'article') {
+      if (dragged.kind === 'many') {
+        const placed = dropTarget !== null && acceptsDrag(dropTarget.stepId, dragged)
+        const result = await insertMany(actions, chapters.data ?? [], dragged.items, placed ? dropTarget : null)
+        const count = dragged.items.length
+        const created = result.createdSteps.length ? ` Étape${result.createdSteps.length > 1 ? 's' : ''} créée${result.createdSteps.length > 1 ? 's' : ''} : ${result.createdSteps.join(', ')}.` : ''
+        const elsewhere = dropTarget && (!placed || result.redirected > 0) ? ' Les articles d’un autre chapitre sont allés dans leur étape.' : ''
+        toast(`${count} éléments ajoutés au devis.${created}${elsewhere}`, 'success')
+        if (result.last) {
+          focusInsertedPosition(result.last.step.id, result.last.positionId)
+        }
+      } else if (dragged.kind === 'article') {
         // Déposé dans l'étape d'un autre chapitre : l'article rejoint l'étape de son propre chapitre.
         const placed = dropTarget !== null && acceptsDrag(dropTarget.stepId, dragged)
         const result = await insertArticle(doc, actions, chapters.data ?? [], dragged.article, placed ? dropTarget : null)
@@ -357,6 +397,10 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
       <label className="flex items-center gap-1.5" title="Devis descriptif : quantités sans prix ni montants, à l'écran comme à l'impression">
         <input type="checkbox" checked={view.hidePrices} onChange={(e) => onViewChange({ ...view, hidePrices: e.target.checked })} className="h-4 w-4 accent-primary-600" />
         Masquer les prix
+      </label>
+      <label className="flex items-center gap-1.5" title="Le total de chaque étape sous ses lignes, à l'écran comme à l'impression">
+        <input type="checkbox" checked={view.showStepTotals} onChange={(e) => onViewChange({ ...view, showStepTotals: e.target.checked })} className="h-4 w-4 accent-primary-600" />
+        Totaux par étape
       </label>
       <span className="text-[12px] text-gray-400">Ces options valent aussi pour l'aperçu et le PDF.</span>
     </div>
@@ -567,7 +611,8 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
                     )}
                   </td>
                 </tr>
-                {step.positions.map((position, index) => (
+                {step.positions.map((position, index) => [
+                  insertRow(step, position.id),
                   <PositionRow
                     key={`${position.id}-${applied[position.id] ?? 0}`}
                     position={position}
@@ -588,8 +633,21 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
                     showBreakdown={view.showBreakdown}
                     hidePrices={view.hidePrices}
                     showQuoted={executed}
-                  />
-                ))}
+                    onInsertAbove={() => setInserting({ stepId: step.id, positionId: position.id })}
+                  />,
+                ])}
+                {insertRow(step, null)}
+                {view.showStepTotals && !view.hidePrices && step.positions.some((position) => position.kind === 'item') && (
+                  <tr className="text-[13px]">
+                    <td />
+                    <td />
+                    <td colSpan={executed ? 5 : 4} />
+                    <td className="border-t border-gray-400 px-1 pb-0.5 pt-1.5 text-right font-semibold tabular-nums" title={`Total de l'étape « ${step.label} », options non comprises`}>
+                      {fmtAmount(step.total)}
+                    </td>
+                    <td />
+                  </tr>
+                )}
                 <tr
                   onDragOver={(event) => {
                     if (dragRef.current || getCatalogDrag()) {
@@ -603,19 +661,21 @@ export default function DocumentEditor({ document: doc, actions, onSaving, view,
                   }}
                   className={`${endTargeted ? 'shadow-[inset_0_3px_0_0_#1d3f9c]' : ''} ${
                     stepDrag !== null && stepTarget?.stepId === step.id && stepTarget.place === 'below' ? 'shadow-[inset_0_-3px_0_0_#1d3f9c]' : ''
-                  }`}
+                  } group`}
                 >
-                  <td />
+                  <td className="relative">
+                    <InsertAboveButton onClick={() => setInserting({ stepId: step.id, positionId: null })} title="Insérer ici, en fin d'étape, un titre de chapitre, un sous-titre ou un texte" />
+                  </td>
+                  {/* Zone de dépôt en fin d'étape : les articles s'ajoutent en les glissant depuis le catalogue (panneau de gauche). */}
                   <td colSpan={executed ? 7 : 6} className="py-1.5" style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
-                    <ArticlePicker
-                      stepId={step.id}
-                      chapterId={step.catalog_chapter_id}
-                      canCreateArticle={Boolean(step.catalog_chapter_id)}
-                      busy={busyStep === step.id}
-                      onPickArticle={(article) => void add(step, { catalog_article_id: article.id }, true)}
-                      onFreeLine={(description, kind) => void add(step, { description, kind }, kind === 'item')}
-                      onCreateArticle={(description) => void createAndAdd(step, description)}
-                    />
+                    <div
+                      data-picker={step.id}
+                      className={`flex h-7 items-center rounded-md border border-dashed px-2 text-[12px] transition ${
+                        endTargeted ? 'border-primary-400 bg-primary-50 text-primary-700' : 'border-transparent text-gray-300 group-hover:border-gray-200 group-hover:text-gray-400'
+                      }`}
+                    >
+                      {endTargeted ? 'Déposer ici, en fin d’étape' : 'Glissez un article du catalogue ici · le + à gauche ajoute un titre ou un texte'}
+                    </div>
                   </td>
                   <td className="pl-2 align-middle">
                     <button

@@ -11,6 +11,7 @@ export default function DocumentRecap({ document: doc }: { document: DocumentDet
   const costedSales = costed.reduce((sum, position) => sum + (position.amount ?? 0), 0)
   const margin = costedSales > 0 ? ((costedSales - cost) / costedSales) * 100 : null
   const options = steps.flatMap((step) => step.positions).filter((position) => position.is_optional && position.amount !== null)
+  const optionsTotal = options.reduce((sum, position) => sum + (position.amount ?? 0), 0)
   const base = doc.total_net - doc.discount_amount
   // Travaux exécutés : montant du devis par étape (quantités du devis × prix), pour comparer.
   const executed = doc.type === 'travaux'
@@ -129,10 +130,15 @@ export default function DocumentRecap({ document: doc }: { document: DocumentDet
               {options.map((position) => (
                 <li key={position.id} className="flex justify-between gap-3">
                   <span className="truncate">{position.description}</span>
-                  <span className="shrink-0 tabular-nums">{fmtAmount(position.amount)}</span>
+                  <span className="shrink-0 tabular-nums">({fmtAmount(position.amount)})</span>
                 </li>
               ))}
+              <li className="flex justify-between gap-3 border-t border-gray-200 pt-1 font-medium text-gray-800">
+                <span>Total des options</span>
+                <span className="shrink-0 tabular-nums">{fmtAmount(optionsTotal)}</span>
+              </li>
             </ul>
+            <p className="mt-2 text-[12px] text-gray-400">Non comprises dans le total du devis ; à ajouter si le client les retient.</p>
           </div>
         )}
       </div>

@@ -7,6 +7,7 @@ import type { DocumentActions, PositionPayload } from '@/hooks/useDocuments'
 import type { DocumentPosition } from '@/types'
 import { Icon } from '@/components/icons'
 import UnitSelect from '@/components/shared/UnitSelect'
+import { InsertAboveButton } from '@/components/documents/InsertLineRow'
 
 interface Draft {
   code: string
@@ -39,6 +40,20 @@ const CELL =
 
 export type DropPlace = 'above' | 'below'
 
+/** Entoure un champ de parenthèses (prix d'une option : affiché, mais hors total). */
+function Parens({ on, children }: { on: boolean; children: React.ReactNode }) {
+  if (!on) {
+    return children
+  }
+  return (
+    <span className="flex items-center text-gray-400" title="Option : hors total">
+      <span className="pl-1">(</span>
+      <span className="min-w-0 flex-1">{children}</span>
+      <span className="pr-0.5">)</span>
+    </span>
+  )
+}
+
 interface PositionRowProps {
   position: DocumentPosition
   /** Numéro tel qu'il sera imprimé (5.1, 6.1.1…) ; vide pour un texte. */
@@ -61,6 +76,8 @@ interface PositionRowProps {
   hidePrices?: boolean
   /** Travaux exécutés : affiche la quantité du devis à côté de la quantité exécutée. */
   showQuoted?: boolean
+  /** « + » au-dessus de la ligne : insérer un titre de chapitre, un sous-titre ou un texte à cet endroit. */
+  onInsertAbove?: () => void
 }
 
 /**
@@ -75,7 +92,7 @@ interface PositionRowProps {
  */
 export default function PositionRow({
   position, printNumber, actions, onSaving, onMove, dragging, dropPlace, onDragStart, onDragEnd, onDragOver, onDrop, onOpenBreakdown,
-  showBreakdown = false, hidePrices = false, showQuoted = false,
+  showBreakdown = false, hidePrices = false, showQuoted = false, onInsertAbove,
 }: PositionRowProps) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(position))
   // Montant en cours de saisie (null = montant calculé quantité × prix).
@@ -205,7 +222,8 @@ export default function PositionRow({
     dropPlace === 'above' ? 'shadow-[inset_0_3px_0_0_#1d3f9c]' : dropPlace === 'below' ? 'shadow-[inset_0_-3px_0_0_#1d3f9c]' : ''
 
   const handle = (
-    <td className="py-1 align-top">
+    <td className="relative py-1 align-top">
+      {onInsertAbove && <InsertAboveButton onClick={onInsertAbove} />}
       <button
         type="button"
         draggable
@@ -306,7 +324,17 @@ export default function PositionRow({
         {isItem && (
           <>
             <td className="py-0.5">
-              <UnitSelect value={draft.unit} onChange={(e) => change({ unit: e.target.value })} className={`${CELL} cursor-pointer appearance-none px-1`} aria-label="Unité" />
+              <UnitSelect
+                value={draft.unit}
+                onChange={(unit) => change({ unit })}
+                onEnter={() => {
+                  const field = document.querySelector<HTMLInputElement>(`[data-qty="${position.id}"]`)
+                  field?.focus()
+                  field?.select()
+                }}
+                className={CELL}
+                aria-label="Unité"
+              />
             </td>
             {showQuoted && (
               <td className="px-1 py-1 text-right tabular-nums text-gray-400" title="Quantité du devis">
@@ -331,35 +359,40 @@ export default function PositionRow({
                   ···
                 </span>
               ) : (
-                <input
-                  data-price={position.id}
-                  value={draft.unit_price}
-                  onChange={(e) => change({ unit_price: e.target.value })}
-                  onKeyDown={(e) => onEnter(e, 'picker')}
-                  inputMode="decimal"
-                  title={hasBreakdown ? `Sous-détail : ${fmtAmount(breakdownTotal)} ÷ ${qty(breakdownQuantity)} = ${fmtAmount(position.calculated_price)}${priceDiffers ? ' (prix corrigé à la main)' : ''}` : undefined}
-                  className={`${CELL} text-right ${hasBreakdown ? (priceDiffers ? 'text-accent-700' : 'text-primary-800') : ''}`}
-                  aria-label="Prix unitaire"
-                />
+                // Option : prix et montant entre parenthèses, comme à l'impression (hors total).
+                <Parens on={draft.is_optional}>
+                  <input
+                    data-price={position.id}
+                    value={draft.unit_price}
+                    onChange={(e) => change({ unit_price: e.target.value })}
+                    onKeyDown={(e) => onEnter(e, 'picker')}
+                    inputMode="decimal"
+                    title={hasBreakdown ? `Sous-détail : ${fmtAmount(breakdownTotal)} ÷ ${qty(breakdownQuantity)} = ${fmtAmount(position.calculated_price)}${priceDiffers ? ' (prix corrigé à la main)' : ''}` : undefined}
+                    className={`${CELL} text-right ${hasBreakdown ? (priceDiffers ? 'text-accent-700' : 'text-primary-800') : ''}`}
+                    aria-label="Prix unitaire"
+                  />
+                </Parens>
               )}
             </td>
             <td className="py-0.5">
               {hidePrices ? (
                 ''
               ) : (
-                <input
-                  data-amount={position.id}
-                  value={amountEdit ?? (amount !== null ? fmtAmount(amount) : '')}
-                  onChange={(e) => changeAmount(e.target.value)}
-                  onFocus={() => setAmountEdit(amount !== null ? text(amount) : '')}
-                  onBlur={() => setAmountEdit(null)}
-                  onKeyDown={(e) => onEnter(e, 'picker')}
-                  disabled={quantity === null || quantity <= 0}
-                  inputMode="decimal"
-                  title="Montant de la ligne : un total saisi donne le prix unitaire (total ÷ quantité)"
-                  className={`${CELL} text-right disabled:hover:border-transparent`}
-                  aria-label="Montant"
-                />
+                <Parens on={draft.is_optional}>
+                  <input
+                    data-amount={position.id}
+                    value={amountEdit ?? (amount !== null ? fmtAmount(amount) : '')}
+                    onChange={(e) => changeAmount(e.target.value)}
+                    onFocus={() => setAmountEdit(amount !== null ? text(amount) : '')}
+                    onBlur={() => setAmountEdit(null)}
+                    onKeyDown={(e) => onEnter(e, 'picker')}
+                    disabled={quantity === null || quantity <= 0}
+                    inputMode="decimal"
+                    title="Montant de la ligne : un total saisi donne le prix unitaire (total ÷ quantité)"
+                    className={`${CELL} text-right disabled:hover:border-transparent`}
+                    aria-label="Montant"
+                  />
+                </Parens>
               )}
             </td>
           </>
@@ -415,17 +448,20 @@ export default function PositionRow({
               {(position.costs ?? []).map((cost, index) => {
                 const counted = computedQuantity(cost, breakdownQuantity)
                 return (
-                  <span key={cost.id} className="whitespace-nowrap">
+                  // Le libellé passe à la ligne comme un texte ; seul le calcul (quantité × prix = vente) reste insécable.
+                  <span key={cost.id}>
                     {index > 0 && <span className="text-red-300"> · </span>}
-                    <span className="font-semibold">{costFamily(cost.family).code}</span> {cost.label} {qty(counted)}
-                    {cost.unit ? ` ${cost.unit}` : ''}
-                    {!hidePrices && (
-                      <>
-                        {' '}
-                        × {fmtAmount(cost.unit_cost)}
-                        {cost.markup_percent ? ` +${qty(cost.markup_percent)}%` : ''} = {fmtAmount(cost.sale)}
-                      </>
-                    )}
+                    <span className="font-semibold">{costFamily(cost.family).code}</span> {cost.label}{' '}
+                    <span className="whitespace-nowrap">
+                      {qty(counted)}
+                      {cost.unit ? ` ${cost.unit}` : ''}
+                      {!hidePrices && (
+                        <>
+                          {' '}
+                          × {fmtAmount(cost.unit_sale ?? cost.unit_cost * (1 + cost.markup_percent / 100))} = {fmtAmount(cost.sale)}
+                        </>
+                      )}
+                    </span>
                   </span>
                 )
               })}

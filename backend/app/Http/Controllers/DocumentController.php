@@ -22,7 +22,7 @@ class DocumentController extends Controller
     private const COLUMNS = ['number', 'title', 'date', 'status', 'recipient_name', 'recipient_city', 'total_net', 'total_gross'];
 
     /** Relations d'un document complet (renvoyé après chaque modification, totaux à jour). */
-    public const FULL = ['project', 'source', 'steps.positions.costs'];
+    public const FULL = ['project', 'source', 'steps.positions.costs.priceElement'];
 
     /**
      * Explorateur de documents (tous projets). Filtres : ?type=, ?status=, ?project_id=.
@@ -113,6 +113,7 @@ class DocumentController extends Controller
         $options = [
             'breakdown' => $request->boolean('breakdown'),
             'prices' => $request->has('prices') ? $request->boolean('prices') : true,
+            'step_totals' => $request->has('totals') ? $request->boolean('totals') : true,
         ];
         $pdf = DocumentPrint::pdf($document, $options);
 

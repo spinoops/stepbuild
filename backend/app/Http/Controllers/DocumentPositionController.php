@@ -19,7 +19,7 @@ class DocumentPositionController extends Controller
 {
     /**
      * Ajoute une position : depuis un article du catalogue (prix repris) ou en saisie libre.
-     * `after_id` l'insère juste après une position existante, sinon en fin d'étape.
+     * `after_id` l'insère juste après une position existante, `after_id` = 0 en tête d'étape, sinon en fin d'étape.
      */
     public function store(SaveDocumentPositionRequest $request, Document $document): JsonResponse
     {
@@ -42,8 +42,11 @@ class DocumentPositionController extends Controller
                 $article->increment('usage_count'); // les plus utilisés remontent dans la recherche
             }
 
-            $after = isset($data['after_id']) ? $step->positions()->find($data['after_id']) : null;
-            if ($after) {
+            $after = ! empty($data['after_id']) ? $step->positions()->find($data['after_id']) : null;
+            if (array_key_exists('after_id', $data) && (int) $data['after_id'] === 0) {
+                $step->positions()->increment('position'); // en tête d'étape
+                $attributes['position'] = 1;
+            } elseif ($after) {
                 $step->positions()->where('position', '>', $after->position)->increment('position');
                 $attributes['position'] = $after->position + 1;
             } else {

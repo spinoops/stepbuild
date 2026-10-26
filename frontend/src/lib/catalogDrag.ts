@@ -7,7 +7,15 @@ import type { CatalogChapter } from '@/types'
  * Le navigateur ne laisse pas lire `dataTransfer` pendant le survol : l'élément glissé est
  * donc gardé ici, en mémoire, le temps du glissement.
  */
-export type CatalogDrag = { kind: 'article'; article: PickerArticle } | { kind: 'chapter'; chapter: CatalogChapter }
+export type CatalogItem = { kind: 'article'; article: PickerArticle } | { kind: 'chapter'; chapter: CatalogChapter }
+
+/** Un élément, ou plusieurs sélectionnés avec Ctrl / Maj (dans l'ordre du catalogue). */
+export type CatalogDrag = CatalogItem | { kind: 'many'; items: CatalogItem[] }
+
+/** Éléments portés par un glissement, toujours sous forme de liste. */
+export function dragItems(drag: CatalogDrag): CatalogItem[] {
+  return drag.kind === 'many' ? drag.items : [drag]
+}
 
 let current: CatalogDrag | null = null
 const listeners = new Set<() => void>()

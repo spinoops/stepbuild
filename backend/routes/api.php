@@ -157,6 +157,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/documents/{document}/pdf', [DocumentController::class, 'pdf']);
         Route::post('/documents/{document}/positions/prune', [DocumentPositionController::class, 'prune']);
         Route::post('/documents/{document}/steps/reorder', [DocumentStepController::class, 'reorder']);
+        Route::post('/documents/{document}/steps/insert', [DocumentStepController::class, 'insert']);
         Route::apiResource('documents.steps', DocumentStepController::class)->only(['store', 'update', 'destroy']);
         Route::post('/documents/{document}/positions/reorder', [DocumentPositionController::class, 'reorder']);
         Route::put('/documents/{document}/positions/{position}/breakdown', [DocumentPositionController::class, 'breakdown']);

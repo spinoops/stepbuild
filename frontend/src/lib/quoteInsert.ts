@@ -1,4 +1,5 @@
 import type { DocumentActions, PickerArticle } from '@/hooks/useDocuments'
+import type { CatalogItem } from '@/lib/catalogDrag'
 import type { CatalogChapter, DocumentDetail, DocumentStep } from '@/types'
 
 /** Endroit visé dans le devis : une étape, et une ligne (au-dessus / en dessous) ou la fin de l'étape. */
@@ -34,11 +35,12 @@ export function findStepForArticle(doc: DocumentDetail, chapters: CatalogChapter
 /**
  * L'étape peut recevoir cet article : elle vient de son chapitre ou du chapitre parent. Un article ne
  * s'ajoute jamais dans l'étape d'un autre corps de métier (TERRASSEMENT ne va pas dans SOUS-TRAITANTS) ;
- * une fois dans le devis, la position peut ensuite être déplacée librement.
+ * une fois dans le devis, la position peut ensuite être déplacée librement. Un chapitre libre (titre saisi à la
+ * main, sans chapitre du catalogue) accepte tout article qu'on y dépose : c'est l'utilisateur qui l'a créé.
  */
 export function stepAcceptsArticle(step: DocumentStep, chapters: CatalogChapter[], article: PickerArticle): boolean {
   if (step.catalog_chapter_id === null) {
-    return false
+    return true
   }
   const parentId = chapters.find((chapter) => chapter.id === article.chapterId)?.parent_id ?? null
   return step.catalog_chapter_id === article.chapterId || step.catalog_chapter_id === parentId
@@ -86,17 +88,12 @@ export async function insertArticle(
     stepCreated = ensured.created
   }
 
-  // Position d'insertion : après la ligne précédente ; en tête d'étape, on ajoute puis on réordonne.
+  // Position d'insertion : après la ligne précédente, ou en tête d'étape (after_id = 0) ; sans cible, à la fin.
   let afterId: number | null = null
-  let atTop = false
   if (target && target.positionId !== null) {
     const ids = step.positions.map((position) => position.id)
     const index = ids.indexOf(target.positionId) + (target.place === 'below' ? 1 : 0)
-    if (index <= 0) {
-      atTop = ids.length > 0
-    } else {
-      afterId = ids[index - 1]
-    }
+    afterId = index <= 0 ? 0 : ids[index - 1]
   }
 
   const positionId = await actions.addPosition({
@@ -104,10 +101,57 @@ export async function insertArticle(
     catalog_article_id: article.id,
     ...(afterId !== null ? { after_id: afterId } : {}),
   })
-  if (atTop && positionId !== null) {
-    await actions.reorderPositions(step.id, [positionId, ...step.positions.map((position) => position.id)])
-  }
   return { step, positionId, stepCreated }
+}
+
+export interface InsertManyResult {
+  /** Étapes créées au passage (titre seul). */
+  createdSteps: string[]
+  /** Articles déposés dans une autre étape que la leur : partis dans l'étape de leur chapitre. */
+  redirected: number
+  last: InsertResult | null
+}
+
+/**
+ * Insère plusieurs éléments du catalogue (sélection Ctrl / Maj), dans l'ordre. Les articles acceptés par la
+ * cible s'y suivent ; les autres rejoignent l'étape de leur chapitre, créée au besoin ; un chapitre ajoute
+ * son étape. Le document est relu dans le cache entre deux ajouts (`actions.current()`).
+ */
+export async function insertMany(
+  actions: DocumentActions,
+  chapters: CatalogChapter[],
+  items: CatalogItem[],
+  target: InsertTarget | null,
+): Promise<InsertManyResult> {
+  const result: InsertManyResult = { createdSteps: [], redirected: 0, last: null }
+  let cursor = target
+  for (const item of items) {
+    const doc = actions.current()
+    if (!doc) {
+      break
+    }
+    if (item.kind === 'chapter') {
+      const { step, created } = await ensureStep(doc, actions, item.chapter.id)
+      if (created) {
+        result.createdSteps.push(step.label)
+      }
+      result.last = { step, positionId: null, stepCreated: created }
+      continue
+    }
+    const targetStep = cursor ? (doc.steps ?? []).find((step) => step.id === cursor?.stepId) : undefined
+    const placed = cursor !== null && targetStep !== undefined && stepAcceptsArticle(targetStep, chapters, item.article)
+    const inserted = await insertArticle(doc, actions, chapters, item.article, placed ? cursor : null)
+    if (placed && inserted.positionId !== null) {
+      cursor = { stepId: inserted.step.id, positionId: inserted.positionId, place: 'below' } // le suivant se met dessous
+    } else if (target) {
+      result.redirected += 1
+    }
+    if (inserted.stepCreated) {
+      result.createdSteps.push(inserted.step.label)
+    }
+    result.last = inserted
+  }
+  return result
 }
 
 /** Fait défiler la feuille jusqu'à la ligne insérée et place le curseur sur sa quantité. */

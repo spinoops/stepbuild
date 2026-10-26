@@ -104,7 +104,7 @@ export interface BreakdownPayload {
   lines: BreakdownLinePayload[]
 }
 
-type DocResponse = { data: DocumentDetail; created_position_id?: number; removed?: number }
+type DocResponse = { data: DocumentDetail; created_position_id?: number; created_step_id?: number; removed?: number }
 
 /**
  * Actions sur un devis. Chaque appel renvoie le document complet (totaux recalculés côté serveur),
@@ -122,12 +122,22 @@ export function useDocumentActions(documentId: number) {
     }
 
     return {
+      /** Document tel qu'il est dans le cache, à jour après chaque action (enchaînement de plusieurs ajouts). */
+      current: () => queryClient.getQueryData<DocumentDetail>(itemKey(documentId)),
       updateHeader: async (payload: Record<string, unknown>) => apply((await api.put<DocResponse>(base, payload)).data).data,
       addStep: async (payload: { catalog_chapter_id?: number; code?: string; label?: string; with_articles?: boolean }) =>
         apply((await api.post<DocResponse>(`${base}/steps`, payload)).data).data,
       updateStep: async (id: number, payload: { code: string; label: string }) =>
         apply((await api.put<DocResponse>(`${base}/steps/${id}`, payload)).data).data,
       deleteStep: async (id: number) => apply((await api.delete<DocResponse>(`${base}/steps/${id}`)).data).data,
+      /**
+       * Titre de chapitre inséré entre les lignes : une étape libre juste après `afterStepId` ; avec `positionId`,
+       * cette ligne et les suivantes passent sous le nouveau titre. Renvoie l'id de la nouvelle étape.
+       */
+      insertStep: async (afterStepId: number, positionId: number | null, label: string) => {
+        const response = apply((await api.post<DocResponse>(`${base}/steps/insert`, { after_step_id: afterStepId, position_id: positionId, label })).data)
+        return response.created_step_id ?? null
+      },
       reorderSteps: async (ids: number[]) => apply((await api.post<DocResponse>(`${base}/steps/reorder`, { ids })).data).data,
       addPosition: async (payload: PositionPayload) => {
         const response = apply((await api.post<DocResponse>(`${base}/positions`, payload)).data)

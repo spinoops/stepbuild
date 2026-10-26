@@ -155,6 +155,27 @@ it('imprime les sous-détails et sans prix sur demande, et respecte les sauts de
 
     $plain = $this->get("/api/documents/{$document->id}/pdf")->assertOk();
     $detailed = $this->get("/api/documents/{$document->id}/pdf?breakdown=1&prices=0")->assertOk();
+    $this->get("/api/documents/{$document->id}/pdf?totals=0")->assertOk(); // sans le total de chaque étape
     expect($plain->headers->get('content-type'))->toBe('application/pdf')
         ->and($detailed->headers->get('content-type'))->toBe('application/pdf');
+});
+
+it('prend le prix de l’élément de coûts rattaché à une ligne du sous-détail', function () {
+    actingAsRole('responsable');
+    [$document, $position] = breakdownPosition();
+    $element = PriceElement::create(['family' => 2, 'number' => 'M002', 'description' => 'Colle', 'unit' => 'kg', 'net_price' => 2.5, 'regie_price' => 3.25]);
+
+    $data = $this->putJson("/api/documents/{$document->id}/positions/{$position->id}/breakdown", [
+        'lines' => [['family' => 2, 'price_element_id' => $element->id, 'label' => 'Colle Weber', 'unit' => 'sac', 'quantity' => 4.2, 'per_dimension' => true, 'unit_cost' => 1, 'markup_percent' => 0]],
+    ])->assertOk()->json('data.steps.0.positions.0');
+    expect($data['costs'][0])->toMatchArray(['unit_cost' => 2.5, 'unit_sale' => 3.25, 'unit' => 'kg', 'markup_percent' => 30, 'label' => 'Colle Weber'])
+        ->and($data['costs'][0]['element']['number'])->toBe('M002')
+        ->and($data['costs'][0]['sale'])->toEqual(122.85)   // 9 m² × 4.2 kg × 3.25 : le prix de vente de l'élément, tel quel
+        ->and($data['cost_price'])->toEqual(10.5);   // 4.2 kg × 2.50 par m²
+
+    // Ligne libre avec un prix de vente saisi : il prime sur la majoration.
+    $free = $this->putJson("/api/documents/{$document->id}/positions/{$position->id}/breakdown", [
+        'lines' => [['family' => 5, 'label' => 'Carrelette', 'quantity' => 1, 'unit_cost' => 40, 'unit_sale' => 45, 'markup_percent' => 30]],
+    ])->assertOk()->json('data.steps.0.positions.0.costs.0');
+    expect($free['sale'])->toEqual(45)->and($free['cost'])->toEqual(40);
 });

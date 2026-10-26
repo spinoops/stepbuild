@@ -286,7 +286,7 @@ class Document extends Model
                     foreach ($position->costs as $cost) {
                         $newPosition->costs()->create($cost->only([
                             'family', 'price_element_id', 'label', 'unit', 'quantity', 'per_dimension', 'pack_size',
-                            'unit_cost', 'markup_percent', 'cost', 'sale', 'note', 'position',
+                            'unit_cost', 'unit_sale', 'markup_percent', 'cost', 'sale', 'note', 'position',
                         ]));
                     }
                 }

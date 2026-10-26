@@ -108,6 +108,7 @@ class DocumentPrint
             'quantity' => $cost->computedQuantity($quantity),
             'unit' => $cost->unit,
             'unit_cost' => $cost->unit_cost,
+            'unit_sale' => $cost->unit_sale,
             'markup_percent' => $cost->markup_percent,
             'sale' => $cost->sale,
         ])->all();
@@ -136,15 +137,19 @@ class DocumentPrint
     /**
      * Construit le PDF : vue Blade + en-têtes et pieds de page dessinés sur chaque page
      * (la page de garde porte le n° TVA, les suivantes le rappel du document et du projet).
-     * Options : `breakdown` (sous-détails sous les positions, en rouge), `prices` (false = sans prix).
+     * Options : `breakdown` (sous-détails sous les positions, en rouge), `prices` (false = sans prix),
+     * `step_totals` (false = sans le total de chaque étape sous ses lignes).
      *
-     * @param  array{breakdown?: bool, prices?: bool}  $options
+     * @param  array{breakdown?: bool, prices?: bool, step_totals?: bool}  $options
      */
     public static function pdf(Document $document, array $options = []): PdfWrapper
     {
         $withBreakdown = (bool) ($options['breakdown'] ?? false);
         $showPrices = (bool) ($options['prices'] ?? true);
+        $stepTotals = (bool) ($options['step_totals'] ?? true);
         $document->loadMissing(['project', 'source', 'steps.positions']);
+        // Options (hors total) : leur somme est rappelée dans la récapitulation.
+        $optionsTotal = round((float) $document->steps->flatMap->positions->where('is_optional', true)->sum('amount'), 2);
         $company = config('company');
         // Demande d'acompte : rappel du devis et des acomptes déjà demandés (hors refusés).
         $advance = null;
@@ -170,6 +175,8 @@ class DocumentPrint
             'steps' => self::steps($document, $withBreakdown),
             'withBreakdown' => $withBreakdown,
             'showPrices' => $showPrices,
+            'stepTotals' => $stepTotals,
+            'optionsTotal' => $optionsTotal,
             'advance' => $advance,
             'executed' => $document->type === 'travaux',
             'source' => $document->source,

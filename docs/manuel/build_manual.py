@@ -422,7 +422,7 @@ def build_story():
         grid([
             ['Famille', 'Contenu'],
             ['1 - Salaire', 'Tarifs horaires par fonction : ouvrier qualifié, chef d’équipe, apprenti…'],
-            ['2 - Matériaux', 'Produits et matériaux, avec prix fournisseur et prix de revente.'],
+            ['2 - Matériaux', "Produits et matériaux, avec prix d'achat et prix de vente."],
             ['3 - Machines/Engins', 'Mini-pelle, dumper, nacelle…'],
             ['4 - Matériaux exploitation', 'Consommables : carburant…'],
             ['5 - Outillage', 'Outils facturés à la journée.'],
@@ -430,15 +430,15 @@ def build_story():
         ], [4.6 * cm, CONTENT_W - 4.6 * cm]),
         Paragraph('Les trois niveaux de prix', H2),
         bullets([
-            "<b>Prix fournisseur</b> : ce que l'élément vous coûte, tarif brut.",
-            "<b>Prix net</b> : après vos remises. S'il est laissé vide, il reprend le prix fournisseur.",
-            "<b>Prix régie</b> : le prix majoré, facturé au client. La colonne <b>Majoration</b> montre l'écart en pour cent.",
+            "<b>Prix d'achat</b> : ce que l'élément vous coûte (le prix net BauBit).",
+            "<b>Prix de vente</b> : le prix majoré, facturé au client (le prix régie BauBit). La colonne <b>Majoration</b> "
+            "montre l'écart en pour cent.",
         ]),
         Paragraph('Régler la majoration avec la tirette', H2),
         p("Dans la liste, cliquez sur la colonne <b>Majoration</b> d'un élément : une tirette s'ouvre. Déplacez-la, tapez "
-          "le pour cent ou cliquez un raccourci (0, 10, 20, 30, 50 %) : le <b>prix régie</b> est recalculé, prix net "
+          "le pour cent ou cliquez un raccourci (0, 10, 20, 30, 50 %) : le <b>prix de vente</b> est recalculé, prix d'achat "
           "+ majoration arrondi à 5 centimes, et enregistré dès que vous relâchez la tirette."),
-        shot('40-majoration.png', 'La tirette de majoration : le prix régie suit en direct.', width=11 * cm),
+        shot('40-majoration.png', 'La tirette de majoration : le prix de vente suit en direct.', width=11 * cm),
         p("Pour créer un élément, cliquez sur <b>Nouvel élément</b> : la famille de l'onglet ouvert et le groupe "
           "sélectionné sont déjà proposés. Le <b>code régie</b>, repris de BauBit, reste visible dans la fiche : il sert "
           "aux reprises de données."),
@@ -728,8 +728,8 @@ def build_story():
         grid([
             ['Statut', 'Signification', 'Couleur'],
             ['1-EC  En cours', "Le rapport se remplit. L'ouvrier peut encore le modifier.", 'Rouge'],
-            ['2-CTRL  En contrôle', "Transmis à la gestion, qui le vérifie et fixe les prix de régie. Seule la gestion le modifie.", 'Vert'],
-            ['3-FAC  Facturé en régie', 'Repris dans une facture : verrouillé.', 'Bleu'],
+            ['2-CTRL  Contrôlé', "Transmis à la gestion, qui le vérifie et fixe les prix de régie. Seule la gestion le modifie.", 'Vert'],
+            ['3-FAC  Facturé', 'Repris dans une facture : verrouillé.', 'Bleu'],
         ], [4 * cm, CONTENT_W - 6.4 * cm, 2.4 * cm]),
         bullets([
             "Le bouton <b>coche verte</b> de la barre d'outils passe le rapport <b>en contrôle</b>. La gestion peut "

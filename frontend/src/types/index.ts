@@ -37,7 +37,7 @@ export interface Paginated<T> {
 /** Statuts d'un projet (chantier) — équivalents BauBit : 1-EC, 2-ADJ, 3-TER, 4-REFUSÉ. */
 export type ProjectStatus = 'en_cours' | 'adjuge' | 'termine' | 'refuse'
 
-/** Workflow d'un rapport journalier : en cours → en contrôle → facturé en régie. */
+/** Workflow d'un rapport journalier : en cours → contrôlé → facturé. */
 export type ReportStatus = 'en_cours' | 'en_controle' | 'facture'
 
 export type AddressType = 'client' | 'fournisseur' | 'sous_traitant' | 'contact'
@@ -229,16 +229,31 @@ export type DocumentStatus = 'en_cours' | 'envoye' | 'accepte' | 'refuse'
 
 /** Position d'un devis : article chiffré, sous-titre ou texte libre. */
 /** Sous-détail de prix type (bibliothèque d'ouvrages du métreur). */
+/** Élément de coûts rattaché à une ligne de sous-détail : son prix s'applique directement. */
+export interface ElementRef {
+  id: number
+  group_code: string | null
+  number: string
+  description: string
+  unit: string | null
+  net_price: number | null
+  regie_price: number | null
+  price_updated_at: string | null
+}
+
 export interface BreakdownTemplateLine {
   id: number
   family: number
   price_element_id: number | null
+  element?: ElementRef | null
   label: string
   unit: string | null
   quantity: number
   per_dimension: boolean
   pack_size: number | null
   unit_cost: number
+  /** Prix de vente unitaire (élément de coûts ou saisi) ; vide = coût × (1 + majoration). */
+  unit_sale: number | null
   markup_percent: number
   note: string | null
 }
@@ -263,12 +278,14 @@ export interface PositionCost {
   id: number
   family: number
   price_element_id: number | null
+  element?: ElementRef | null
   label: string
   unit: string | null
   quantity: number
   per_dimension: boolean
   pack_size: number | null
   unit_cost: number
+  unit_sale: number | null
   markup_percent: number
   cost: number
   sale: number

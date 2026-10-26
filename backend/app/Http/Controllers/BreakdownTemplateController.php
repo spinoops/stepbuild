@@ -28,7 +28,7 @@ class BreakdownTemplateController extends Controller
 
     public function show(BreakdownTemplate $template): BreakdownTemplateResource
     {
-        return BreakdownTemplateResource::make($template->load('lines'));
+        return BreakdownTemplateResource::make($template->load('lines.priceElement'));
     }
 
     public function store(SaveBreakdownTemplateRequest $request): JsonResponse
@@ -41,7 +41,7 @@ class BreakdownTemplateController extends Controller
             return $template;
         });
 
-        return BreakdownTemplateResource::make($template->load('lines'))->response()->setStatusCode(201);
+        return BreakdownTemplateResource::make($template->load('lines.priceElement'))->response()->setStatusCode(201);
     }
 
     public function update(SaveBreakdownTemplateRequest $request, BreakdownTemplate $template): BreakdownTemplateResource
@@ -54,7 +54,7 @@ class BreakdownTemplateController extends Controller
             }
         });
 
-        return BreakdownTemplateResource::make($template->refresh()->load('lines'));
+        return BreakdownTemplateResource::make($template->refresh()->load('lines.priceElement'));
     }
 
     public function destroy(BreakdownTemplate $template): JsonResponse
@@ -69,6 +69,6 @@ class BreakdownTemplateController extends Controller
     {
         $template->increment('usage_count');
 
-        return BreakdownTemplateResource::make($template->load('lines'));
+        return BreakdownTemplateResource::make($template->load('lines.priceElement'));
     }
 }

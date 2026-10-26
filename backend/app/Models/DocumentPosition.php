@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\BreakdownElements;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -110,7 +111,7 @@ class DocumentPosition extends Model
         $keep = [];
         $quantity = $this->breakdownQuantity();
         foreach (array_values($lines) as $index => $line) {
-            $attributes = [...collect($line)->except('id')->all(), 'position' => $index + 1];
+            $attributes = BreakdownElements::apply([...collect($line)->except('id')->all(), 'position' => $index + 1]);
             $existing = isset($line['id']) ? $this->costs()->find($line['id']) : null;
             $cost = $existing ? $existing->fill($attributes) : $this->costs()->make($attributes);
             $cost->compute($quantity)->save();

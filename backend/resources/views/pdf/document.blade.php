@@ -70,6 +70,8 @@
         .detail .description { white-space: pre-line; }
         .option { color: #777; }
         .grand-total td { border-top: 0.8pt solid #1f1f1f; font-weight: bold; padding: 2.5mm 1mm; }
+        .detail tr.step-total td { font-style: italic; color: #444; padding-top: 1.2mm; padding-bottom: 2.5mm; }
+        .detail tr.step-total td.amount { font-style: normal; font-weight: bold; color: #1f1f1f; border-top: 0.5pt solid #777; }
     </style>
 </head>
 <body>
@@ -267,6 +269,13 @@
                 <td class="cur">CHF</td>
                 <td class="amount">{{ P::money($document->total_gross) }}</td>
             </tr>
+            @if ($optionsTotal > 0)
+                <tr class="sub">
+                    <td colspan="2" style="color: #666; padding-top: 2mm;">Options (hors total, sur demande)</td>
+                    <td class="cur" style="padding-top: 2mm;">CHF</td>
+                    <td class="amount" style="color: #666; padding-top: 2mm;">({{ P::money($optionsTotal) }})</td>
+                </tr>
+            @endif
         @endif
     </table>
     @endif
@@ -328,8 +337,8 @@
                             @endif
                             <td class="qty">{{ $row['quantity'] !== null ? P::money($row['quantity']) : '' }}</td>
                             @if ($showPrices)
-                                <td class="price">{{ P::money($row['unit_price']) }}</td>
-                                <td class="amount">{{ P::money($row['amount']) }}</td>
+                                <td class="price">{{ $row['is_optional'] ? '('.P::money($row['unit_price']).')' : P::money($row['unit_price']) }}</td>
+                                <td class="amount">{{ $row['is_optional'] ? '('.P::money($row['amount']).')' : P::money($row['amount']) }}</td>
                             @endif
                         </tr>
                         @foreach ($costs as $cost)
@@ -342,7 +351,7 @@
                                 @endif
                                 <td class="qty">{{ P::qty($cost['quantity']) }}</td>
                                 @if ($showPrices)
-                                    <td class="price">{{ P::money($cost['unit_cost']) }}@if ($cost['markup_percent']) +{{ P::qty($cost['markup_percent']) }}%@endif</td>
+                                    <td class="price">{{ P::money($cost['unit_sale'] ?? $cost['unit_cost'] * (1 + $cost['markup_percent'] / 100)) }}</td>
                                     <td class="amount">{{ P::money($cost['sale']) }}</td>
                                 @endif
                             </tr>
@@ -354,6 +363,13 @@
                         </tr>
                     @endif
                 @endforeach
+                @if ($stepTotals && $showPrices && collect($step['rows'])->where('kind', 'item')->isNotEmpty())
+                    <tr class="step-total">
+                        <td></td>
+                        <td colspan="{{ $columns - 2 }}"></td>
+                        <td class="amount">{{ P::money($step['total']) }}</td>
+                    </tr>
+                @endif
             @endforeach
             @if ($showPrices)
                 <tr class="grand-total">

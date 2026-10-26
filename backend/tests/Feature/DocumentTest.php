@@ -236,6 +236,44 @@ it('réordonne les étapes et les positions', function () {
 
     $this->postJson("/api/documents/{$document->id}/positions/reorder", ['step_id' => $a, 'ids' => [$p2, $p1]])
         ->assertOk()->assertJsonPath('data.steps.1.positions.0.description', 'Deux');
+
+    // after_id = 0 : en tête d'étape, en un seul appel.
+    $this->postJson("/api/documents/{$document->id}/positions", ['document_step_id' => $a, 'kind' => 'title', 'description' => 'Cuisine', 'after_id' => 0])
+        ->assertCreated()
+        ->assertJsonPath('data.steps.1.positions.0.description', 'Cuisine')
+        ->assertJsonPath('data.steps.1.positions.1.description', 'Deux')
+        ->assertJsonPath('data.steps.1.positions.2.description', 'Un');
+});
+
+it('insère un titre de chapitre entre les lignes : les lignes suivantes passent dessous', function () {
+    actingAsRole('responsable');
+    $document = Document::createForProject(quoteProject(), 'devis');
+    $a = $this->postJson("/api/documents/{$document->id}/steps", ['code' => '03', 'label' => 'DEMONTAGE'])->json('data.steps.0.id');
+    $b = $this->postJson("/api/documents/{$document->id}/steps", ['code' => '12', 'label' => 'CARRELAGE'])->json('data.steps.1.id');
+    $ids = collect(['Un', 'Deux', 'Trois'])->map(fn ($text) => $this->postJson("/api/documents/{$document->id}/positions", [
+        'document_step_id' => $a, 'description' => $text, 'quantity' => 1, 'unit_price' => 10,
+    ])->json('created_position_id'));
+
+    // Titre au-dessus de « Deux » : DEMONTAGE garde « Un », le nouveau chapitre prend « Deux » et « Trois ».
+    $response = $this->postJson("/api/documents/{$document->id}/steps/insert", ['after_step_id' => $a, 'position_id' => $ids[1], 'label' => 'Démolition cuisine'])
+        ->assertCreated()
+        ->assertJsonCount(3, 'data.steps')
+        ->assertJsonPath('data.steps.0.label', 'DEMONTAGE')
+        ->assertJsonCount(1, 'data.steps.0.positions')
+        ->assertJsonPath('data.steps.1.label', 'Démolition cuisine')
+        ->assertJsonPath('data.steps.1.catalog_chapter_id', null)
+        ->assertJsonPath('data.steps.1.positions.0.description', 'Deux')
+        ->assertJsonPath('data.steps.1.positions.1.description', 'Trois')
+        ->assertJsonPath('data.steps.2.id', $b)
+        ->assertJsonPath('data.total_net', 30);
+    expect($response->json('created_step_id'))->toBe($response->json('data.steps.1.id'));
+
+    // Sans ligne : le titre s'insère après l'étape, vide.
+    $this->postJson("/api/documents/{$document->id}/steps/insert", ['after_step_id' => $b, 'label' => 'Divers'])
+        ->assertCreated()->assertJsonPath('data.steps.3.label', 'Divers')->assertJsonCount(0, 'data.steps.3.positions');
+
+    // Une ligne d'une autre étape est refusée.
+    $this->postJson("/api/documents/{$document->id}/steps/insert", ['after_step_id' => $b, 'position_id' => $ids[0], 'label' => 'X'])->assertNotFound();
 });
 
 it('supprime une étape avec ses positions et recalcule', function () {

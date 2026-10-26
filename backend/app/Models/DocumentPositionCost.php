@@ -27,7 +27,7 @@ class DocumentPositionCost extends Model
 
     protected $fillable = [
         'document_position_id', 'family', 'price_element_id', 'label', 'unit', 'quantity', 'per_dimension',
-        'pack_size', 'unit_cost', 'markup_percent', 'note', 'position',
+        'pack_size', 'unit_cost', 'unit_sale', 'markup_percent', 'note', 'position',
     ];
 
     protected function casts(): array
@@ -38,6 +38,7 @@ class DocumentPositionCost extends Model
             'per_dimension' => 'boolean',
             'pack_size' => 'float',
             'unit_cost' => 'float',
+            'unit_sale' => 'float',
             'markup_percent' => 'float',
             'cost' => 'float',
             'sale' => 'float',
@@ -67,11 +68,17 @@ class DocumentPositionCost extends Model
         return $quantity;
     }
 
-    /** Recalcule coût et vente pour la dimension donnée (sans enregistrer). */
+    /**
+     * Recalcule coût et vente pour la dimension donnée (sans enregistrer). Vente = quantité × prix de vente
+     * unitaire s'il est donné (élément de coûts, ou saisi), sinon coût × (1 + majoration).
+     */
     public function compute(?float $dimension): self
     {
-        $this->cost = round($this->computedQuantity($dimension) * $this->unit_cost, 2);
-        $this->sale = round($this->cost * (1 + $this->markup_percent / 100), 2);
+        $quantity = $this->computedQuantity($dimension);
+        $this->cost = round($quantity * $this->unit_cost, 2);
+        $this->sale = $this->unit_sale !== null
+            ? round($quantity * $this->unit_sale, 2)
+            : round($this->cost * (1 + $this->markup_percent / 100), 2);
 
         return $this;
     }

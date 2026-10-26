@@ -141,16 +141,22 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
 - **Totaux** recalculés côté serveur (`Document::recalculate`) : net hors options, rabais %, TVA (8.1 % par défaut),
   **arrondi à 5 centimes**, TTC. Chaque action d'étape ou de position **renvoie le document complet** ; le front
   remplace le cache (`useDocumentActions` dans `hooks/useDocuments.ts`), sans rechargement.
-- **Saisie rapide** (`components/documents/`) : `ArticlePicker` par étape cherche en mémoire dans
-  `/api/catalog-articles/picker` ; Entrée insère, puis quantité → Entrée → prix → Entrée → retour au champ d'ajout.
-  Sans résultat : ligne libre, ou **création de l'article à la volée** dans le chapitre de l'étape. La loupe du champ ouvre
-  `ArticleBrowserDialog` (chapitres en arbre, recherche en mémoire, double-clic ou Entrée insère, « Insérer et
-  continuer ») ; même principe pour les éléments de coûts avec `components/shared/ElementBrowserDialog` (groupes,
-  recherche serveur) depuis `ElementPicker` (rapports, sous-détail). `DataGrid` a reçu `onActivate` (double-clic).
+- **Ajout des articles : uniquement depuis le panneau de gauche** (26.10.2026) : le champ d'ajout d'article par étape
+  (`ArticlePicker`, `ArticleBrowserDialog`) a été retiré de la feuille ; à sa place, une zone de dépôt « Glissez un article
+  du catalogue ici » (toujours `data-picker={step.id}`, cible de fin d'étape). Les sous-titres, textes et titres de
+  chapitre s'insèrent par le « + » entre les lignes (`InsertLineRow`). Après insertion, quantité → Entrée → prix →
+  Entrée. Pour les éléments de coûts, `components/shared/ElementBrowserDialog` (groupes, recherche serveur) depuis
+  `ElementPicker` (rapports, sous-détail). `DataGrid` a reçu `onActivate` (double-clic). **À refaire dans le mode
+  d'emploi** : chapitre 9 « saisie rapide » et capture 13 (`capture.cjs` clique encore `[data-picker]`).
   `PositionRow` garde un brouillon local (enregistré à la sortie de ligne ou après 1,5 s) : ne pas resynchroniser
   ses champs depuis le serveur pendant la saisie.
   Réordonnancement par **glisser-déposer** natif (poignée `data-handle`, dépose dans l'étape ou vers une autre étape :
   `updatePosition` avec le nouveau `document_step_id` puis `reorderPositions`) ; au clavier, flèches sur la poignée.
+  **Insertion entre les lignes** (26.10.2026) : un « + » au survol, sur le bord haut de chaque ligne et du champ
+  d'ajout (`InsertAboveButton`), ouvre `InsertLineRow` : **titre de chapitre** (par défaut), sous-titre ou texte.
+  Le titre de chapitre crée une étape libre juste après l'étape courante, et la ligne visée et les suivantes passent
+  dessous (`POST /documents/{id}/steps/insert` `{after_step_id, position_id?, label}`, renvoie `created_step_id`) ;
+  sous-titre et texte s'insèrent à l'endroit (`after_id`, **`after_id` = 0 = en tête d'étape**, un seul appel).
   **Les étapes se gèrent aussi sur la feuille** (20.10.2026) : poignée `data-step-handle` sur le titre (glisser l'étape
   entière au-dessus / en dessous d'une autre, `stepDragRef` distinct du glissement de position, ou flèches au clavier →
   `reorderSteps`), renommage par double-clic ou crayon (`updateStep`), corbeille (`deleteStep`, confirmation).
@@ -168,14 +174,23 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   avec la mention « corrigé à … ». Les colonnes `dimension` / `price_per_dimension` restent en base
   (dimension = quantité de la ligne) mais ne se saisissent plus. `PUT /documents/{id}/positions/{pos}/breakdown`
   remplace tout le sous-détail (`lines`, `internal_remark`).
+  **Prix de vente unitaire** (26.10.2026, colonne `unit_sale` sur `document_position_costs` et
+  `breakdown_template_lines`) : vente = quantité × prix de vente s'il est donné, sinon coût × (1 + majoration)
+  (`DocumentPositionCost::compute`) ; une ligne rattachée à un élément prend ses deux prix (achat = net, vente =
+  régie, tels quels) et la marge affichée en découle. Tableau : colonnes Achat, Vente unit., Marge % (prix de vente
+  sur achat), Coût, Vente ; saisir l'un recalcule les autres (`changeCost` / `changeSale` / `changeMarkup`).
   Front : `CostBreakdownDialog` (autosave 1 s, sauvegardes en file, affiche « ÷ quantité ») + `BreakdownLinesTable`
   (tableau partagé, colonne « × Qté »), familles et calcul dans `lib/costFamilies.ts`, brouillons dans `lib/breakdown.ts`.
   Dans la ligne du devis, le prix d'une position avec sous-détail est en bleu (rouge s'il a été corrigé à la main).
 - **Options d'affichage du devis** (`lib/quoteView.ts`, mémorisées dans le navigateur, barre au-dessus de la feuille) :
-  « Afficher les sous-détails » (lignes du sous-détail **en rouge, très compact, sous la position**) et « Masquer les
-  prix » (devis descriptif). Les mêmes options pilotent l'aperçu et le PDF (`GET …/pdf?breakdown=1&prices=0`,
-  cases aussi dans l'onglet Aperçu) : sous-détails imprimés en rouge sous les positions ; sans prix, la page de garde
-  liste les étapes sans montants et le détail n'a ni Prix ni Montant.
+  « Afficher les sous-détails » (lignes du sous-détail **en rouge, très compact, sous la position**), « Masquer les
+  prix » (devis descriptif) et « Totaux par étape » (26.10.2026, **coché par défaut** : le montant de l'étape seul, sans
+  libellé, sous ses lignes, options non comprises). Les mêmes options pilotent l'aperçu et le PDF
+  (`GET …/pdf?breakdown=1&prices=0&totals=0`, cases aussi dans l'onglet Aperçu) : sous-détails imprimés en rouge
+  sous les positions ; sans prix, la page de garde liste les étapes sans montants et le détail n'a ni Prix ni
+  Montant ; `tr.step-total` dans le détail imprimé. **Options** (`is_optional`) : prix et montant **entre
+  parenthèses** sur la feuille (`Parens` dans `PositionRow`) et dans le PDF ; la récapitulation (onglet et page de
+  garde, après le TTC) rappelle le **total des options**, non compris dans le devis.
 - **Saut de page** : position `kind = pagebreak` (sans description, bouton à droite du champ d'ajout de chaque étape,
   déplaçable par sa poignée) ; dessiné en pointillé sur la feuille, le PDF ferme et rouvre le tableau de détail.
 - **Sous-détails types** (`breakdown_templates` → `breakdown_template_lines`, page `/sous-details-types`) : la
@@ -183,9 +198,28 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `database/data/breakdown_templates.json`, chargés par `BreakdownTemplateSeeder` dans **tous** les environnements,
   jamais écrasés une fois présents). Conventions du métreur : main-d'œuvre vendue **750.- la personne-jour, 90.-
   l'heure** (lignes MO à prix de vente, majoration 0), prix fournisseurs **+30 %**. Dans la fenêtre du sous-détail,
-  `TemplatePicker` charge un modèle (lignes remplacées, DIM saisie conservée, `POST …/used` compte l'usage) ;
-  « Enregistrer comme sous-détail type » crée un modèle depuis une position. `catalog_article_id` est prévu pour
+  la bibliothèque charge un modèle (lignes remplacées, `POST …/used` compte l'usage) ;
+  **Fenêtre pleine largeur** (26.10.2026, `Modal size="full"`) : le calcul de la ligne à gauche, la **bibliothèque des
+  sous-détails types** à droite (`TemplateLibraryPanel` : recherche, liste par groupe, un clic charge l'ouvrage —
+  confirmation si des lignes existent —, l'ouvrage chargé est surligné, icône « enregistrer » = remplacer ses lignes
+  par celles saisies, corbeille = supprimer, et en bas **création directe** d'un ouvrage avec les lignes saisies :
+  nom + Créer, quantité et unité de la ligne comme DIM). `TemplatePicker` et `NewTemplateDialog` ont disparu. `catalog_article_id` est prévu pour
   rattacher un modèle à un article à la reprise du catalogue BauBit (chargement automatique à l'insertion).
+  **Lignes rattachées aux éléments de coûts** (26.10.2026) : une ligne de sous-détail (modèle ou position) avec
+  `price_element_id` prend **le prix de l'élément** : `App\Support\BreakdownElements` (coût = prix net, sinon
+  fournisseur, sinon régie ; majoration = régie / net − 1 si les deux existent ; unité de l'élément ; libellé libre),
+  appliqué à l'enregistrement (`BreakdownTemplate::syncLines`, `DocumentPosition::syncBreakdown`) et **en direct** sur
+  la fiche d'un modèle et à son chargement (`BreakdownTemplateResource` relit l'élément : `lines.*.element`,
+  `costs.*.element`). Front : pastille avec le numéro de l'élément dans `BreakdownLinesTable` (unité et coût non
+  modifiables, clic = détacher), étiquette au survol d'une ligne libre → `ElementPicker` pour la rattacher
+  (`lib/breakdown.ts` `linkedValues()`). **Rattachement automatique** des 110 modèles transcrits :
+  `php artisan stepbuild:link-breakdown-lines [--dry-run] [--write-json] [--all]` (`App\Support\BreakdownLinker` :
+  main-d'œuvre → Ouvrier qualifié en heures = personnes × jours × `work_day_hours` ; autres familles : mots entiers
+  du libellé dans la désignation, unités compatibles, un seul candidat net, sinon « à choisir »). Fait le 26.10.2026 :
+  170 lignes rattachées et reportées dans `breakdown_templates.json` (10e élément de la ligne = `{baubit_id,
+  group_code, number, description}`) ; `BreakdownTemplateSeeder::linkElements()` applique ces rattachements aux
+  modèles déjà chargés (prod) si l'élément existe. Les 251 lignes « à choisir » et 103 « sans élément » se rattachent
+  à la main dans la page Sous-détails types.
 - **Le détail se présente comme la feuille imprimée** (`DocumentEditor`) : feuille blanche de 869 px sur fond gris, zone
   imprimée de 717 px aux proportions des colonnes du PDF (police Helvetica 14 px, descriptions qui passent à la ligne
   comme sur le papier), **numéro imprimé en direct** (`lib/documentNumbering.ts`, même règle que `DocumentPrint::steps`),
@@ -220,7 +254,13 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   vide) → `lib/quoteInsert.ts` `insertArticle()` le place dans son étape, **créée d'abord (titre seul) si elle
   manque** (toast). Une fois dans le devis, la position se déplace librement par sa poignée. Un chapitre glissé →
   `ensureStep()`. `takeCatalogDrag()` garantit un seul gestionnaire par dépôt. Clic sur un chapitre :
-  déplie ses articles. Crayon sur un article : `ArticleQuickEdit` modifie le catalogue seulement (les positions du
+  déplie ses articles. **Bouton +** au survol d'un chapitre (devis ouvert) → `ArticleCreateDialog` : nouvel article
+  dans ce chapitre (description, code, unité, prix d'achat et de vente), le chapitre se déplie. Le volet « Étapes et
+  devis » est **replié par défaut** (26.10.2026). **Sélection multiple** (26.10.2026) : clic sur un article, Ctrl + clic (articles et chapitres),
+  Maj + clic pour une plage ; glisser un élément sélectionné emporte toute la sélection (`CatalogDrag` `kind: 'many'`,
+  pastille « n éléments ») → `insertMany()` les insère dans l'ordre du catalogue, à la suite à l'endroit visé s'ils
+  y ont leur place, sinon dans l'étape de leur chapitre ; le document est relu dans le cache entre deux ajouts
+  (`actions.current()`). Un **chapitre libre** (`catalog_chapter_id` null) accepte tout article déposé dessus. Crayon sur un article : `ArticleQuickEdit` modifie le catalogue seulement (les positions du
   devis sont des instantanés, jamais touchées).
 - **Documents dérivés d'un devis** (22.10.2026, `documents.source_document_id`, menu « Autre document » de la page
   Documents → `DerivedDocumentDialog`) : **Demande d'acompte** (`type` acompte, `AC.n`, `Document::createAdvance()` :
@@ -342,10 +382,16 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `hooks/useStock.ts` (le produit renvoyé remplace celui du cache). Pour admin/responsable la page est dans la coque
   normale (Données de base → Stocks).
 
+### Éléments de coûts : deux prix affichés
+Depuis le 26.10.2026, la liste et la fiche ne montrent que **Prix d'achat** (= `net_price`, le coût) et **Prix de vente**
+(= `regie_price`, le prix facturé) ; `supplier_price` (prix fournisseur BauBit) reste en base et dans l'API, renvoyé
+tel quel par le formulaire, mais n'est plus affiché ni saisi. Mêmes libellés dans `ElementBrowserDialog` et les
+info-bulles des sous-détails. Les noms de colonnes de l'API ne changent pas.
+
 ### Éléments de coûts : majoration par tirette
-Dans la liste des éléments de coûts, la colonne **Majoration** (prix régie sur prix net, en %) est une cellule
+Dans la liste des éléments de coûts, la colonne **Majoration** (prix de vente sur prix d'achat, en %) est une cellule
 `MarkupCell` : un clic ouvre une tirette (0–200 %, champ et raccourcis 0 / 10 / 20 / 30 / 50 %) ; au relâchement, le
-**prix régie** est réécrit = prix net × (1 + majoration), arrondi à 5 ct (`PUT /price-elements/{id}` avec la fiche
+**prix de vente** est réécrit = prix d'achat × (1 + majoration), arrondi à 5 ct (`PUT /price-elements/{id}` avec la fiche
 complète). La colonne « Code régie » a quitté la liste (le champ reste dans la fiche pour les reprises).
 
 ### Éléments de coûts : unité régie
@@ -358,8 +404,10 @@ Table `units` (code imprimé, libellé, ordre, actif), `Unit::DEFAULTS` = codes 
 Pce…), créées par `Unit::seedDefaults()` dans `DatabaseSeeder` (tous environnements, jamais écrasées). `GET /units`
 pour tous les rôles ; store/update/destroy/reorder pour la gestion. Les positions, articles et éléments gardent
 l'unité **en texte** (code) : supprimer ou désactiver une unité ne touche pas aux données. Front :
-`components/shared/UnitSelect` (liste + valeur actuelle hors liste conservée, remonté quand la liste arrive pour
-react-hook-form) dans `PositionRow` et le formulaire d'article ; éditeur `components/settings/UnitsEditor` sur la
+`components/shared/UnitSelect` (26.10.2026 : champ de recherche avec liste par **ordre alphabétique**, les premières
+lettres filtrent — code d'abord, puis libellé, « contient » dès deux lettres —, Entrée / Tab prend l'unité, Échap
+annule ; API `value` / `onChange(code)` / `onEnter`, liste en portail ; dans le formulaire d'article : `useWatch` +
+`setValue`) dans `PositionRow` (Entrée passe à la quantité) et le formulaire d'article ; éditeur `components/settings/UnitsEditor` sur la
 page Configuration.
 
 ### Reprise BauBit (phase 7)
@@ -406,7 +454,8 @@ navigateur. `LoginLog::record()` ne bloque jamais la connexion. `GET /api/login-
 Les modules non développés utilisent `components/ModulePlaceholder.tsx` : **remplacer**
 le placeholder par la vraie page lors de la phase concernée.
 
-Statuts (libellés, codes BauBit, couleurs) dans `frontend/src/lib/status.ts`.
+Statuts (libellés, codes BauBit, couleurs) dans `frontend/src/lib/status.ts` ; rapports journaliers : **En cours,
+Contrôlé, Facturé** (libellés du 26.10.2026, codes `en_cours` / `en_controle` / `facture` inchangés).
 Phases du projet : `frontend/src/lib/phases.ts` (mettre à jour `status` ; n'alimente plus que la barre d'état, la liste a été retirée du tableau de bord le 08.10.2026).
 
 ## ⚠️ Piège PHP (IMPORTANT)
