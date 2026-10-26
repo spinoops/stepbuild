@@ -40,9 +40,10 @@ const COLUMNS: GridColumn<PriceElement>[] = [
   { key: 'number', header: 'N° élément', value: (e) => e.number, width: 110 },
   { key: 'description', header: 'Description', value: (e) => e.description, width: 460 },
   { key: 'unit', header: 'Un.', value: (e) => e.unit, width: 70 },
-  { key: 'supplier_price', header: 'Prix fourn.', value: (e) => e.supplier_price, type: 'number', width: 100 },
-  { key: 'net_price', header: 'Net', value: (e) => e.net_price, type: 'number', width: 100 },
-  { key: 'regie_price', header: 'Prix régie', value: (e) => e.regie_price, type: 'number', width: 100 },
+  // Deux prix seulement (demande du 26.10.2026) : achat = prix net (coût), vente = prix régie (facturé).
+  // Le prix fournisseur reste en base (reprises BauBit) mais n'est plus affiché ni saisi.
+  { key: 'net_price', header: "Prix d'achat", value: (e) => e.net_price, type: 'number', width: 100 },
+  { key: 'regie_price', header: 'Prix de vente', value: (e) => e.regie_price, type: 'number', width: 100 },
   {
     key: 'price_updated_at',
     header: 'Prix du',
@@ -70,7 +71,6 @@ const schema = z.object({
   number: z.string().trim().min(1, 'Le numéro est requis.').max(30),
   description: z.string().trim().min(1, 'La description est requise.').max(500),
   unit: z.string().max(20),
-  supplier_price: price,
   net_price: price,
   regie_price: price,
   regie_code: z.string().max(30),
@@ -87,7 +87,6 @@ function toValues(element: PriceElement | null, family: number): FormValues {
     number: element?.number ?? '',
     description: element?.description ?? '',
     unit: element?.unit ?? '',
-    supplier_price: text(element?.supplier_price),
     net_price: text(element?.net_price),
     regie_price: text(element?.regie_price),
     regie_code: element?.regie_code ?? '',
@@ -271,8 +270,8 @@ function ElementForm({ element, isNew, defaultFamily, defaultGroup, disabled, on
           number: values.number.trim(),
           description: values.description.trim(),
           unit: nullable(values.unit),
-          supplier_price: toNumber(values.supplier_price),
-          net_price: toNumber(values.net_price) ?? toNumber(values.supplier_price),
+          supplier_price: element?.supplier_price ?? null, // conservé tel quel (reprise BauBit), plus saisi
+          net_price: toNumber(values.net_price),
           regie_price: toNumber(values.regie_price),
           regie_code: nullable(values.regie_code),
         },
@@ -300,8 +299,8 @@ function ElementForm({ element, isNew, defaultFamily, defaultGroup, disabled, on
         <Field label="Unité" labelWidth={90}>
           <BbInput className="w-24" {...register('unit')} />
         </Field>
-        <Field label="Prix fournisseur" labelWidth={110}>
-          <BbInput className="w-28 text-right" invalid={Boolean(errors.supplier_price)} {...register('supplier_price')} />
+        <Field label="Prix d'achat" labelWidth={110}>
+          <BbInput className="w-28 text-right" invalid={Boolean(errors.net_price)} {...register('net_price')} />
         </Field>
 
         <Field label="Groupe / N°" labelWidth={90}>
@@ -311,32 +310,29 @@ function ElementForm({ element, isNew, defaultFamily, defaultGroup, disabled, on
         <Field label="Code régie" labelWidth={90}>
           <BbInput className="w-56" {...register('regie_code')} />
         </Field>
-        <Field label="Prix net" labelWidth={110}>
-          <BbInput className="w-28 text-right" invalid={Boolean(errors.net_price)} {...register('net_price')} />
+        <Field label="Prix de vente" labelWidth={110}>
+          <BbInput className="w-28 text-right" invalid={Boolean(errors.regie_price)} {...register('regie_price')} />
         </Field>
 
         <Field label="Description" labelWidth={90} className="col-span-2">
           <BbInput className="w-[590px]" invalid={Boolean(errors.description)} {...register('description')} />
         </Field>
-        <Field label="Prix régie (majoré)" labelWidth={110}>
-          <BbInput className="w-28 text-right" invalid={Boolean(errors.regie_price)} {...register('regie_price')} />
-          {element?.price_updated_at && <span className="ml-3 text-[12px] text-gray-500">Prix du {fmtDate(element.price_updated_at)}</span>}
-        </Field>
+        <div className="flex items-center text-[12px] text-gray-500">{element?.price_updated_at && `Prix du ${fmtDate(element.price_updated_at)}`}</div>
       </fieldset>
       {firstError && <p className="mt-2 text-[12px] text-red-600">{firstError}</p>}
     </form>
   )
 }
 
-/** Majoration du prix régie sur le prix net, en % (null sans prix net ou sans prix régie). */
+/** Majoration du prix de vente sur le prix d'achat, en % (null sans l'un des deux prix). */
 function markupOf(element: PriceElement): number | null {
   return element.net_price && element.regie_price !== null ? ((element.regie_price - element.net_price) / element.net_price) * 100 : null
 }
 
 /**
  * Cellule « Majoration » de la liste : un clic ouvre une tirette ; la majoration choisie recalcule le prix
- * régie (prix net × (1 + majoration), arrondi à 5 ct) et l'enregistre quand on relâche la tirette, qu'on
- * valide le champ ou qu'on clique un raccourci. Sans prix net, rien à majorer.
+ * de vente (prix d'achat × (1 + majoration), arrondi à 5 ct) et l'enregistre quand on relâche la tirette, qu'on
+ * valide le champ ou qu'on clique un raccourci. Sans prix d'achat, rien à majorer.
  */
 function MarkupCell({ element }: { element: PriceElement }) {
   const save = useSaveResource<PriceElement, Record<string, unknown>>('price-elements')
@@ -376,7 +372,7 @@ function MarkupCell({ element }: { element: PriceElement }) {
     setDraft(null)
   }
 
-  /** Enregistre le prix régie correspondant à la majoration donnée (si elle change). */
+  /** Enregistre le prix de vente correspondant à la majoration donnée (si elle change). */
   function apply(value: number) {
     setDraft(null)
     if (Math.abs(value - (current ?? 0)) < 0.05) {
@@ -403,7 +399,7 @@ function MarkupCell({ element }: { element: PriceElement }) {
         },
       },
       {
-        onSuccess: () => toast(`Prix régie de ${element.number} : ${fmtAmount(regie)} (net + ${fmtAmount(value, 1)} %).`, 'success'),
+        onSuccess: () => toast(`Prix de vente de ${element.number} : ${fmtAmount(regie)} (achat + ${fmtAmount(value, 1)} %).`, 'success'),
         onError: () => toast("La majoration n'a pas pu être enregistrée.", 'error'),
       },
     )
@@ -422,7 +418,7 @@ function MarkupCell({ element }: { element: PriceElement }) {
         type="button"
         onClick={toggle}
         disabled={!net}
-        title={net ? 'Cliquer pour régler la majoration avec une tirette' : 'Pas de prix net : rien à majorer'}
+        title={net ? 'Cliquer pour régler la majoration avec une tirette' : "Pas de prix d'achat : rien à majorer"}
         className={`h-7 w-full rounded px-1.5 text-right tabular-nums transition ${
           net ? 'text-gray-600 hover:bg-primary-50 hover:text-primary-800' : 'cursor-default text-gray-300'
         } ${open ? 'bg-primary-50 text-primary-800' : ''}`}
@@ -443,8 +439,8 @@ function MarkupCell({ element }: { element: PriceElement }) {
           className="z-50 w-[300px] rounded-lg border border-gray-200 bg-white p-3 text-[12px] shadow-xl"
         >
           <div className="mb-2 flex items-baseline justify-between">
-            <span className="font-semibold text-gray-700">Majoration sur le prix net</span>
-            <span className="text-gray-400">net {fmtAmount(net)}</span>
+            <span className="font-semibold text-gray-700">Majoration sur le prix d'achat</span>
+            <span className="text-gray-400">achat {fmtAmount(net)}</span>
           </div>
           <div className="flex items-center gap-2">
             <input
@@ -475,7 +471,7 @@ function MarkupCell({ element }: { element: PriceElement }) {
             <span className="text-gray-500">%</span>
           </div>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-gray-500">Prix régie</span>
+            <span className="text-gray-500">Prix de vente</span>
             <span className={`text-[14px] font-semibold tabular-nums ${draft !== null ? 'text-primary-800' : 'text-gray-800'}`}>{fmtAmount(projected)}</span>
           </div>
           <div className="mt-1 flex flex-wrap gap-1">

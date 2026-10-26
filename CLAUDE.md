@@ -370,10 +370,16 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   `hooks/useStock.ts` (le produit renvoyé remplace celui du cache). Pour admin/responsable la page est dans la coque
   normale (Données de base → Stocks).
 
+### Éléments de coûts : deux prix affichés
+Depuis le 26.10.2026, la liste et la fiche ne montrent que **Prix d'achat** (= `net_price`, le coût) et **Prix de vente**
+(= `regie_price`, le prix facturé) ; `supplier_price` (prix fournisseur BauBit) reste en base et dans l'API, renvoyé
+tel quel par le formulaire, mais n'est plus affiché ni saisi. Mêmes libellés dans `ElementBrowserDialog` et les
+info-bulles des sous-détails. Les noms de colonnes de l'API ne changent pas.
+
 ### Éléments de coûts : majoration par tirette
-Dans la liste des éléments de coûts, la colonne **Majoration** (prix régie sur prix net, en %) est une cellule
+Dans la liste des éléments de coûts, la colonne **Majoration** (prix de vente sur prix d'achat, en %) est une cellule
 `MarkupCell` : un clic ouvre une tirette (0–200 %, champ et raccourcis 0 / 10 / 20 / 30 / 50 %) ; au relâchement, le
-**prix régie** est réécrit = prix net × (1 + majoration), arrondi à 5 ct (`PUT /price-elements/{id}` avec la fiche
+**prix de vente** est réécrit = prix d'achat × (1 + majoration), arrondi à 5 ct (`PUT /price-elements/{id}` avec la fiche
 complète). La colonne « Code régie » a quitté la liste (le champ reste dans la fiche pour les reprises).
 
 ### Éléments de coûts : unité régie

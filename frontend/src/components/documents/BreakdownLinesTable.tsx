@@ -83,7 +83,7 @@ export default function BreakdownLinesTable({ evaluated, onUpdateLine, onAddLine
                           type="button"
                           disabled={readOnly}
                           onClick={() => onUpdateLine(line.key, { price_element_id: null, element: null })}
-                          title={`Élément de coûts ${line.element.number} · ${line.element.description}\nPrix net ${line.element.net_price !== null ? fmtAmount(line.element.net_price) : '—'}${line.element.regie_price !== null ? `, régie ${fmtAmount(line.element.regie_price)}` : ''}${line.element.price_updated_at ? ` (prix du ${fmtDate(line.element.price_updated_at)})` : ''}\nSon prix s'applique à la ligne. Clic : détacher (le prix redevient libre).`}
+                          title={`Élément de coûts ${line.element.number} · ${line.element.description}\nPrix d'achat ${line.element.net_price !== null ? fmtAmount(line.element.net_price) : '—'}${line.element.regie_price !== null ? `, prix de vente ${fmtAmount(line.element.regie_price)}` : ''}${line.element.price_updated_at ? ` (prix du ${fmtDate(line.element.price_updated_at)})` : ''}\nSon prix s'applique à la ligne. Clic : détacher (le prix redevient libre).`}
                           className="h-5 shrink-0 rounded bg-primary-100 px-1.5 text-[11px] font-medium tabular-nums text-primary-800 hover:bg-primary-200 disabled:hover:bg-primary-100"
                         >
                           {line.element.number}
