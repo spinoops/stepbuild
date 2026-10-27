@@ -78,4 +78,30 @@ class PriceElement extends Model
     {
         return LogOptions::defaults()->logFillable()->logOnlyDirty()->dontSubmitEmptyLogs();
     }
+
+    /**
+     * Prochain numéro libre d'une famille (et d'un groupe) : le premier multiple de 5 au-dessus du plus grand
+     * numéro existant, sur six chiffres « PPP.NNN » comme dans BauBit (020.000, 020.005…). Sans élément dans le
+     * groupe : 010.000 pour les salaires, sinon « F00.000 » (F = famille).
+     */
+    public static function nextNumber(int $family, ?string $group = null): string
+    {
+        // Calculé en SQL (10 000 éléments) : le numéro sans son point, en entier (MySQL et SQLite).
+        $max = (int) self::where('family', $family)->when($group, fn ($q) => $q->where('group_code', $group))
+            ->selectRaw("MAX(CAST(REPLACE(number, '.', '') AS UNSIGNED)) AS m")->value('m');
+        $next = $max ? (intdiv($max, 5) + 1) * 5 : ($family === 1 ? 10000 : $family * 100000);
+        while (self::withTrashed()->where('family', $family)->where('number', self::formatNumber($next))->exists()) {
+            $next += 5;
+        }
+
+        return self::formatNumber($next);
+    }
+
+    /** 20005 → « 020.005 ». */
+    public static function formatNumber(int $value): string
+    {
+        $digits = str_pad((string) $value, 6, '0', STR_PAD_LEFT);
+
+        return substr($digits, 0, -3).'.'.substr($digits, -3);
+    }
 }

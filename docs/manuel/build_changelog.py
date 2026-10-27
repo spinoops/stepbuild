@@ -1,148 +1,112 @@
 # -*- coding: utf-8 -*-
 """
-Génère le PDF des nouveautés livrées entre deux dates (document court pour le client).
+Génère le PDF des nouveautés livrées entre deux dates : une page, pour le client.
 
-    python build_changelog.py   -> docs/Nouveautés - StepBuild - 16 au 22 octobre 2026.pdf
+    python build_changelog.py   -> docs/Nouveautés - StepBuild - 23 au 26 octobre 2026.pdf
 
 Reprend la charte du mode d'emploi (build_manual.py). Police Helvetica : caractères WinAnsi seulement.
+À chaque livraison : mettre à jour PERIOD, OUTPUT et la liste des points ; vérifier qu'il tient sur une page.
 """
 import os
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate, Paragraph, Spacer
+from reportlab.platypus import BaseDocTemplate, Frame, ListFlowable, ListItem, PageTemplate, Paragraph, Spacer
 
-from build_manual import (
-    ANTHRACITE, BLUE, BODY, CONTENT_W, GREY, H1, H2, LEAD, MARGIN, PAGE_H, PAGE_W, RED, bullets, grid, note, p, tip,
-)
+from build_manual import ANTHRACITE, BLUE, CONTENT_W, GREY, MARGIN, PAGE_H, PAGE_W, RED
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PERIOD = 'du 16 au 22 octobre 2026'
-OUTPUT = os.path.join(HERE, '..', 'Nouveautés - StepBuild - 16 au 22 octobre 2026.pdf')
+PERIOD = 'du 23 au 26 octobre 2026'
+OUTPUT = os.path.join(HERE, '..', 'Nouveautés - StepBuild - 23 au 26 octobre 2026.pdf')
+
+# Styles compacts : le document tient sur une page.
+TEXT = ParagraphStyle('CText', fontName='Helvetica', fontSize=9.2, leading=12, textColor=colors.HexColor('#1f2937'), spaceAfter=3)
+INTRO = ParagraphStyle('CIntro', parent=TEXT, fontSize=9.8, leading=13, textColor=colors.HexColor('#374151'), spaceAfter=6)
+TITLE = ParagraphStyle('CTitle', fontName='Helvetica-Bold', fontSize=16, leading=19, textColor=BLUE, spaceAfter=6)
+HEAD = ParagraphStyle('CHead', fontName='Helvetica-Bold', fontSize=10.5, leading=13, textColor=ANTHRACITE, spaceBefore=6, spaceAfter=2, keepWithNext=1)
+FOOT = ParagraphStyle('CFoot', parent=TEXT, fontSize=8.6, leading=11, textColor=GREY, spaceBefore=6)
+
+
+def bullets(items):
+    return ListFlowable(
+        [ListItem(Paragraph(item, TEXT), leftIndent=11, bulletColor=BLUE) for item in items],
+        bulletType='bullet', start='•', bulletFontSize=8, leftIndent=11, bulletOffsetY=-1, spaceAfter=2,
+    )
 
 
 def header(canvas, doc):
     canvas.saveState()
     canvas.setFillColor(ANTHRACITE)
-    canvas.rect(0, PAGE_H - 2.6 * cm, PAGE_W, 2.6 * cm, stroke=0, fill=1)
+    canvas.rect(0, PAGE_H - 2.2 * cm, PAGE_W, 2.2 * cm, stroke=0, fill=1)
     canvas.setFillColor(RED)
-    canvas.rect(0, PAGE_H - 2.6 * cm - 2.5, PAGE_W, 2.5, stroke=0, fill=1)
+    canvas.rect(0, PAGE_H - 2.2 * cm - 2.5, PAGE_W, 2.5, stroke=0, fill=1)
     canvas.setFillColor(colors.white)
-    canvas.setFont('Helvetica-Bold', 15)
-    canvas.drawString(MARGIN, PAGE_H - 1.65 * cm, 'StepBuild — Nouveautés')
-    canvas.setFont('Helvetica', 10)
+    canvas.setFont('Helvetica-Bold', 14)
+    canvas.drawString(MARGIN, PAGE_H - 1.4 * cm, 'StepBuild — Nouveautés')
+    canvas.setFont('Helvetica', 9.5)
     canvas.setFillColor(colors.HexColor('#d1d5db'))
-    canvas.drawRightString(PAGE_W - MARGIN, PAGE_H - 1.65 * cm, f'Lachat Construction Sàrl  ·  {PERIOD}')
+    canvas.drawRightString(PAGE_W - MARGIN, PAGE_H - 1.4 * cm, f'Lachat Construction Sàrl  ·  {PERIOD}')
     canvas.setFillColor(GREY)
-    canvas.setFont('Helvetica', 8.5)
-    canvas.drawString(MARGIN, 1.05 * cm, 'Stéphane Offreda — Step One')
-    canvas.drawRightString(PAGE_W - MARGIN, 1.05 * cm, f'Page {doc.page}')
+    canvas.setFont('Helvetica', 8)
+    canvas.drawString(MARGIN, 0.9 * cm, 'Stéphane Offreda — Step One')
+    canvas.drawRightString(PAGE_W - MARGIN, 0.9 * cm, f'Page {doc.page}')
     canvas.restoreState()
 
 
 def story():
-    s = [
-        Spacer(1, 6),
-        Paragraph(f'Nouveautés livrées {PERIOD}', H1),
-        p("Ce document résume ce qui a changé dans StepBuild depuis vendredi 16 octobre après-midi, à la suite de vos "
-          "retours. Tout est en ligne. Le mode d'emploi a été mis à jour en conséquence (version 0.4).", LEAD),
+    return [
+        Paragraph(f'Nouveautés livrées {PERIOD}', TITLE),
+        Paragraph("Ce qui a changé dans StepBuild depuis la livraison du 22 octobre, à la suite de vos retours. Tout est en "
+                  "ligne ; le mode d'emploi (version 0.5) décrit chaque point avec des captures d'écran.", INTRO),
 
-        Paragraph('1. Projets', H2),
+        Paragraph('1. Sous-détail de prix et éléments de coûts', HEAD),
         bullets([
-            "<b>Nouveau projet</b> : on saisit d'abord le code postal et la localité du chantier, en grand. La localité "
-            "est proposée si le carnet d'adresses connaît le NPA, et le numéro de projet (2854-003) apparaît aussitôt. "
-            "« Continuer » ouvre la fiche complète.",
-            "<b>Onglet Client</b> : le client et ses coordonnées ont quitté l'onglet Général pour un onglet à part, "
-            "avec un lien vers sa fiche du carnet.",
-            "<b>Plus de liste en bas de la page</b> : la fiche occupe toute la page. Le projet se choisit dans la barre "
-            "du haut.",
+            "<b>Les ouvrages du métreur sont rattachés aux éléments de coûts</b> : une ligne de sous-détail peut pointer sur "
+            "un élément de la liste de prix (pastille avec son numéro) et prend alors <b>ses prix, à jour</b>. 170 lignes des "
+            "110 ouvrages ont été rattachées d'office ; les autres se rattachent d'un clic (étiquette au survol de la ligne).",
+            "Chaque ligne a un <b>prix d'achat</b>, un <b>prix de vente</b> et la <b>marge</b> ; la vente de la ligne utilise le "
+            "prix de vente. Saisir l'un des trois recalcule les deux autres.",
+            "Main-d'œuvre des ouvrages : heures d'Ouvrier qualifié au tarif de la liste (52.78 / 90.-), soit 810.- la journée "
+            "de 9 h au lieu des 750.- du Word : <b>à valider avec le métreur</b>.",
+            "<b>Éléments de coûts</b> : la liste et la fiche ne montrent plus que <b>Prix d'achat</b> et <b>Prix de vente</b> ; "
+            "pour un nouvel élément, le groupe et le <b>numéro sont proposés</b> automatiquement (suivant du groupe).",
         ]),
 
-        Paragraph('2. Barre Projet / Document', H2),
+        Paragraph('2. Fenêtre du sous-détail', HEAD),
         bullets([
-            "Les deux champs ouvrent désormais une <b>fenêtre de choix</b> : recherche instantanée, filtres par statut "
-            "(et par type pour les documents), liste colorée. Un clic sur une ligne la choisit et referme la fenêtre.",
+            "Pleine largeur : le calcul de la ligne à gauche, la <b>bibliothèque des ouvrages</b> à droite (recherche, "
+            "corps de métier, un clic charge l'ouvrage, l'ouvrage chargé est surligné).",
+            "<b>Création directe</b> d'un ouvrage : groupe, nom, Créer. Au survol d'un ouvrage : mettre à jour ses lignes, "
+            "ou le supprimer.",
         ]),
 
-        Paragraph('3. Devis : panneau de gauche et saisie', H2),
+        Paragraph('3. Devis', HEAD),
         bullets([
-            "Le panneau de gauche a deux volets : le <b>Catalogue de prix</b> en haut, <b>Étapes et devis</b> en dessous.",
-            "Les articles et les chapitres s'ajoutent <b>uniquement en glissant</b> vers la feuille, jamais au clic.",
-            "Un article glissé va <b>toujours dans l'étape de son chapitre</b>, créée au passage si elle manque. Déposé "
-            "sur une ligne de cette étape, il prend sa place. Une fois dans le devis, la ligne se déplace librement.",
-            "Un article du catalogue se <b>modifie dans une fenêtre</b> depuis le panneau (crayon). Les lignes déjà dans "
-            "les devis ne changent pas.",
-            "Les <b>étapes</b> se déplacent, se renomment (double-clic) et se suppriment directement sur la feuille, "
-            "par leur poignée et les icônes au survol du titre.",
-            "<b>Saut de page</b> : un bouton à droite du champ d'ajout insère un saut de page, déplaçable, respecté à l'impression.",
+            "<b>Unités</b> par ordre alphabétique, trouvées en tapant les premières lettres ; Entrée prend l'unité et passe à la quantité.",
+            "<b>Catalogue</b> : sélection de plusieurs articles ou chapitres (Ctrl + clic, Maj + clic) et glisser ensemble ; "
+            "<b>+</b> au survol d'un chapitre pour créer un article sans quitter le devis.",
+            "Plus de champ d'ajout sous les étapes : les articles arrivent du catalogue en glissant ; titres de chapitre, "
+            "sous-titres et textes s'insèrent par le <b>+</b> au survol d'une ligne (un titre de chapitre coupe l'étape en deux).",
+            "<b>Totaux par étape</b> sous les lignes, à l'écran et dans le PDF (option, cochée d'office) ; <b>options</b> entre "
+            "parenthèses, avec leur total dans la récapitulation et sur la page de garde.",
+            "Volet « Étapes et devis » replié par défaut ; les sous-détails en rouge passent à la ligne.",
         ]),
 
-        Paragraph('4. Devis : sous-détail de prix', H2),
-        bullets([
-            "Le sous-détail est toujours <b>le calcul complet de la ligne</b> : son total divisé par la quantité donne le "
-            "prix unitaire (1 000.- pour 10 m² = 100.- le m²), et le prix suit si la quantité change.",
-            "Le <b>prix unitaire</b> et le <b>montant</b> de la ligne restent corrigeables à la main : un total saisi "
-            "donne le prix unitaire. Le sous-détail reste affiché en rouge, avec la mention « corrigé à … ».",
-            "Deux options en haut du devis : <b>Afficher les sous-détails</b> (en rouge, en tout petit, sous chaque "
-            "position) et <b>Masquer les prix</b>. Elles s'appliquent aussi à l'aperçu et au PDF.",
-        ]),
+        Paragraph('4. Rapports journaliers', HEAD),
+        bullets(["Les statuts s'appellent <b>En cours</b>, <b>Contrôlé</b> et <b>Facturé</b>."]),
 
-        Paragraph('5. Devis : destinataire et nouveaux documents', H2),
-        bullets([
-            "Destinataire : champ <b>Entreprise</b> et ligne <b>Complément</b> avec la mention « À l'attention de », "
-            "« p.a. », « c/o » ou « Case postale ». L'adresse s'imprime dans l'ordre de La Poste, avec un aperçu dans l'en-tête.",
-            "<b>Demande d'acompte</b> (AC.1) : pourcentage du net HT ou montant fixe, PDF avec rappel du devis, des "
-            "acomptes déjà demandés et du montant à verser.",
-            "<b>Travaux exécutés</b> (TE.1) : les positions du devis avec la quantité du devis en gris et la quantité "
-            "exécutée à corriger ; comparaison devis / exécuté par étape, avec le pourcentage, à l'écran et dans le PDF.",
-        ]),
-
-        Paragraph('6. Rapport de régie (nouvel onglet du menu)', H2),
-        bullets([
-            "Pour le projet courant, chaque <b>étape du devis</b> est mise en face des <b>rapports journaliers</b> : "
-            "devis vente, prix de revient, heures prévues et réalisées, coût réalisé, écart, part du budget consommée, "
-            "régie et client. <b>Vert</b> dans le budget, <b>rouge</b> dépassé.",
-            "Chaque étape se déplie sur ses rapports ; filtres par statut, période et version du devis ; résumé du "
-            "chantier dans le panneau de gauche.",
-            "Une <b>tirette de marge</b> par étape, et une pour tout le chantier, fixe le prix client de toutes les "
-            "lignes à « coût brut + marge » (rapports non facturés).",
-        ]),
-
-        Paragraph('7. Éléments de coûts et listes', H2),
-        bullets([
-            "La <b>majoration</b> se règle d'un clic dans la liste, avec une tirette : le prix régie est recalculé et enregistré.",
-            "Les colonnes « Un. régie » et « Code régie » ont quitté la liste ; le code reste dans la fiche pour les reprises.",
-            "Les colonnes « Prix du » et « Majoration » se trient. Dans toutes les grilles, les <b>colonnes se "
-            "redimensionnent</b> en tirant le bord droit de leur titre.",
-        ]),
-
-        Paragraph('8. Menu et administration', H2),
-        bullets([
-            "Onglet <b>Rapport de régie</b> ajouté à côté d'Exécution ; <b>Services centraux</b> renommé <b>Statistiques</b>.",
-            "<b>Données de base</b> regroupe désormais <b>Clients</b> (le carnet d'adresses, auparavant « Adresses » dans "
-            "Services centraux), Catalogue d'articles, Stocks, Éléments de coûts et Collaborateurs. Les modèles de devis "
-            "et les sous-détails types sont dans Offre facturation.",
-            "L'onglet actif du menu se raccorde à la barre de boutons ; les boutons factices Colonnes, Filtre et "
-            "Imprimer ont disparu des barres d'outils.",
-            "<b>Journal des connexions</b> (Administration) : connexions, échecs, blocages, déconnexions et mots de "
-            "passe réinitialisés, avec adresse IP et navigateur ; conservé un an.",
-        ]),
-
-        note("Le mode d'emploi, version 0.4 du 22 octobre 2026, décrit chacun de ces points avec des captures d'écran."),
-        tip("Pour tout retour, signalez la page concernée et ce que vous cherchiez à faire : la prochaine livraison "
-            "portera sur la facture finale."),
-        Spacer(1, 10),
-        p('Stéphane Offreda — Step One', BODY),
+        Paragraph("Pour tout retour, indiquez la page et ce que vous cherchiez à faire. Prochaine étape : la facture finale.  —  "
+                  "Stéphane Offreda, Step One", FOOT),
     ]
-    return s
 
 
 def main():
     doc = BaseDocTemplate(
-        OUTPUT, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=3.3 * cm, bottomMargin=2 * cm,
+        OUTPUT, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=2.8 * cm, bottomMargin=1.6 * cm,
         title=f'StepBuild — Nouveautés {PERIOD}', author='Stéphane Offreda — Step One', subject='Lachat Construction Sàrl',
     )
-    frame = Frame(MARGIN, 2 * cm, CONTENT_W, PAGE_H - 5.3 * cm, id='main', leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
+    frame = Frame(MARGIN, 1.6 * cm, CONTENT_W, PAGE_H - 4.4 * cm, id='main', leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
     doc.addPageTemplates([PageTemplate(id='page', frames=[frame], onPage=header)])
     doc.build(story())
     print('PDF :', os.path.normpath(OUTPUT))

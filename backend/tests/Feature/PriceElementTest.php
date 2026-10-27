@@ -96,3 +96,17 @@ it('date l\'élément à chaque changement de prix (« Prix du »)', function ()
     actingAsRole('responsable');
     $this->getJson('/api/price-elements?family=2')->assertOk()->assertJsonPath('data.0.price_updated_at', '2026-11-02');
 });
+
+it('propose le prochain numéro libre d’un groupe (multiple de 5 au-dessus du plus grand)', function () {
+    actingAsRole('responsable');
+    PriceElement::create(['family' => 2, 'group_code' => 'M92', 'number' => '020.000', 'description' => 'A', 'net_price' => 1]);
+    PriceElement::create(['family' => 2, 'group_code' => 'M92', 'number' => '230.031', 'description' => 'B', 'net_price' => 1]);
+    PriceElement::create(['family' => 2, 'group_code' => 'M10', 'number' => '100.010', 'description' => 'C', 'net_price' => 1]);
+
+    $this->getJson('/api/price-elements/next-number?family=2&group=M92')->assertOk()->assertJsonPath('number', '230.035');
+    $this->getJson('/api/price-elements/next-number?family=2&group=M10')->assertOk()->assertJsonPath('number', '100.015');
+    $this->getJson('/api/price-elements/next-number?family=2')->assertOk()->assertJsonPath('number', '230.035');
+    $this->getJson('/api/price-elements/next-number?family=5&group=O95')->assertOk()->assertJsonPath('number', '500.000'); // groupe vide
+    $this->getJson('/api/price-elements/next-number?family=1')->assertOk()->assertJsonPath('number', '010.000');
+    $this->getJson('/api/price-elements/next-number?family=9')->assertStatus(422);
+});

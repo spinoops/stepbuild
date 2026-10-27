@@ -2,7 +2,7 @@
 #  dev.ps1  —  Lance l'environnement de dev complet (backend + frontend).
 #
 #  Ouvre DEUX fenetres PowerShell :
-#    - API Laravel  -> http://localhost:8020   (php artisan serve)
+#    - API Laravel  -> http://localhost:8020   (php -S … server.php : OPcache actif, Xdebug et Telescope coupés)
 #    - SPA React    -> http://localhost:5190   (npm run dev, hot-reload Vite)
 #
 #  Usage :  depuis la racine du projet, clic droit > "Executer avec PowerShell"
@@ -57,7 +57,8 @@ if (-not (Test-Path (Join-Path $frontend 'node_modules'))) {
 # `$Host (backtick) reste litteral : il s'evalue dans la fenetre enfant.
 $backendCmd  = "`$Host.UI.RawUI.WindowTitle = 'API Laravel  ->  http://localhost:8020'; " +
                "Set-Location '$backend'; " +
-               "& '$php' artisan serve --port=8020"
+               "`$env:XDEBUG_MODE = 'off'; `$env:TELESCOPE_ENABLED = 'false'; " +
+               "& '$php' -d opcache.enable_cli=1 -d xdebug.mode=off -S 127.0.0.1:8020 -t public server.php"
 
 $frontendCmd = "`$Host.UI.RawUI.WindowTitle = 'SPA React (Vite)  ->  http://localhost:5190'; " +
                "Set-Location '$frontend'; " +

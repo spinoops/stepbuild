@@ -146,8 +146,7 @@ Tout nouveau module cherchable (projets…) doit être ajouté à `SearchControl
   du catalogue ici » (toujours `data-picker={step.id}`, cible de fin d'étape). Les sous-titres, textes et titres de
   chapitre s'insèrent par le « + » entre les lignes (`InsertLineRow`). Après insertion, quantité → Entrée → prix →
   Entrée. Pour les éléments de coûts, `components/shared/ElementBrowserDialog` (groupes, recherche serveur) depuis
-  `ElementPicker` (rapports, sous-détail). `DataGrid` a reçu `onActivate` (double-clic). **À refaire dans le mode
-  d'emploi** : chapitre 9 « saisie rapide » et capture 13 (`capture.cjs` clique encore `[data-picker]`).
+  `ElementPicker` (rapports, sous-détail). `DataGrid` a reçu `onActivate` (double-clic). Mode d'emploi 0.5 (26.10.2026) à jour : capture 13 = ligne d'insertion, 41 = unité, 42 = + du chapitre.
   `PositionRow` garde un brouillon local (enregistré à la sortie de ligne ou après 1,5 s) : ne pas resynchroniser
   ses champs depuis le serveur pendant la saisie.
   Réordonnancement par **glisser-déposer** natif (poignée `data-handle`, dépose dans l'étape ou vers une autre étape :
@@ -388,6 +387,15 @@ Depuis le 26.10.2026, la liste et la fiche ne montrent que **Prix d'achat** (= `
 tel quel par le formulaire, mais n'est plus affiché ni saisi. Mêmes libellés dans `ElementBrowserDialog` et les
 info-bulles des sous-détails. Les noms de colonnes de l'API ne changent pas.
 
+### Éléments de coûts : numéro proposé
+`GET /price-elements/next-number?family=&group=` (`PriceElement::nextNumber`, 27.10.2026) : premier multiple de 5
+au-dessus du plus grand numéro de la famille (et du groupe), format « PPP.NNN » comme BauBit (M92 230.031 → 230.035) ;
+groupe vide → `010.000` (salaires) ou `F00.000`. Dans la fiche d'un nouvel élément, le groupe proposé est le plus
+fourni de la famille (M92, M93, O95, T96…), le numéro est proposé et suit famille / groupe tant qu'il n'a pas été
+modifié à la main ; bouton « Proposer ». Signification des codes BauBit : groupe = lettre de famille (S, M, E, O, T)
++ numéro (10 = groupe d'origine, 92–96 = import des listes fournisseurs, un par famille) ; numéro = rubrique (tranche
+alphabétique d'import de ~200 articles) + séquence par pas de 5 ; code régie = famille.numéro.
+
 ### Éléments de coûts : majoration par tirette
 Dans la liste des éléments de coûts, la colonne **Majoration** (prix de vente sur prix d'achat, en %) est une cellule
 `MarkupCell` : un clic ouvre une tirette (0–200 %, champ et raccourcis 0 / 10 / 20 / 30 / 50 %) ; au relâchement, le
@@ -466,6 +474,12 @@ Le `php` du PATH Windows est en **8.1** (trop vieux pour Laravel 13, qui exige *
 
 ## Démarrer
 - **`dev.bat`** (racine) lance le backend (`:8020`) + le frontend (`:5190`). **WAMP (MySQL) doit tourner.**
+- **Lenteur locale, causes trouvées le 27.10.2026** : (1) sur Windows, un appel à `localhost` coûte ~0.2 s (essai IPv6
+  `::1` refusé puis IPv4) → **l'API s'appelle en `http://127.0.0.1:8020`** (`VITE_API_URL`, `lib/api.ts`, `APP_URL` pour
+  les liens signés des photos, `capture.cjs`) ; (2) `artisan serve` lance PHP sans OPcache (`opcache.enable_cli=Off`) et
+  avec Xdebug (`xdebug.mode=develop` dans le php.ini WAMP) → `dev.ps1` et `.claude/launch.json` lancent
+  `php -d opcache.enable_cli=1 -d xdebug.mode=off -S 127.0.0.1:8020 -t public server.php` (`backend/server.php`) avec
+  `XDEBUG_MODE=off` et `TELESCOPE_ENABLED=false`. Résultat : ~15–40 ms par appel au lieu de 250–1000 ms.
 - **Ports réservés à StepBuild : 8020 (API) et 5190 (front)** (21.10.2026). Les autres projets de `D:\wamp64\www`
   dérivés de baseapp utilisent 5173–5176 et 8000–8003 (stepone-worktime, systeme-reservation… sur 8001/5174) :
   StepBuild peut donc tourner en même temps qu'eux. Ports écrits dans `.claude/launch.json`, `dev.ps1`,

@@ -195,6 +195,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/hours-control/{collaborator}/validate', [HoursControlController::class, 'validateMonth']);
 
         Route::get('/price-elements/groups', [PriceElementController::class, 'groups']);
+        Route::get('/price-elements/next-number', [PriceElementController::class, 'nextNumber']);
         Route::apiResource('price-elements', PriceElementController::class)
             ->parameters(['price-elements' => 'element']);
     });
