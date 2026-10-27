@@ -531,7 +531,8 @@ Le `php` du PATH Windows est en **8.1** (trop vieux pour Laravel 13, qui exige *
 `.env`, `vendor/`, `node_modules/`, `frontend/dist/`, `storage/*`, `_construction/` (données client).
 
 ## Mode d'emploi client
-`docs/Mode d'emploi - StepBuild.pdf`, généré par `docs/manuel/` : `npm run captures` (puppeteer sur
+**Les PDF ne sont jamais versionnés** (demande du 27.10.2026, `docs/*.pdf` ignoré) : ils se génèrent en local et
+s'envoient au client par email. `docs/Mode d'emploi - StepBuild.pdf`, généré par `docs/manuel/` : `npm run captures` (puppeteer sur
 Chrome, données d'exemple ; `FRONT_URL` / `API_URL` pour d'autres ports) puis `npm run pdf` (reportlab,
 `build_manual.py`, police Helvetica → caractères WinAnsi seulement). **À compléter à chaque phase livrée**
 (chapitre par module, version et date en tête du script). `npm run changelog` (`build_changelog.py`, mêmes styles)

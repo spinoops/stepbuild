@@ -23,3 +23,6 @@ _construction/
 
 # Archives de mise en ligne de secours (release.ps1)
 release/
+
+# Documents livrés au client (PDF générés par docs/manuel/, envoyés par email, jamais versionnés)
+docs/*.pdf
