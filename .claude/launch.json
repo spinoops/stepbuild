@@ -4,7 +4,14 @@
     {
       "name": "api",
       "runtimeExecutable": "D:/wamp64/bin/php/php8.4.24/php.exe",
-      "runtimeArgs": ["backend/artisan", "serve", "--port=8020"],
+      "runtimeArgs": [
+        "-d", "opcache.enable_cli=1",
+        "-d", "xdebug.mode=off",
+        "-S", "127.0.0.1:8020",
+        "-t", "backend/public",
+        "backend/server.php"
+      ],
+      "env": { "XDEBUG_MODE": "off", "TELESCOPE_ENABLED": "false" },
       "port": 8020
     },
     {

@@ -45,7 +45,7 @@ Créer la base puis migrer/seed :
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS app_chantier CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 php artisan migrate --seed
-php artisan serve --port=8020   # http://localhost:8020
+php -d opcache.enable_cli=1 -d xdebug.mode=off -S 127.0.0.1:8020 -t public server.php   # http://127.0.0.1:8020 (ou dev.bat)
 ```
 
 > Ajuste `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` dans `backend/.env` si besoin.

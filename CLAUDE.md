@@ -474,6 +474,12 @@ Le `php` du PATH Windows est en **8.1** (trop vieux pour Laravel 13, qui exige *
 
 ## Démarrer
 - **`dev.bat`** (racine) lance le backend (`:8020`) + le frontend (`:5190`). **WAMP (MySQL) doit tourner.**
+- **Lenteur locale, causes trouvées le 27.10.2026** : (1) sur Windows, un appel à `localhost` coûte ~0.2 s (essai IPv6
+  `::1` refusé puis IPv4) → **l'API s'appelle en `http://127.0.0.1:8020`** (`VITE_API_URL`, `lib/api.ts`, `APP_URL` pour
+  les liens signés des photos, `capture.cjs`) ; (2) `artisan serve` lance PHP sans OPcache (`opcache.enable_cli=Off`) et
+  avec Xdebug (`xdebug.mode=develop` dans le php.ini WAMP) → `dev.ps1` et `.claude/launch.json` lancent
+  `php -d opcache.enable_cli=1 -d xdebug.mode=off -S 127.0.0.1:8020 -t public server.php` (`backend/server.php`) avec
+  `XDEBUG_MODE=off` et `TELESCOPE_ENABLED=false`. Résultat : ~15–40 ms par appel au lieu de 250–1000 ms.
 - **Ports réservés à StepBuild : 8020 (API) et 5190 (front)** (21.10.2026). Les autres projets de `D:\wamp64\www`
   dérivés de baseapp utilisent 5173–5176 et 8000–8003 (stepone-worktime, systeme-reservation… sur 8001/5174) :
   StepBuild peut donc tourner en même temps qu'eux. Ports écrits dans `.claude/launch.json`, `dev.ps1`,

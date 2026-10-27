@@ -5,7 +5,7 @@ const fs = require('fs')
 
 // Ports du dev.bat par défaut ; surchargeables : FRONT_URL=http://localhost:5177 API_URL=http://localhost:8007 node capture.cjs
 const FRONT = process.env.FRONT_URL || 'http://localhost:5190'
-const API = (process.env.API_URL || 'http://localhost:8020') + '/api'
+const API = (process.env.API_URL || 'http://127.0.0.1:8020') + '/api'
 const OUT = path.join(__dirname, 'shots')
 fs.mkdirSync(OUT, { recursive: true })
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))

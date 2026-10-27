@@ -86,8 +86,9 @@ class PriceElement extends Model
      */
     public static function nextNumber(int $family, ?string $group = null): string
     {
-        $query = self::where('family', $family)->when($group, fn ($q) => $q->where('group_code', $group));
-        $max = $query->get(['number'])->map(fn ($e) => (int) preg_replace('/\D/', '', (string) $e->number))->filter(fn ($n) => $n > 0)->max();
+        // Calculé en SQL (10 000 éléments) : le numéro sans son point, en entier (MySQL et SQLite).
+        $max = (int) self::where('family', $family)->when($group, fn ($q) => $q->where('group_code', $group))
+            ->selectRaw("MAX(CAST(REPLACE(number, '.', '') AS UNSIGNED)) AS m")->value('m');
         $next = $max ? (intdiv($max, 5) + 1) * 5 : ($family === 1 ? 10000 : $family * 100000);
         while (self::withTrashed()->where('family', $family)->where('number', self::formatNumber($next))->exists()) {
             $next += 5;
