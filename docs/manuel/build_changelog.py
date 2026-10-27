@@ -60,25 +60,20 @@ def story():
         Paragraph("Ce qui a changé dans StepBuild depuis la livraison du 22 octobre, à la suite de vos retours. Tout est en "
                   "ligne ; le mode d'emploi (version 0.5) décrit chaque point avec des captures d'écran.", INTRO),
 
-        Paragraph('1. Sous-détail de prix et éléments de coûts', HEAD),
+        Paragraph('1. Sous-détail de prix', HEAD),
         bullets([
-            "<b>Les ouvrages du métreur sont rattachés aux éléments de coûts</b> : une ligne de sous-détail peut pointer sur "
-            "un élément de la liste de prix (pastille avec son numéro) et prend alors <b>ses prix, à jour</b>. 170 lignes des "
-            "110 ouvrages ont été rattachées d'office ; les autres se rattachent d'un clic (étiquette au survol de la ligne).",
-            "Chaque ligne a un <b>prix d'achat</b>, un <b>prix de vente</b> et la <b>marge</b> ; la vente de la ligne utilise le "
-            "prix de vente. Saisir l'un des trois recalcule les deux autres.",
-            "Main-d'œuvre des ouvrages : heures d'Ouvrier qualifié au tarif de la liste (52.78 / 90.-), soit 810.- la journée "
-            "de 9 h au lieu des 750.- du Word : <b>à valider avec le métreur</b>.",
-            "<b>Éléments de coûts</b> : la liste et la fiche ne montrent plus que <b>Prix d'achat</b> et <b>Prix de vente</b> ; "
-            "pour un nouvel élément, le groupe et le <b>numéro sont proposés</b> automatiquement (suivant du groupe).",
+            "La fenêtre du sous-détail a une colonne avec les <b>types de sous-détails</b> repris de votre document Word "
+            "(les ouvrages du métreur, par corps de métier) : un clic ajoute l'ouvrage à la ligne. On peut en <b>créer de "
+            "nouveaux</b> directement depuis les lignes saisies, les mettre à jour ou les supprimer.",
+            "Chaque ligne a un <b>prix d'achat</b>, un <b>prix de vente</b> et la <b>marge</b> ; les lignes prises dans la liste "
+            "des éléments de coûts gardent le prix de la liste, à jour.",
         ]),
 
-        Paragraph('2. Fenêtre du sous-détail', HEAD),
+        Paragraph('2. Éléments de coûts', HEAD),
         bullets([
-            "Pleine largeur : le calcul de la ligne à gauche, la <b>bibliothèque des ouvrages</b> à droite (recherche, "
-            "corps de métier, un clic charge l'ouvrage, l'ouvrage chargé est surligné).",
-            "<b>Création directe</b> d'un ouvrage : groupe, nom, Créer. Au survol d'un ouvrage : mettre à jour ses lignes, "
-            "ou le supprimer.",
+            "La liste et la fiche ne montrent plus que <b>Prix d'achat</b> et <b>Prix de vente</b>.",
+            "Pour un nouvel élément, le groupe et le <b>numéro sont attribués automatiquement</b> (le suivant du groupe), "
+            "modifiables.",
         ]),
 
         Paragraph('3. Devis', HEAD),
