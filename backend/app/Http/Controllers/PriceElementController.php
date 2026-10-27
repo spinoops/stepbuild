@@ -46,6 +46,17 @@ class PriceElementController extends Controller
     /**
      * Groupes existants (panneau latéral), avec le nombre d'éléments. ?family= optionnel.
      */
+    /** Prochain numéro libre pour une famille et un groupe (`?family=2&group=M92`), proposé dans la fiche. */
+    public function nextNumber(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'family' => ['required', 'integer', 'min:1', 'max:6'],
+            'group' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        return response()->json(['number' => PriceElement::nextNumber((int) $data['family'], $data['group'] ?? null)]);
+    }
+
     public function groups(Request $request): JsonResponse
     {
         $groups = PriceElement::query()

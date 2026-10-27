@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Workspace, { AsidePanel } from '@/components/baubit/Workspace'
@@ -113,6 +113,9 @@ export default function PriceListsPage() {
       (await api.get<{ data: { code: string; total: number }[] }>('/price-elements/groups', { params: family ? { family } : {} })).data.data,
   })
 
+  // Nouvel élément sans groupe choisi : le groupe le plus fourni de la famille (M92 pour les matériaux…).
+  const biggestGroup = (groups.data ?? []).reduce<{ code: string; total: number } | null>((best, item) => (best && best.total >= item.total ? best : item), null)?.code ?? null
+
   const currentId = isNew ? null : (selectedId ?? rows[0]?.id ?? null)
   const inList = rows.find((row) => row.id === currentId) ?? null
   const single = useResourceItem<PriceElement>('price-elements', currentId, !inList)
@@ -197,7 +200,7 @@ export default function PriceListsPage() {
           element={element}
           isNew={isNew}
           defaultFamily={family ?? 2}
-          defaultGroup={group}
+          defaultGroup={group ?? biggestGroup}
           disabled={!isNew && !element}
           onStateChange={setSaveState}
           onCreated={(created) => select(created.id)}
@@ -238,6 +241,11 @@ function GroupButton({ label, total, active, onClick }: { label: string; total?:
   )
 }
 
+/** Prochain numéro libre de la famille et du groupe (multiple de 5 au-dessus du plus grand, comme dans BauBit). */
+async function fetchNextElementNumber(family: string, group: string): Promise<string> {
+  return (await api.get<{ number: string }>('/price-elements/next-number', { params: { family, ...(group.trim() ? { group: group.trim() } : {}) } })).data.number
+}
+
 interface ElementFormProps {
   element: PriceElement | null
   isNew: boolean
@@ -257,6 +265,50 @@ function ElementForm({ element, isNew, defaultFamily, defaultGroup, disabled, on
   const { register, formState } = form
   const errors = formState.errors
   const firstError = Object.values(errors)[0]?.message
+
+  // Nouvel élément : le numéro est proposé d'après la famille et le groupe, et suit tant qu'il n'a pas été modifié.
+  const [watchFamily, watchGroup] = useWatch({ control: form.control, name: ['family', 'group_code'] })
+  const proposed = useRef('')
+  const request = useRef(0) // seule la dernière demande compte (famille changée pendant qu'une réponse arrive)
+  async function suggestNumber(force: boolean) {
+    const current = form.getValues('number').trim()
+    if (!isNew || (!force && current && current !== proposed.current)) {
+      return
+    }
+    const id = ++request.current
+    try {
+      const number = await fetchNextElementNumber(watchFamily, watchGroup ?? '')
+      if (id !== request.current) {
+        return
+      }
+      proposed.current = number
+      form.setValue('number', number, { shouldDirty: true, shouldValidate: true })
+    } catch {
+      // Pas de proposition : l'utilisateur saisit le numéro à la main.
+    }
+  }
+  useEffect(() => {
+    void suggestNumber(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew, watchFamily, watchGroup])
+  // Le groupe proposé (le plus fourni de la famille) arrive après le montage : il remplit le champ s'il est vide.
+  const proposedGroup = useRef('')
+  useEffect(() => {
+    if (isNew && defaultGroup && !form.getValues('group_code').trim()) {
+      proposedGroup.current = defaultGroup
+      form.setValue('group_code', defaultGroup)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew, defaultGroup])
+  // Famille changée dans la fiche : un groupe seulement proposé (M92…) n'a plus de sens, il est vidé.
+  const mountedFamily = useRef(watchFamily)
+  useEffect(() => {
+    if (isNew && watchFamily !== mountedFamily.current && form.getValues('group_code') === proposedGroup.current) {
+      proposedGroup.current = ''
+      form.setValue('group_code', '')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew, watchFamily])
 
   const { submit, onBlur } = useEntityForm(form, {
     isNew,
@@ -305,7 +357,17 @@ function ElementForm({ element, isNew, defaultFamily, defaultGroup, disabled, on
 
         <Field label="Groupe / N°" labelWidth={90}>
           <BbInput className="w-20" {...register('group_code')} />
-          <BbInput className="w-[136px]" autoFocus={isNew} invalid={Boolean(errors.number)} {...register('number')} />
+          <BbInput className="w-[136px]" invalid={Boolean(errors.number)} title={isNew ? 'Numéro proposé : le suivant du groupe. Modifiable.' : undefined} {...register('number')} />
+          {isNew && (
+            <button
+              type="button"
+              onClick={() => void suggestNumber(true)}
+              title="Proposer le prochain numéro libre du groupe"
+              className="ml-2 h-7 rounded-md border border-gray-300 bg-white px-2 text-[12px] text-gray-600 hover:border-primary-400 hover:text-primary-700"
+            >
+              Proposer
+            </button>
+          )}
         </Field>
         <Field label="Code régie" labelWidth={90}>
           <BbInput className="w-56" {...register('regie_code')} />
@@ -315,7 +377,7 @@ function ElementForm({ element, isNew, defaultFamily, defaultGroup, disabled, on
         </Field>
 
         <Field label="Description" labelWidth={90} className="col-span-2">
-          <BbInput className="w-[590px]" invalid={Boolean(errors.description)} {...register('description')} />
+          <BbInput className="w-[590px]" autoFocus={isNew} invalid={Boolean(errors.description)} {...register('description')} />
         </Field>
         <div className="flex items-center text-[12px] text-gray-500">{element?.price_updated_at && `Prix du ${fmtDate(element.price_updated_at)}`}</div>
       </fieldset>

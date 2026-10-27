@@ -387,6 +387,15 @@ Depuis le 26.10.2026, la liste et la fiche ne montrent que **Prix d'achat** (= `
 tel quel par le formulaire, mais n'est plus affiché ni saisi. Mêmes libellés dans `ElementBrowserDialog` et les
 info-bulles des sous-détails. Les noms de colonnes de l'API ne changent pas.
 
+### Éléments de coûts : numéro proposé
+`GET /price-elements/next-number?family=&group=` (`PriceElement::nextNumber`, 27.10.2026) : premier multiple de 5
+au-dessus du plus grand numéro de la famille (et du groupe), format « PPP.NNN » comme BauBit (M92 230.031 → 230.035) ;
+groupe vide → `010.000` (salaires) ou `F00.000`. Dans la fiche d'un nouvel élément, le groupe proposé est le plus
+fourni de la famille (M92, M93, O95, T96…), le numéro est proposé et suit famille / groupe tant qu'il n'a pas été
+modifié à la main ; bouton « Proposer ». Signification des codes BauBit : groupe = lettre de famille (S, M, E, O, T)
++ numéro (10 = groupe d'origine, 92–96 = import des listes fournisseurs, un par famille) ; numéro = rubrique (tranche
+alphabétique d'import de ~200 articles) + séquence par pas de 5 ; code régie = famille.numéro.
+
 ### Éléments de coûts : majoration par tirette
 Dans la liste des éléments de coûts, la colonne **Majoration** (prix de vente sur prix d'achat, en %) est une cellule
 `MarkupCell` : un clic ouvre une tirette (0–200 %, champ et raccourcis 0 / 10 / 20 / 30 / 50 %) ; au relâchement, le
